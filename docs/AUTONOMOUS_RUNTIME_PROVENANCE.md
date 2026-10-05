@@ -2495,3 +2495,24 @@ on native bars, bounded/invalid inputs and metadata controls. Capacity removal i
 component evidence: the original64-channel scratch charge,128MiB ceiling and
 two-pass admission remain unchanged. Complete allocation/metadata/lifetime,
 parent/child capture, RSS/deadline and runtime qualification remain separate.
+
+
+## Matched ordinary native process control
+
+The existing test-only iterative chain validator shares its detached ordinary
+reference construction with a separate four-case control at 44.1 and 48 kHz,
+covering admitted initial chains and the original forced-correction aggregate
+refusal. Only reduced PCM, hold, replay, continuation and quality identities,
+public reservation fields, terminal ordinals and refusal details survive each
+worker. The observed validator retains its full exact product/reservation
+comparison and storage assertions, then emits the same compact reference for
+external cold comparison. This avoids a second preparation implementation.
+
+The separate process control has no numeric storage probe or full snapshot
+serialization. External whole-process kernel footprint can therefore distinguish
+ordinary execution from observer/reporting overhead on identical source and
+outcomes. Frameworks, allocator caches and compact reporting still belong to
+that process; physical footprint is not complete allocated-storage attribution.
+Neither process is production activation, musical qualification, a per-phase
+peak, a deadline proof or selected native root/child capture admission. Existing
+reservations, 128 MiB ceiling, two-pass bound and all full gates are unchanged.

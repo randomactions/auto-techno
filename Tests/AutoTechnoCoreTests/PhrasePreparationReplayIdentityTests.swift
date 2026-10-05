@@ -1026,7 +1026,7 @@ struct IterativeSuccessorPreparationTests {
     }
 
 
-    private struct StreamedChainControl: Equatable {
+    private struct StreamedChainControl: Equatable, Codable {
         let sampleHashes: [String]
         let transactionHashes: [String]
         let sourceIdentities: [String?]
@@ -1058,6 +1058,74 @@ struct IterativeSuccessorPreparationTests {
         return parent
     }
 
+    private struct NativeChainReference: Sendable {
+        let products: StreamedChainControl?
+        let reservation: AutonomousPreparationChainResourceBudget?
+        let stage: String?
+        let code: String?
+        let details: [String]?
+        let terminals: [Int]
+    }
+
+    // Shared by the observed test and its ordinary-only process control. Only
+    // reduced evidence survives the worker; no probe, capture or PCM is retained.
+    private static func nativeChainReference(request: PhrasePreparationRequest,
+        director: AutonomousSessionDirector, mode: Control.Mode) async -> NativeChainReference {
+        await Task.detached {
+            let control = Control(mode: mode)
+            let outcome = AutonomousPerformancePreparer.prepareChainDiagnosing(
+                request: request, director: director, longHorizonPolicy: nil,
+                makeEvaluator: { Evaluator(request: $0, control: control) }, cancellationRequested: { false })
+            return NativeChainReference(products: outcome.preparedPhrase.map(Self.reducedControl),
+                reservation: outcome.preparedPhrase?.preparationChainResourceBudget,
+                stage: outcome.failure?.stage, code: outcome.failure?.code,
+                details: outcome.failure?.details, terminals: control.terminals)
+        }.value
+    }
+
+    private static func printNativeReference(_ reference: NativeChainReference,
+        rate: Double, correction: Bool) throws {
+        var reservation: [String: Int] = [:]
+        if let budget = reference.reservation {
+            reservation = ["reservedPeakWorkingByteCount": budget.reservedPeakWorkingByteCount,
+                "retainedNumericByteCount": budget.retainedNumericByteCount,
+                "retainedIncomingContinuationNumericByteCount": budget.retainedIncomingContinuationNumericByteCount,
+                "sourceCount": budget.sourceCount, "maximumRenderPassCount": budget.maximumRenderPassCount]
+        }
+        let report: [String: Any] = ["schema": "autotechno-native-chain-reference.v1",
+            "sampleRate": rate, "selectedCorrection": correction,
+            "products": try JSONSerialization.jsonObject(with: JSONEncoder().encode(reference.products), options: [.fragmentsAllowed]),
+            "publicReservationFields": reservation, "terminals": reference.terminals,
+            "failureStage": reference.stage ?? "none", "failureCode": reference.code ?? "none",
+            "failureDetails": reference.details ?? [], "qualification": "mechanical-only-not-installed",
+            "completeWorkingSetQualification": false, "nativeSelectedStreamCaptureCapacityQualified": false]
+        print("AUTOTECHNO_NATIVE_CHAIN_REFERENCE " + String(decoding:
+            try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]), as: UTF8.self))
+    }
+
+    @Test("Ordinary native chain control retains no storage observer or full snapshot report")
+    func nativeChainOrdinaryProcessControl() async throws {
+        for rate in [44_100.0, 48_000.0] {
+            for mode in [Control.Mode.accept, .forceCorrection] {
+                let request = Self.sourceRequest(rate: rate)
+                let original = AutonomousCandidateFingerprint.sessionState(request.sourceState)
+                let reference = await Self.nativeChainReference(request: request,
+                    director: AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed), mode: mode)
+                #expect(AutonomousCandidateFingerprint.sessionState(request.sourceState) == original)
+                if mode == .accept {
+                    let products = try #require(reference.products)
+                    let reservation = try #require(reference.reservation)
+                    #expect(products.sampleHashes.count == 2 && products.sourceIdentities.allSatisfy { $0 != nil })
+                    #expect(reservation.sourceCount == 2 && reference.stage == nil && reference.code == nil)
+                } else {
+                    #expect(reference.products == nil && reference.reservation == nil)
+                    #expect(reference.stage == "successor-chain" && reference.code == "resource-bound")
+                }
+                try Self.printNativeReference(reference, rate: rate, correction: mode == .forceCorrection)
+            }
+        }
+    }
+
     @Test("Native chain observations preserve exact admission and bounded corrective refusal")
     func nativeChainStorageObservations() async throws {
         for rate in [44_100.0, 48_000.0] {
@@ -1066,16 +1134,8 @@ struct IterativeSuccessorPreparationTests {
                 let director = AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed)
                 let original = AutonomousCandidateFingerprint.sessionState(request.sourceState)
                 let processMemoryBefore = try DiagnosticRoleStemStreamingTests.nativeProcessMemoryObservation()
-                let reference = await Task.detached {
-                    let control = Control(mode: mode)
-                    let outcome = AutonomousPerformancePreparer.prepareChainDiagnosing(
-                        request: request, director: director, longHorizonPolicy: nil,
-                        makeEvaluator: { Evaluator(request: $0, control: control) }, cancellationRequested: { false })
-                    return (products: outcome.preparedPhrase.map(Self.reducedControl),
-                        reservation: outcome.preparedPhrase?.preparationChainResourceBudget,
-                        stage: outcome.failure?.stage, code: outcome.failure?.code,
-                        details: outcome.failure?.details, terminals: control.terminals)
-                }.value
+                let reference = await Self.nativeChainReference(request: request,
+                    director: director, mode: mode)
                 // Only reduced evidence crosses into the observed call; the
                 // ordinary arrays and continuation leave scope beforehand.
                 let probe = PreparationWorkingStorageProbe(), control = Control(mode: mode)
@@ -1090,6 +1150,7 @@ struct IterativeSuccessorPreparationTests {
                     outcome.failure?.details == reference.details && control.terminals == reference.terminals &&
                     AutonomousCandidateFingerprint.sessionState(request.sourceState) == original
                 #expect(exact)
+                try Self.printNativeReference(reference, rate: rate, correction: mode == .forceCorrection)
                 #expect(probe.valid && probe.observationCount > 0 && probe.snapshots.allSatisfy { $0.valid })
                 try DiagnosticRoleStemStreamingTests.checkAnalyzerStorage(probe,
                     prefix: "chain.render.analysis", sampleRate: rate)
