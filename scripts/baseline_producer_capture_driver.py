@@ -203,6 +203,8 @@ def execute(root: Path, scratch: Path, corpus_name: str) -> dict:
         reference_outputs += [transaction.output_record(root, n) for n in sorted(reference_names)]
     if foundation_coverage(root, 'v1') != foundation_coverage(root, reference_namespace):
         raise producer.ProducerWitnessError('foundation behavior coverage differs')
+    if producer.current_python_witness() != producer.original_python_witness(receipt):
+        raise producer.ProducerWitnessError('driver Python changed during native capture or cold validation')
     if dependency.capture(root, context) != snapshot:
         raise producer.ProducerWitnessError('frozen inputs changed during native parity')
     pool = {b['familyId']: b for b in bindings}

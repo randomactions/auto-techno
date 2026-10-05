@@ -95,6 +95,61 @@ class ProducerWitnessTests(unittest.TestCase):
         self.assertEqual(producer.ascii_canonical({'a/b': 'x'}), b'{"a/b":"x"}')
         with self.assertRaises(producer.ProducerWitnessError): producer.ascii_canonical({'path': 'caf\u00e9'})
 
+    def test_both_supported_build_system_images_bind_actual_probe(self):
+        for name in ['AutoTechnoCoreTests', 'AutoTechnoPackageTests']:
+            with self.subTest(name=name):
+                scratch = self.root / ('build-' + name)
+                bin_path = scratch / 'out/release'
+                image = bin_path / (name + '.xctest') / 'Contents/MacOS' / name
+                image.parent.mkdir(parents=True)
+                image.write_bytes(b'package-loaded test image')
+                selected = producer.registered_image(bin_path, scratch)
+                self.assertEqual(selected, image)
+                companion = bin_path / 'AutoTechnoAppTests.xctest/Contents/MacOS/AutoTechnoAppTests'
+                companion.parent.mkdir(parents=True)
+                companion.write_bytes(b'known companion test target')
+                self.assertEqual(producer.registered_image(bin_path, scratch), image)
+                probe = dict(self.probe, compiledImagePath=str(image),
+                             compiledImageSha256=producer.file_hash(image))
+                producer.validate_probe(self.root, probe, image=selected, corpus_name=self.corpus_name)
+                probe['compiledImagePath'] = str(self.image)
+                with self.assertRaisesRegex(producer.ProducerWitnessError, 'freshly built'):
+                    producer.validate_probe(self.root, probe, image=selected, corpus_name=self.corpus_name)
+
+    def test_missing_unknown_ambiguous_and_symlink_build_layouts_refuse(self):
+        scratch = self.root / 'build'
+        bin_path = scratch / 'release'
+        bin_path.mkdir(parents=True)
+        with self.assertRaises(producer.ProducerWitnessError): producer.registered_image(bin_path, scratch)
+        for name in ['ForeignTests', 'AutoTechnoCoreTests', 'AutoTechnoPackageTests']:
+            image = bin_path / (name + '.xctest') / 'Contents/MacOS' / name
+            image.parent.mkdir(parents=True)
+            image.write_bytes(b'image')
+            with self.assertRaises(producer.ProducerWitnessError): producer.registered_image(bin_path, scratch)
+        import shutil
+        shutil.rmtree(bin_path / 'ForeignTests.xctest')
+        with self.assertRaisesRegex(producer.ProducerWitnessError, 'ambiguous'):
+            producer.registered_image(bin_path, scratch)
+        shutil.rmtree(bin_path / 'AutoTechnoPackageTests.xctest')
+        image = bin_path / 'AutoTechnoCoreTests.xctest/Contents/MacOS/AutoTechnoCoreTests'
+        image.unlink(); image.symlink_to(self.image)
+        with self.assertRaises(producer.ProducerWitnessError): producer.registered_image(bin_path, scratch)
+        image.unlink()
+        macos = image.parent
+        macos.rmdir(); macos.symlink_to(self.root, target_is_directory=True)
+        with self.assertRaises(producer.ProducerWitnessError): producer.registered_image(bin_path, scratch)
+
+    def test_original_python_identity_is_versioned_bounded_and_never_backfilled(self):
+        receipt = {'schema': producer.BUILD_SCHEMA, 'pythonWitness': producer.current_python_witness()}
+        self.assertEqual(producer.original_python_witness(receipt), receipt['pythonWitness'])
+        for change in [lambda x: x.update(schema='autotechno-baseline-producer-build.v1'),
+                       lambda x: x.pop('pythonWitness'),
+                       lambda x: x['pythonWitness'].update(version=''),
+                       lambda x: x['pythonWitness'].update(executablePath='relative/python'),
+                       lambda x: x['pythonWitness'].update(executableSha256='unknown')]:
+            altered = copy.deepcopy(receipt); change(altered)
+            with self.assertRaises(producer.ProducerWitnessError): producer.original_python_witness(altered)
+
     def test_independent_witness_refuses_manifest_and_declaration_tampering(self):
         artifact = 'docs/local/reports/manifest.json'
         (self.root / artifact).parent.mkdir(parents=True, exist_ok=True)

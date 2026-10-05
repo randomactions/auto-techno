@@ -25,7 +25,8 @@ import baseline_capture_transaction as transaction
 DECLARATION_SCHEMA = 'autotechno-baseline-producer-declaration.v1'
 WITNESS_SCHEMA = 'autotechno-baseline-producer-witness.v1'
 PROBE_SCHEMA = 'autotechno-baseline-producer-probe.v1'
-BUILD_SCHEMA = 'autotechno-baseline-producer-build.v1'
+BUILD_SCHEMA = 'autotechno-baseline-producer-build.v2'
+PYTHON_SCHEMA = 'autotechno-baseline-python-witness.v1'
 PROBE_FILTER = 'BaselineProducerWitnessTests'
 FAMILIES = {'whole-mix-render': 'BaselineRenderIntegrationTests',
             'role-stem-capture': 'StemCaptureIntegrationTests'}
@@ -82,6 +83,54 @@ def require_same_source(root: Path, before: dict[str, Any]) -> None:
         raise ProducerWitnessError('source changed during exporter build or probe')
 
 
+def registered_image(bin_path: Path, scratch: Path) -> Path:
+    """Select the package's actual test image; never substitute its host runner."""
+    if scratch.is_symlink() or not bin_path.is_absolute() or not bin_path.is_relative_to(scratch) or bin_path.is_symlink():
+        raise ProducerWitnessError('unknown compiled output layout')
+    names = {'AutoTechnoCoreTests', 'AutoTechnoPackageTests'}
+    bundles = list(bin_path.glob('*.xctest'))
+    producers = [bundle for bundle in bundles if bundle.stem in names]
+    # Xcode emits one bundle per declared test target; AppTests is the known
+    # companion and does not own the native exporter. Conventional SwiftPM
+    # consolidates the tests in the package bundle instead.
+    if len(producers) != 1 or any(bundle.stem not in names | {'AutoTechnoAppTests'}
+            or bundle.is_symlink() or not bundle.is_dir() for bundle in bundles):
+        raise ProducerWitnessError('unknown or ambiguous compiled test bundle layout')
+    image = producers[0] / 'Contents/MacOS' / producers[0].stem
+    candidate = scratch
+    for part in image.relative_to(scratch).parts:
+        candidate = candidate / part
+        if candidate.is_symlink():
+            raise ProducerWitnessError('compiled test image cannot traverse a symlink')
+    if not image.resolve().is_relative_to(scratch.resolve()):
+        raise ProducerWitnessError('compiled test image escaped registered build')
+    file_hash(image)
+    return image
+
+
+def current_python_witness() -> dict[str, str]:
+    return {'schema': PYTHON_SCHEMA, 'version': sys.version,
+        'executablePath': sys.executable,
+        'executableSha256': file_hash(Path(sys.executable).resolve())}
+
+
+def original_python_witness(receipt: dict[str, Any]) -> dict[str, str]:
+    """Read sealed original identity without consulting the current interpreter."""
+    witness = receipt.get('pythonWitness')
+    if receipt.get('schema') != BUILD_SCHEMA or not isinstance(witness, dict) or set(witness) != {
+            'schema', 'version', 'executablePath', 'executableSha256'}:
+        raise ProducerWitnessError('original Python witness unavailable; regeneration required')
+    if witness['schema'] != PYTHON_SCHEMA or not isinstance(witness['version'], str) or not 1 <= len(witness['version']) <= 4096:
+        raise ProducerWitnessError('unsupported original Python witness')
+    path = witness['executablePath']
+    if not isinstance(path, str) or not 1 <= len(path) <= 4096 or not Path(path).is_absolute() or any(ord(c) < 32 for c in path):
+        raise ProducerWitnessError('invalid original Python invocation path')
+    if not isinstance(witness['executableSha256'], str) or not dependency.HEX.fullmatch(witness['executableSha256']):
+        raise ProducerWitnessError('invalid original Python executable identity')
+    ascii_canonical(witness)
+    return witness
+
+
 def validate_probe(root: Path, probe: dict[str, Any], *, image: Path, corpus_name: str) -> None:
     if probe.get('schema') != PROBE_SCHEMA or probe.get('probeOnly') is not True or probe.get('artifactCurrencyEstablished') is not False or probe.get('promotionAuthorized') is not False:
         raise ProducerWitnessError('probe cannot establish capture or promotion')
@@ -135,6 +184,7 @@ def prepare_exporter(root: Path, scratch: Path, environment: dict[str, str], *, 
     if CONTROLS & environment.keys():
         raise ProducerWitnessError('driver owns all witness and probe controls')
     ascii_canonical(environment)
+    python_witness = current_python_witness()
     before = source_freeze(root)
     developer = Path(environment['DEVELOPER_DIR'])
     swift = developer / 'Toolchains/XcodeDefault.xctoolchain/usr/bin/swift'
@@ -166,9 +216,7 @@ def prepare_exporter(root: Path, scratch: Path, environment: dict[str, str], *, 
     run(argv)
     require_same_source(root, before)
     bin_path = Path(run([str(swift), 'build', '--show-bin-path', *options]).decode().strip())
-    if not bin_path.is_relative_to(scratch) or bin_path.is_symlink():
-        raise ProducerWitnessError('unknown compiled output layout')
-    image = bin_path / 'AutoTechnoCoreTests.xctest/Contents/MacOS/AutoTechnoCoreTests'
+    image = registered_image(bin_path, scratch)
     image_sha = file_hash(image)
     name = 'docs/local/reports/producer-probe-' + uuid.uuid4().hex + '.json'
     output = transaction.local_path(root, name)
@@ -188,6 +236,7 @@ def prepare_exporter(root: Path, scratch: Path, environment: dict[str, str], *, 
         raise ProducerWitnessError('compiled image changed during probe')
     require_same_source(root, before)
     receipt = {'schema': BUILD_SCHEMA, 'source': before, 'buildArgv': argv,
+        'pythonWitness': python_witness,
         'buildConfiguration': configuration, 'driverEnvironmentSha256': dependency.digest(environment),
         'swiftCompilerIdentity': dependency.digest({'version': run([str(swift), '--version']).decode().strip(),
             'driverSha256': file_hash(swift.resolve()),
@@ -197,12 +246,15 @@ def prepare_exporter(root: Path, scratch: Path, environment: dict[str, str], *, 
         'probeArgv': probe_argv, 'probePath': name, 'probeSha256': file_hash(output, dependency.MAX_METADATA_BYTES),
         'probe': probe, 'qualification': dict(dependency.QUALIFICATION)}
     require_same_source(root, before)
+    if current_python_witness() != python_witness:
+        raise ProducerWitnessError('driver Python changed during exporter preparation')
     receipt['receiptFingerprint'] = dependency.digest(receipt)
     return receipt
 
 
 def capture_context(root: Path, receipt: dict[str, Any]) -> dict[str, str]:
     probe = receipt['probe']
+    python_witness = original_python_witness(receipt)
     corpus = json.loads(dependency.regular_bytes(root, probe['captureCorpusPath']))
     return {'engineVersion': probe['engineVersion'], 'buildConfiguration': receipt['buildConfiguration'],
         'swiftCompilerIdentity': receipt['swiftCompilerIdentity'], 'sdkIdentity': receipt['sdkIdentity'],
@@ -210,7 +262,8 @@ def capture_context(root: Path, receipt: dict[str, Any]) -> dict[str, str]:
         'routeIdentityFingerprint': dependency.digest(corpus['routes']),
         'initialStateFingerprint': probe['initialStateFingerprint'],
         'corpusSha256': hashlib.sha256(dependency.regular_bytes(root, 'docs/BASELINE_CORPUS.json')).hexdigest(),
-        'pythonIdentity': dependency.digest({'version': sys.version, 'executableSha256': file_hash(Path(sys.executable).resolve())}),
+        'pythonIdentity': dependency.digest({'version': python_witness['version'],
+            'executableSha256': python_witness['executableSha256']}),
         'captureCorpusPath': probe['captureCorpusPath'], 'captureCorpusSha256': probe['captureCorpusSha256'],
         'compiledImageSha256': probe['compiledImageSha256'],
         'captureEnvironmentFingerprint': probe['captureEnvironmentSha256']}
@@ -239,6 +292,8 @@ def declaration(root: Path, family: str, snapshot: dict[str, Any], receipt: dict
             raise ProducerWitnessError('capture context differs from actual native probe')
     if context != capture_context(root, receipt):
         raise ProducerWitnessError('capture context differs from actual build and corpus')
+    if original_python_witness(receipt) != current_python_witness():
+        raise ProducerWitnessError('fresh capture driver Python differs from prepared original')
     scope = snapshot['families'][family]
     return {'schema': DECLARATION_SCHEMA, 'familyId': family,
         'dependencySnapshotFingerprint': snapshot['snapshotFingerprint'], 'gitHead': snapshot['gitHead'],

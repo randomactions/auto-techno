@@ -94,7 +94,7 @@ def native_context(root: Path, build: dict) -> dict:
         if probe[field] != build['probe'][field]:
             raise RetainedCaptureError('actual current private state/image/environment requires fresh capture')
     producer.require_same_source(root, before)
-    current = dict(build, probe=probe)
+    current = dict(build, probe=probe, pythonWitness=producer.current_python_witness())
     return {'context': producer.capture_context(root, current),
         'probePath': name,
         'probeSha256': producer.file_hash(output, dependency.MAX_METADATA_BYTES),
