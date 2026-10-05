@@ -422,7 +422,9 @@
         "schema-, contract-, corpus-, engine-, route-, build-, and dependency-bound evidence lifecycle metadata",
         "fifteen current artifact bindings, subordinate validation, exact whole/role PCM, and deficit-source traceability without a musical-quality claim",
         "offline process-local independent stereo analysis reuse with live input hashes, unchanged per-asset comparisons, bounded memory, cold fallback and all nineteen aggregate subordinate validators",
-        "Engine v49 and quality-contract schema50 bind post-relocation tonal ownership; candidate-vector43/transaction14 unchanged and all current primary seals unset pending complete fresh native qualification."
+        "Engine v49 and quality-contract schema50 bind post-relocation tonal ownership; candidate-vector43/transaction14 unchanged and all current primary seals unset pending complete fresh native qualification.",
+        "driver-owned fresh capture transaction binding with exact output/PCM coverage, original source ancestry, conservative frozen dependencies and exact transitive upstream captures; actual producer invocation accounting and scoped artifact currency remain required adoption work; lifecycle assessment v2 and Phase-1 v2 retain original whole/role envelopes with separate current source/context/probe verification, enforce paired origin/current bindings and post-cold byte/source checks, and keep unsupported families conservative",
+        "Registered tracked-derived deficit output is generated and independently checked in a separate same-origin candidate checkout. Original source, HEAD, index, inventory and complete upstream captures remain frozen; only the exact JSON/Markdown output slots may differ. Checked publication revalidates immutable inputs and restores original output bytes on validation failure; no currency or promotion authority."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoCore/LiveFeedback.swift",
@@ -442,7 +444,8 @@
         "docs/LIVE_FEEDBACK.md",
         "docs/PRIMARY_EVALUATOR.md",
         "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
-        "docs/BASELINE_VALIDATION_THROUGHPUT.md"
+        "docs/BASELINE_VALIDATION_THROUGHPUT.md",
+        "docs/BASELINE_DEPENDENCY_CONTRACT.md"
       ],
       "dependsOn": [
         "session-director-and-score"
@@ -842,7 +845,11 @@
         "explicit retained-model native-rate calibrated admission mechanics; mixed-scope artifact, vector-only, legacy observation, altered metric, unsupported-rate and missing/unfinished proof refusal; no current artifact qualification",
         "Default-off post-study actual attenuation/recovery rerender verifies both current frozen-study live baseline fingerprints and constructs its exact offline primary artifacts; no corpus import, installed activation, long-horizon or final-source qualification. Historical scope-attack fixtures cannot load as current primary artifacts; capture checkpoints and adjacent context refuse ineligible products before canonical advancement or PCM export.",
         "One canonical preparationBoundaryRejection preserves ordered transaction identity and candidate hard-gate refusal before terminal route/prospective checks; independently testable without installed artifacts, nil never grants calibrated acceptance or prepared admission.",
-        "Default-off synchronous canonical preflight observations join actual source/ending continuation, incoming and suspended parents and corrective initial owners with BS.1770 Double rings/emitted energies/values/gates, fixed FIR history, perceptual FFT workspace/evidence values and per-bar movement arrays. Shared bounded metadata maxima retain no PCM or callback authority; native whole-report, chain admission/refusal and exhausted-observer controls preserve exact canonical outcomes. Standard-library internal scratch, other transients, heap/encoding/writer storage, RSS and deadlines remain unqualified; no resource charge or quality promotion changes."
+        "Default-off synchronous canonical preflight observations join actual source/ending continuation, incoming and suspended parents and corrective initial owners with BS.1770 Double rings/emitted energies/values/gates, fixed FIR history, perceptual FFT workspace/evidence values and per-bar movement arrays. Shared bounded metadata maxima retain no PCM or callback authority; native whole-report, chain admission/refusal and exhausted-observer controls preserve exact canonical outcomes. Standard-library internal scratch, other transients, heap/encoding/writer storage, RSS and deadlines remain unqualified; no resource charge or quality promotion changes.",
+        "opt-in local exporter witness observes actual loaded test image, initialization, process inputs and immutable manifest; driver-controlled fresh build and probe receipts are non-authoritative until cold family validation and native PCM parity adoption; trusted local-root aliases normalize before per-component symlink refusal and corpus identity comparison",
+        "registered offline whole/role producer driver requires absent isolated outputs, real native image witnesses, original cold family validation, exact transitive fresh bindings and separate witness-disabled whole/role PCM and typed-evidence parity; no artifact-currency or qualification authority",
+        "Independent detached completed-capture reader rechecks original Git source envelopes, actual loaded-image and private-initialization witnesses, registered successful producer/cold-validator logs, complete fresh upstream bindings, and exact witness-disabled whole/role PCM and foundation behavior; no current currency or promotion authority.",
+        "Explicit retained whole/role proof revalidates immutable original envelopes through current dependency assessment, live compiler/SDK/image checks and a fresh registered native initialization probe, then preserves cold PCM/content checks; unknown or changed producers recapture and other lifecycle families retain their guards. Original capture identities and current verification identities remain separate."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AudioQualityReport.swift",
@@ -914,7 +921,8 @@
         "Tests/AutoTechnoCoreTests/ModalSuccessorReportJoinTests.swift",
         "Tests/AutoTechnoCoreTests/ContinuousPrimaryPreparedAdmissionTests.swift",
         "Tests/AutoTechnoCoreTests/DiagnosticRoleStemStreamingTests.swift",
-        "Tests/AutoTechnoCoreTests/PhrasePreparationReplayIdentityTests.swift"
+        "Tests/AutoTechnoCoreTests/PhrasePreparationReplayIdentityTests.swift",
+        "Tests/AutoTechnoCoreTests/BaselineProducerWitnessTests.swift"
       ],
       "contracts": [
         "docs/SOUND_QUALITY.md",

@@ -66,6 +66,8 @@ struct BaselineRenderIntegrationTests {
         try validateFrozenCohort(corpus, baseline: baseline, root: root)
         let output = root.appendingPathComponent("docs/local/audio/baseline-corpus-\(namespace)", isDirectory: true)
         let report = root.appendingPathComponent("docs/local/reports/baseline-corpus-\(namespace)", isDirectory: true)
+        let witness = try BaselineProducerCaptureWitness.begin(root: root,
+            family: "whole-mix-render", corpusURL: corpusURL, outputDirectories: [output, report])
         if namespace != "v1",
            (FileManager.default.fileExists(atPath: output.path) ||
             FileManager.default.fileExists(atPath: report.path)) {
@@ -78,7 +80,7 @@ struct BaselineRenderIntegrationTests {
         var entries: [Entry] = []
         for fixture in corpus.cases {
             for route in corpus.routes {
-                entries.append(try render(fixture, route: route, namespace: namespace, limit: corpus.checkpointPolicy.maximumPhrases, primary: primary, longHorizon: longHorizon, output: output))
+                entries.append(try render(fixture, route: route, namespace: namespace, limit: corpus.checkpointPolicy.maximumPhrases, primary: primary, longHorizon: longHorizon, output: output, witness: witness))
             }
         }
         let manifest = Manifest(
@@ -91,16 +93,25 @@ struct BaselineRenderIntegrationTests {
         )
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        try encoder.encode(manifest).write(to: report.appendingPathComponent("manifest.json"), options: .atomic)
+        let manifestData = try encoder.encode(manifest)
+        let manifestURL = report.appendingPathComponent("manifest.json")
+        try manifestData.write(to: manifestURL, options: .atomic)
+        try witness?.finish(artifactURL: manifestURL, artifactData: manifestData)
         #expect(entries.count == corpus.cases.count * corpus.routes.count)
     }
 
-    private func render(_ fixture: Corpus.Case, route: Corpus.Route, namespace: String, limit: Int, primary: ProfessionalQualityPrimaryArtifacts, longHorizon: LongHorizonProfessionalPolicyArtifacts, output: URL) throws -> Entry {
+    private func render(_ fixture: Corpus.Case, route: Corpus.Route, namespace: String, limit: Int, primary: ProfessionalQualityPrimaryArtifacts, longHorizon: LongHorizonProfessionalPolicyArtifacts, output: URL,
+        witness: BaselineProducerCaptureWitness?) throws -> Entry {
         let director = AutonomousSessionDirector(rootSeed: fixture.rootSeed)
         var state = director.initialState()
         var renderState = RenderState(), graphState = GeneratedDSPContinuationState()
         var previousGraph: DSPGraphPlan?, horizon: LongHorizonFutureAdaptationState?
         var previousChapter: InterlockChapter?
+        try witness?.record(BaselineProducerCaptureWitness.initialState(
+            id: fixture.id + "--" + route.id, rootSeed: fixture.rootSeed,
+            sampleRate: route.sampleRate, channelCount: route.channelCount,
+            routeGeneration: route.routeGeneration, routeRecovery: route.routeRecovery,
+            state: state, render: renderState, graph: graphState))
         var predecessor: PreparedPerformancePhrase?
         var boundarySample: Int64 = 0
         for _ in 0..<limit {
