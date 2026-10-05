@@ -95,7 +95,13 @@ def native_context(root: Path, build: dict) -> dict:
             raise RetainedCaptureError('actual current private state/image/environment requires fresh capture')
     producer.require_same_source(root, before)
     current = dict(build, probe=probe)
-    return producer.capture_context(root, current)
+    return {'context': producer.capture_context(root, current),
+        'probePath': name,
+        'probeSha256': producer.file_hash(output, dependency.MAX_METADATA_BYTES),
+        'diagnosticSha256': producer.file_hash(
+            transaction.local_path(root, directory + '/native.log'), 16 * 1024 * 1024),
+        'invocationFingerprint': dependency.digest(argv),
+        'actualArgumentsFingerprint': dependency.digest(probe['actualArguments'])}
 
 
 def origin_for_validator(root: Path, directory: str, family: str) -> dict:
@@ -110,7 +116,8 @@ def origin_for_validator(root: Path, directory: str, family: str) -> dict:
     if assessment['families'][family]['action'] == 'recapture-required':
         raise RetainedCaptureError('changed or unknown producer dependencies require fresh capture')
     build = dependency.read_json(transaction.local_path(root, directory + '/build.json'))
-    context = native_context(root, build)
+    native = native_context(root, build)
+    context = native['context']
     current = dependency.capture(root, context)
     assessment = dependency.assess(snapshot, current, root)
     if assessment['families'][family]['action'] == 'recapture-required':
@@ -125,11 +132,20 @@ def origin_for_validator(root: Path, directory: str, family: str) -> dict:
         manifests[name] = dependency.read_json(transaction.local_path(root, artifact))
     producer.require_same_source(root, before)
     return {'gitHead': snapshot['gitHead'],
+        'originSnapshotFingerprint': snapshot['snapshotFingerprint'],
+        'validationFingerprint': original['validationFingerprint'],
         'contractBaselineFingerprint': snapshot['executionFingerprint'],
         'sourceFingerprint': original['sourceFingerprint'],
         'captureCorpusPath': snapshot['context']['captureCorpusPath'],
         'captureCorpusSha256': snapshot['context']['captureCorpusSha256'],
         'currentSnapshotFingerprint': current['snapshotFingerprint'],
+        'currentGitHead': current['gitHead'],
+        'currentContractBaselineFingerprint': current['executionFingerprint'],
+        'currentCaptureContextFingerprint': dependency.digest(current['context']),
+        'currentSourceFreezeFingerprint': dependency.digest(before),
+        'currentProbeVerification': {k: native[k] for k in (
+            'probePath', 'probeSha256', 'diagnosticSha256', 'invocationFingerprint',
+            'actualArgumentsFingerprint')},
         'action': assessment['families'][family]['action'],
         'manifests': manifests,
         'qualification': dict(dependency.QUALIFICATION)}

@@ -47,6 +47,7 @@ class PhaseOneGateTests(unittest.TestCase):
                 "configurationBinding": "aggregate-release-regeneration-wrapper",
                 "routeIdentity": "not-applicable",
                 "validator": node["validatorCommand"],
+                "currentVerification": None,
             })
         checks = [{
             "id": identifier,

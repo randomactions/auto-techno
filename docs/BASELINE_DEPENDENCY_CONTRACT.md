@@ -223,3 +223,29 @@ subordinate checks, both aggregate passes, holdouts, rejection and promotion
 gates remain required. Coordinated downstream lifecycle/cohort/aggregate adoption
 and map-only-versus-regeneration parity are still required before programme-wide
 scoped currency can be claimed.
+
+## Scoped lifecycle and aggregate consumer integration
+
+Lifecycle assessment v2 and Phase-1 report v2 record original artifact envelopes
+unchanged and keep registered whole/role current verification separate. Each
+verification binds original Git/source/execution and completed native parity
+receipt to current Git/snapshot/capture-context/source-freeze identities and a
+fresh actual native probe, diagnostic and registered/actual invocation receipts.
+Whole/role verification must share exactly the same original and current context.
+An explicit rejected selector cannot fall back; unsupported families retain their
+existing current-contract/source/content requirements.
+
+All fifteen lifecycle families and nineteen ordered subordinate checks remain
+mandatory. The aggregate rechecks current source and the actual probe, diagnostic,
+loaded image and invocation bytes after cold checks. Generate and check each
+execute fresh probes. Only their three event-receipt fields (probe path, file hash
+and native diagnostic hash) and derived fingerprints may differ after independent
+verification. Every semantic identity, original envelope and verdict remains exact;
+check never rewrites saved artifacts or metadata.
+
+This changes conservative COMMON inputs and requires a new clean original capture;
+prior proof cannot be retagged. Legacy report schemas are not upgraded in place.
+Native/component parity is not programme-wide adoption: actual shared-cohort and
+complete fifteen-family/nineteen-check/two-aggregate parity against regeneration
+remain required at the coordinated current engine boundary. Holdouts, rejection,
+replay, routes, resources, memory/deadline and promotion gates remain unchanged.

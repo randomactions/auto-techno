@@ -168,6 +168,9 @@ class ValidationSessionTests(unittest.TestCase):
         runner = session.ValidationSessionRunner(self.root, fallback)
         self.invoke(runner, "stereo_compatibility_baseline_report.py", "generate")
         expected = gate_fixtures.PhaseOneGateTests().report()
+        policy_path = self.root / session.gate.lifecycle.POLICY_PATH
+        policy_path.parent.mkdir(parents=True, exist_ok=True)
+        policy_path.write_text(json.dumps(gate_fixtures.PhaseOneGateTests().policy()))
         def build_with_all_checks(root, nested_runner):
             results = session.gate.run_checks(root, nested_runner)
             self.assertEqual(len(results), 19)
