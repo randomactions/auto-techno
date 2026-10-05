@@ -151,9 +151,12 @@ extension NumericStorageInventory {
     }
 
     package func registerBlocks(_ blocks: [RenderBlock], owner: String) {
-        for (index, block) in blocks.enumerated() {
-            register(block.left, owner: "\(owner).\(index).left")
-            register(block.right, owner: "\(owner).\(index).right")
+        // Only the two channel owners are observed. Project them directly;
+        // enumerating whole RenderBlock values copies all score/evidence fields
+        // onto the already-deep detached render stack for no inventory purpose.
+        for index in blocks.indices {
+            register(blocks[index].left, owner: "\(owner).\(index).left")
+            register(blocks[index].right, owner: "\(owner).\(index).right")
         }
     }
 
