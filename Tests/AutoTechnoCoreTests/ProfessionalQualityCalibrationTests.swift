@@ -2148,46 +2148,8 @@ struct ProfessionalQualityCalibrationTests {
     func maskingLocalEvidencePreservesBarRoleAndBand() throws {
         func report(activeBar: Int, activeBand: String) throws ->
             ProfessionalQualityMaskingLocalEvidence {
-            let bars = [50, 51].map { bar in
-                let observations = SpectrumMaskingAnalyzer.rolePairs.flatMap {
-                    pair in
-                    let firstRole = pair.0
-                    let secondRole = pair.1
-                    return SpectrumMaskingAnalyzer.bands.map { band in
-                        let active = bar == activeBar &&
-                            band.name == activeBand &&
-                            firstRole == .foundation &&
-                            secondRole == .percussion
-                        return AutonomousMaskingObservationEvidence(
-                            bandName: band.name,
-                            lowerHz: band.lowerHz,
-                            upperHz: band.upperHz,
-                            firstRole: firstRole.rawValue,
-                            secondRole: secondRole.rawValue,
-                            analyzedWindowCount: SpectrumMaskingAnalyzer
-                                .analyzedWindowCount,
-                            activePairWindowCount: active ? 2 : 0,
-                            overlapWindowCount: active ? 1 : 0,
-                            longestOverlapRun: active ? 1 : 0,
-                            maximumOverlap: active ? 0.8 : 0
-                        )
-                    }
-                }
-                return AutonomousMaskingBarEvidence(
-                    bar: bar,
-                    sourceObservationCount: observations.count,
-                    observations: observations
-                )
-            }
-            return try ProfessionalQualityMaskingLocalEvidence(
-                engineVersion: QualityQualificationContract.engineVersion,
-                policyVersion: "masking-local-test.v1",
-                sourceReportFingerprint: "same-candidate-source",
-                planFingerprint: "same-plan",
-                checkpoint: .establishment,
-                sampleRate: 44_100,
-                sourceBars: bars
-            )
+            try AT0038LocalFixtureAcceptanceSupport.maskingFixture(
+                activeBar: activeBar, activeBand: activeBand)
         }
 
         let subBar50 = try report(activeBar: 50, activeBand: "sub")
@@ -2702,6 +2664,80 @@ struct ProfessionalQualityCalibrationTests {
         #expect(!verdict.accepted)
         #expect(verdict.reasons == [.metricOutOfRange])
         #expect(verdict.failedMetrics == [.truePeakDBTP])
+    }
+
+    @Test("AT0038 paired mean controls stay inside supplied canonical bounds")
+    func localAcceptanceMeanControlsUseCanonicalBounds() throws {
+        let profile = try ProfessionalQualityCalibrationProfile(
+            engineVersion: QualityQualificationContract.engineVersion,
+            sourceBankFingerprint: "at0038-mechanistic-profile-fixture",
+            sampleRates: ProfessionalQualityCalibrationProfile.requiredSampleRates,
+            observations: representativeObservations())
+        for rate in ProfessionalQualityCalibrationProfile.requiredSampleRates {
+            let proof = try AT0038LocalFixtureAcceptanceSupport.pairedKickMeanControl(
+                profile: profile, checkpoint: .establishment, sampleRate: rate)
+            #expect(try AT0038LocalFixtureAcceptanceSupport.pairedKickMeanControl(
+                profile: profile, checkpoint: .establishment, sampleRate: rate).localized == proof.localized)
+            for (source, projected) in [(proof.uniformSource, proof.uniform),
+                                        (proof.localizedSource, proof.localized)] {
+                let independent = source.map { 20 * log10($0.kickActiveRMS / $0.foundationActiveRMS) }
+                #expect(projected.barMeasurements.map(\.bar) == source.map(\.bar))
+                #expect(projected.barMeasurements.map(\.kickOverFoundationDB) == independent)
+                #expect(projected.meanDB == independent.reduce(0, +) / Double(independent.count))
+                let mean = try #require(projected.meanDB)
+                #expect(try #require(profile.effectiveBounds(for: .kickOverFoundationActiveDBMean,
+                    at: .establishment, observedValue: mean)).contains(mean))
+            }
+            #expect(proof.uniform.spreadDB == 0)
+            #expect(try #require(proof.localized.spreadDB) > 0)
+            #expect(proof.uniform.sourceReportFingerprint != proof.localized.sourceReportFingerprint)
+            #expect(proof.profileFingerprint == profile.fingerprint)
+        }
+        #expect(throws: AT0038AcceptanceError.invalidProjection) {
+            try AT0038LocalFixtureAcceptanceSupport.pairedKickMeanControl(
+                profile: profile, checkpoint: .establishment, sampleRate: 8_000)
+        }
+        // This mechanically fitted profile is not current qualified native authority.
+    }
+
+    @Test("AT0038 localized masking failure survives favorable peers and relocation")
+    func localAcceptanceMaskingFailureUsesCanonicalVerdict() throws {
+        let observations = try representativeObservations()
+        let profile = try ProfessionalQualityCalibrationProfile(
+            engineVersion: QualityQualificationContract.engineVersion,
+            sourceBankFingerprint: "at0038-mechanistic-masking-profile",
+            sampleRates: ProfessionalQualityCalibrationProfile.requiredSampleRates,
+            observations: observations)
+        let baseline = try #require(observations.first {
+            $0.checkpoint == .establishment && $0.sampleRate == 48_000
+        })
+        let checkpoint = try #require(profile[.establishment])
+        let bounds = try #require(checkpoint[.maskingMaximumOverlap])
+        let centered = try ProfessionalQualityObservation(
+            engineVersion: baseline.engineVersion, checkpoint: baseline.checkpoint,
+            sampleRate: baseline.sampleRate, hardGatesPassed: true, liveMaster: baseline.liveMaster,
+            metrics: checkpoint.bounds.map { ProfessionalQualityMetricValue(
+                metric: $0.metric, value: $0.lower + ($0.upper - $0.lower) * 0.5) })
+        let neutral = try AT0038LocalFixtureAcceptanceSupport.maskingFixture(
+            activeBar: -1, activeBand: "none", sampleRate: baseline.sampleRate)
+        #expect(try AT0038LocalFixtureAcceptanceSupport.maskingFixtureVerdict(neutral,
+            baseline: centered, profile: profile).accepted)
+        let localMaximum = bounds.upper + (1 - bounds.upper) * 0.5
+        #expect(localMaximum > bounds.upper && localMaximum <= 1)
+        for (bar, band) in [(50, "sub"), (51, "high")] {
+            let local = try AT0038LocalFixtureAcceptanceSupport.maskingFixture(
+                activeBar: bar, activeBand: band, maximumOverlap: localMaximum,
+                sampleRate: baseline.sampleRate)
+            let failed = try #require(local.observations.first { $0.maximumOverlap == localMaximum })
+            #expect(failed.bar == bar && failed.bandName == band)
+            #expect(local.observations.filter { $0.maximumOverlap == 0 }.count == 23)
+            let verdict = try AT0038LocalFixtureAcceptanceSupport.maskingFixtureVerdict(local,
+                baseline: centered, profile: profile)
+            #expect(!verdict.accepted)
+            #expect(verdict.reasons == [.metricOutOfRange])
+            #expect(verdict.failedMetrics == [.maskingMaximumOverlap])
+        }
+        // Existing bound/evaluator mechanism only; no new local musical threshold.
     }
 
     @Test("Safer one-sided metrics accept improvement but reject regression")

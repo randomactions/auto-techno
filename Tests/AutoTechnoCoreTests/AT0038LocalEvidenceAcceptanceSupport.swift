@@ -315,3 +315,121 @@ struct AT0038LocalCohortAudit {
         return result
     }
 }
+
+/// Mechanistic controls for the future complete producer. A supplied profile is
+/// a source of existing bounds, not proof of current artifact qualification.
+/// The parent producer must separately authenticate its complete native context.
+enum AT0038LocalFixtureAcceptanceSupport {
+    struct PairedKickMeanControl {
+        let uniformSource: [ProfessionalQualityKickFoundationLocalEvidence.SourceBar]
+        let localizedSource: [ProfessionalQualityKickFoundationLocalEvidence.SourceBar]
+        let uniform: ProfessionalQualityKickFoundationLocalEvidence
+        let localized: ProfessionalQualityKickFoundationLocalEvidence
+        let profileFingerprint: String
+        let targetMeanDB: Double
+    }
+
+    static func pairedKickMeanControl(
+        profile: ProfessionalQualityCalibrationProfile,
+        checkpoint: CanonicalJourneyCheckpoint, sampleRate: Double
+    ) throws -> PairedKickMeanControl {
+        guard profile.isComplete,
+              profile.engineVersion == QualityQualificationContract.engineVersion,
+              profile.sampleRates.contains(sampleRate),
+              ProfessionalQualityCalibrationProfile.requiredSampleRates.contains(sampleRate),
+              let bounds = profile[checkpoint]?[.kickOverFoundationActiveDBMean] else {
+            throw AT0038AcceptanceError.invalidProjection
+        }
+        let target = bounds.lower + (bounds.upper - bounds.lower) * 0.5
+        // Keep the +/-20 dB construction inside the existing +/-120 dB
+        // descriptive measurement range. This is fixture geometry, not policy.
+        guard target.isFinite, abs(target) < 100 else {
+            throw AT0038AcceptanceError.invalidProjection
+        }
+        let ratio = pow(10, target / 20)
+        let uniformSource = (8...11).map {
+            ProfessionalQualityKickFoundationLocalEvidence.SourceBar(
+                bar: $0, kickActiveRMS: ratio, foundationActiveRMS: 1)
+        }
+        let localizedSource = [ratio * 0.1, ratio, ratio, ratio * 10].enumerated().map {
+            ProfessionalQualityKickFoundationLocalEvidence.SourceBar(
+                bar: 8 + $0.offset, kickActiveRMS: $0.element, foundationActiveRMS: 1)
+        }
+        func report(_ bars: [ProfessionalQualityKickFoundationLocalEvidence.SourceBar],
+                    identity: String) throws -> ProfessionalQualityKickFoundationLocalEvidence {
+            try ProfessionalQualityKickFoundationLocalEvidence(
+                engineVersion: profile.engineVersion,
+                policyVersion: "at0038-mechanistic-mean-control.v1",
+                sourceReportFingerprint: profile.fingerprint + ":" + identity,
+                planFingerprint: "at0038-matched-mean-fixture.v1",
+                checkpoint: checkpoint, sampleRate: sampleRate,
+                sourceBarCount: bars.count, sourceBars: bars)
+        }
+        let uniform = try report(uniformSource, identity: "uniform-source")
+        let localized = try report(localizedSource, identity: "localized-source")
+        guard let uniformMean = uniform.meanDB, let localMean = localized.meanDB,
+              let uniformBounds = profile.effectiveBounds(for: .kickOverFoundationActiveDBMean,
+                at: checkpoint, observedValue: uniformMean),
+              let localBounds = profile.effectiveBounds(for: .kickOverFoundationActiveDBMean,
+                at: checkpoint, observedValue: localMean),
+              uniformBounds.contains(uniformMean), localBounds.contains(localMean),
+              uniform.spreadDB == 0, (localized.spreadDB ?? 0) > 0 else {
+            throw AT0038AcceptanceError.invalidProjection
+        }
+        return PairedKickMeanControl(uniformSource: uniformSource,
+            localizedSource: localizedSource, uniform: uniform, localized: localized,
+            profileFingerprint: profile.fingerprint, targetMeanDB: target)
+    }
+
+    /// One existing two-bar, three-role-pair/four-band fixture recipe shared
+    /// by localization and canonical-profile non-compensation controls.
+    static func maskingFixture(activeBar: Int, activeBand: String,
+        maximumOverlap: Double = 0.8, checkpoint: CanonicalJourneyCheckpoint = .establishment,
+        sampleRate: Double = 44_100) throws -> ProfessionalQualityMaskingLocalEvidence {
+        let bars = [50, 51].map { bar in
+            let observations = SpectrumMaskingAnalyzer.rolePairs.flatMap { pair in
+                SpectrumMaskingAnalyzer.bands.map { band in
+                    let active = bar == activeBar && band.name == activeBand &&
+                        pair.0 == .foundation && pair.1 == .percussion
+                    return AutonomousMaskingObservationEvidence(
+                        bandName: band.name, lowerHz: band.lowerHz, upperHz: band.upperHz,
+                        firstRole: pair.0.rawValue, secondRole: pair.1.rawValue,
+                        analyzedWindowCount: SpectrumMaskingAnalyzer.analyzedWindowCount,
+                        activePairWindowCount: active ? 2 : 0,
+                        overlapWindowCount: active ? 1 : 0,
+                        longestOverlapRun: active ? 1 : 0,
+                        maximumOverlap: active ? maximumOverlap : 0)
+                }
+            }
+            return AutonomousMaskingBarEvidence(bar: bar,
+                sourceObservationCount: observations.count, observations: observations)
+        }
+        return try ProfessionalQualityMaskingLocalEvidence(
+            engineVersion: QualityQualificationContract.engineVersion,
+            policyVersion: "masking-local-test.v1", sourceReportFingerprint: "same-candidate-source",
+            planFingerprint: "same-plan", checkpoint: checkpoint, sampleRate: sampleRate,
+            sourceBars: bars)
+    }
+
+    /// Retain the canonical observation and evaluator. Only the three existing
+    /// masking aggregates are reconstructed from the known local fixture source.
+    static func maskingFixtureVerdict(_ local: ProfessionalQualityMaskingLocalEvidence,
+        baseline: ProfessionalQualityObservation, profile: ProfessionalQualityCalibrationProfile
+    ) throws -> ProfessionalQualityVerdict {
+        guard local.engineVersion == baseline.engineVersion,
+              local.checkpoint == baseline.checkpoint, local.sampleRate == baseline.sampleRate,
+              !local.observations.isEmpty,
+              local.observations.allSatisfy({
+                  $0.analyzedWindowCount == SpectrumMaskingAnalyzer.analyzedWindowCount
+              }) else { throw AT0038AcceptanceError.invalidProjection }
+        let analyzed = local.observations.reduce(0) { $0 + $1.analyzedWindowCount }
+        var observation = try baseline.replacing(.maskingMaximumOverlap,
+            with: local.observations.map(\.maximumOverlap).max() ?? 0)
+        observation = try observation.replacing(.maskingOverlapWindowRatio,
+            with: Double(local.observations.reduce(0) { $0 + $1.overlapWindowCount }) / Double(analyzed))
+        observation = try observation.replacing(.maskingLongestRunRatio,
+            with: Double(local.observations.map(\.longestOverlapRun).max() ?? 0) /
+                Double(SpectrumMaskingAnalyzer.analyzedWindowCount))
+        return ProfessionalQualityProfileEvaluator.evaluate(observation, against: profile)
+    }
+}

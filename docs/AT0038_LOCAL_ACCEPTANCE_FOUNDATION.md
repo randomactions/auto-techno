@@ -63,3 +63,19 @@ admission path. Its synthetic source controls do not constitute a current full
 native cohort, accepted mean under a current qualified profile, or all four
 objective gates. The item-specific controller verifier and complete current
 source/plan/producer qualification context are still required.
+
+The next bounded fixture support conditions paired kick/foundation sources on
+existing supplied profile bounds, retains both original RMS sources, independently
+reconstructs their local measurements, and checks that both means remain within
+those same bounds while their local spreads differ. A shared masking fixture
+recipe retains bar, role-pair and band identity; its three existing aggregates
+feed the original observation/evaluator, so a single localized maximum above the
+existing profile bound refuses despite neutral peers or relocation. These are
+mechanistic controls with a fixture-fitted profile, not a qualified current native
+profile, perceptual defect labels or positive item authority. The complete parent
+producer must authenticate current native profile/source context and every gate.
+No engine owner, runtime state, module dependency or callback boundary changes.
+The shared test fixture moves into the existing support source; the semantic map
+retains the same evidence component while recording its fixture responsibility
+and the new support enum. Its manifest and generated symbol inventory are
+refreshed together; map check remains required.
