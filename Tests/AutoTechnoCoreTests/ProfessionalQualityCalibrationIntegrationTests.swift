@@ -239,6 +239,66 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         }
     }
 
+    @Test("Detached diagnostic serialization preserves actual report and successor bytes")
+    func detachedDiagnosticSerializationPreservesActualProducts() throws {
+        let seed: UInt64 = 48_300
+        let harness = CanonicalJourneyQualificationHarness(
+            engineVersion: QualityQualificationContract.engineVersion,
+            routeFingerprint: "score-only-coverage-selection", routeGeneration: 0)
+        let planned = try #require(harness.planCheckpoints(
+            director: AutonomousSessionDirector(rootSeed: seed)).first)
+        let execution = try executeJourney(seed: seed, sampleRate: 8_000,
+            maximumPhrases: planned.phraseIndex + 2, frozenCheckpoints: [planned],
+            requiresActualSuccessors: true)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        func actualObjects() throws -> [String: Any] {
+            ["originalReports": try JSONSerialization.jsonObject(with: encoder.encode(execution.reports)),
+             "actualSuccessorReceipts": try JSONSerialization.jsonObject(with: encoder.encode(execution.successors)),
+             "renderedPhraseCount": execution.renderedPhraseCount]
+        }
+        let original = try canonicalCacheJSON(actualObjects())
+        let scoped = try detachedDiagnosticJSON(actualObjects)
+        #expect(scoped == original)
+        #expect(try detachedDiagnosticJSON(actualObjects) == original)
+        // Inspect returned bytes after the temporary object pool has drained.
+        let decoded = try #require(JSONSerialization.jsonObject(with: scoped) as? [String: Any])
+        #expect((decoded["originalReports"] as? [Any])?.count == 1)
+        #expect((decoded["actualSuccessorReceipts"] as? [Any])?.count == 1)
+        #expect(execution.reports.count == 1 && execution.successors.count == 1)
+        let observation = try ProfessionalQualityObservation(
+            continuousReport: #require(execution.reports.first),
+            successor: #require(execution.successors.first))
+        #expect(observation.continuousModalSource != nil)
+        // Reduced-rate serialization control has no native-cohort authority.
+        #expect(throws: ProfessionalEvidenceReportBankError.incompleteJourneyCoverage) {
+            try ProfessionalEvidenceReportBank(reports: execution.reports)
+        }
+    }
+
+    @Test("Detached diagnostic scope preserves typed construction and JSON parsing errors")
+    func detachedDiagnosticSerializationPreservesErrors() throws {
+        enum SourceFailure: Error, Equatable { case unavailable }
+        #expect(throws: SourceFailure.unavailable) {
+            try detachedDiagnosticJSON { throw SourceFailure.unavailable }
+        }
+        func failure(_ operation: () throws -> Data) throws -> NSError {
+            do {
+                _ = try operation()
+                Issue.record("invalid diagnostic unexpectedly serialized")
+                throw SourceFailure.unavailable
+            } catch let error as NSError { return error }
+        }
+        func malformedObjects() throws -> [String: Any] {
+            let object = try JSONSerialization.jsonObject(with: Data("{".utf8))
+            return try #require(object as? [String: Any])
+        }
+        let original = try failure { try canonicalCacheJSON(malformedObjects()) }
+        let scoped = try failure { try detachedDiagnosticJSON(malformedObjects) }
+        #expect(scoped.domain == original.domain)
+        #expect(scoped.code == original.code)
+    }
+
     private struct FrozenCoverageCohort: Decodable {
         let schema: String
         let engineVersion: String
@@ -607,14 +667,16 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                     }
                 }.count
                 let filename = "\(partition)-ordinal-\(fixture.ordinal).json"
-                let artifact: [String: Any] = ["frozenPlanningEntry": originalEntry,
-                    "actualReportBank": try JSONSerialization.jsonObject(with: bank.deterministicJSON()),
-                    "actualSuccessorReceipts": try JSONSerialization.jsonObject(with: encoder.encode(receipts)),
-                    "continuousTrajectory": try JSONSerialization.jsonObject(with: encoder.encode(trajectory)),
-                    "renderedPhraseCounts": phraseCounts,
-                    "requiredUnavailableObservationCount": unavailable,
-                    "constructionAuthority": "actual typed products; diagnostic serialization cannot replace source reconstruction"]
-                try canonicalCacheJSON(artifact).write(to: output.appendingPathComponent(filename), options: .withoutOverwriting)
+                let artifact = try detachedDiagnosticJSON {
+                    ["frozenPlanningEntry": originalEntry,
+                     "actualReportBank": try JSONSerialization.jsonObject(with: bank.deterministicJSON()),
+                     "actualSuccessorReceipts": try JSONSerialization.jsonObject(with: encoder.encode(receipts)),
+                     "continuousTrajectory": try JSONSerialization.jsonObject(with: encoder.encode(trajectory)),
+                     "renderedPhraseCounts": phraseCounts,
+                     "requiredUnavailableObservationCount": unavailable,
+                     "constructionAuthority": "actual typed products; diagnostic serialization cannot replace source reconstruction"]
+                }
+                try artifact.write(to: output.appendingPathComponent(filename), options: .withoutOverwriting)
                 if partition == "development" { development.append(trajectory) } else { holdout.append(trajectory) }
                 completed.append(["partition": partition, "ordinal": fixture.ordinal, "artifact": filename,
                     "originalBankFingerprint": trajectory.sourceBankFingerprint,
@@ -2427,6 +2489,18 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                 checkpoints: CanonicalJourneyCheckpoint.allCases.map(\.rawValue)
             )
         }
+    }
+
+    /// Release temporary Foundation object graphs after detached serialization.
+    /// Only canonical Data escapes; fresh typed evidence remains with its owner.
+    private func detachedDiagnosticJSON(
+        _ makeObject: () throws -> [String: Any]
+    ) throws -> Data {
+        #if canImport(ObjectiveC)
+        return try autoreleasepool { try canonicalCacheJSON(makeObject()) }
+        #else
+        return try canonicalCacheJSON(makeObject())
+        #endif
     }
 
     func canonicalCacheJSON(_ object: [String: Any]) throws -> Data {
