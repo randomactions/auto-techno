@@ -2581,3 +2581,15 @@ exclusive OS directory-creation operation after input validation. A competing
 writer causes a pre-PCM refusal; its directory and manifest are preserved.
 The no-PCM filesystem control covers competing creation and repeated claims.
 This test-owned output claim performs no callback work or runtime activation.
+
+The same offline executor constructs each trajectory's temporary Foundation JSON
+objects inside one detached serialization scope and returns only the unchanged
+canonical Data before writing. Objective-C platforms drain a local autorelease
+pool; other platforms use the same synchronous serializer directly. Original typed
+report, successor and corpus ownership stays outside that scope. Actual-product
+controls preserve exact diagnostic bytes and source-bound observation construction;
+typed construction and JSON parsing errors propagate unchanged. This
+changes neither PCM nor native study inputs, output identity, file-claim semantics,
+quality/profile authority, callback work or preparation resource reservations.
+A diagnostic lifetime control is not native preparation allocation, RSS/deadline,
+Windows execution or physical-output qualification.
