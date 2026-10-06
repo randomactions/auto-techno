@@ -818,6 +818,30 @@ lifecycle families, subordinate/aggregate checks, shared cohorts, safety,
 rejection, replay, deadline/capacity and promotion gates remain unchanged.
 Dependency reuse requires independently validated installed bindings; unknown or
 legacy evidence remains conservatively stale and original envelopes are immutable.
+The `completed` state uses the same current objective receipt and qualification
+requirements as `verified-no-change`. A status edit, including a matching
+`last_completed_item` edit, cannot supply completion evidence or unlock work.
+Positive current admission remains unavailable until the authoritative
+item-specific machine verifier establishes every required objective gate.
+
+The human-approved 2026-10-06 compatibility boundary preserves items AT-0001
+through AT-0038 only as historical planning prerequisites. The fixed tuple in
+`scripts/roadmap_integrity.py` binds each exact completed row (including outcome,
+ordered dependencies, evidence and formatting) and private acceptance-plan bytes
+by SHA-256. It contains hashes only and cannot reconstruct private content.
+It is reviewed source, never regenerated or extended from current statuses,
+controller fields, receipts, local inventories or new plan hashes. Missing,
+changed or symlinked plans and changed rows lose historical admission and require
+the ordinary current completion evidence. Both historical and current admitted
+rows must satisfy their own prerequisites through the same fixed-point algorithm;
+an unfinished or unproven chain remains unavailable even if its descendant's
+historical bytes match. `last_completed_item` must name an admitted completion.
+These historical bindings assert unchanged planning scope only. They provide no
+current implementation, musical-quality, artifact-currency, runtime, release or
+promotion authority and waive none of the active item's objective gates. The
+single private Markdown roadmap remains the only work queue; the tuple cannot
+choose work, change a state or qualify a resource.
+
 Existing phase boundaries define nearer product milestone views. They never add
 another queue, permit out-of-order work, or turn later research into a release
 prerequisite. The verified-no-change state remains reserved for an existing
@@ -853,7 +877,8 @@ applicable objective gate. Only publication, exact-head CI, release app launch,
 app/route QA and physical-output soak may be explicitly not-applicable with
 their required scope limitation. An existing capability must still have positive
 implementation evidence; verified-no-change cannot exempt that gate.
-Listening remains optional. Opaque text, missing or invalid receipts, mutable or
+Listening remains optional. For current completed and verified-no-change rows,
+opaque text, missing or invalid receipts, mutable or
 stale source, and incomplete applicable gates cannot satisfy a dependency or make
 a later row eligible. No cross-revision no-change reuse contract is installed.
 A passed full-local or automated qualification result independently requires an

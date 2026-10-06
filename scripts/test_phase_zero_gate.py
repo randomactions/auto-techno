@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import io
 import json
 import subprocess
@@ -11,6 +12,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 MODULE_PATH = Path(__file__).with_name("phase_zero_gate.py")
@@ -72,6 +74,14 @@ class PhaseZeroGateTests(unittest.TestCase):
             },
         )
         self.write("docs/local/roadmap-plans/AT-0002.md", "plan\n")
+        self.write("docs/local/roadmap-plans/AT-0001.md", "historical fixture plan\n")
+        row = "| AT-0001 | `completed` | — | outcome | evidence |"
+        patch = mock.patch.object(gate.roadmap_integrity, "HISTORICAL_PLANNING_BINDINGS", (
+            ("AT-0001", hashlib.sha256(row.encode()).hexdigest(),
+             hashlib.sha256(b"historical fixture plan\n").hexdigest()),
+        ))
+        patch.start()
+        self.addCleanup(patch.stop)
         self.write(
             "docs/local/SYNTH_FX_DSP_RESEARCH_STUDY.md",
             self.roadmap(),
