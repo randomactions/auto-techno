@@ -162,5 +162,51 @@ class ResultStatusVocabularyTests(unittest.TestCase):
         self.assertIn("generated Markdown is stale", output.getvalue())
 
 
+    def local_qualification_record(self) -> dict[str, object]:
+        record = self.complete_record()
+        record["summary"] = "Complete local qualification; external release gates remain unverified."
+        for gate in record["gates"]:
+            if gate["id"] in ("implementation", "focused-local-verification",
+                              "full-local-verification", "automated-quality-qualification"):
+                continue
+            gate.update(status="not-run", evidence=[], limitation="Not run for this source.")
+        record["claim"]["status"] = "unverified"
+        record["claim"]["missingGates"] = [
+            gate["id"] for gate in record["gates"]
+            if gate["id"] in vocabulary_module.RELEASE_REQUIRED_GATES and gate["status"] != "passed"
+        ]
+        return record
+
+    def test_local_qualification_requires_immutable_revision_without_release_claim(self) -> None:
+        record = self.local_qualification_record()
+        for revision in ("working-tree", "main", "abc1234", "a" * 39, "g" * 40):
+            with self.subTest(revision=revision):
+                record["revision"] = revision
+                self.assertTrue(any("40-digit exact revision" in e for e in self.validate(record)))
+
+    def test_exact_local_qualification_allows_external_release_gates_not_run(self) -> None:
+        record = self.local_qualification_record()
+        self.assertEqual(self.validate(record), [])
+        self.assertEqual(record["claim"]["status"], "unverified")
+
+    def test_either_positive_complete_gate_requires_immutable_revision(self) -> None:
+        for identifier in ("full-local-verification", "automated-quality-qualification"):
+            with self.subTest(gate=identifier):
+                record = vocabulary_module.new_record("AT-0010")
+                for gate in record["gates"]:
+                    if gate["id"] == identifier:
+                        gate.update(status="passed", evidence=["complete gate result"], limitation="")
+                record["claim"]["missingGates"].remove(identifier)
+                self.assertTrue(any("40-digit exact revision" in e for e in self.validate(record)))
+
+    def test_focused_development_may_retain_working_tree(self) -> None:
+        record = vocabulary_module.new_record("AT-0010")
+        for gate in record["gates"]:
+            if gate["id"] in ("implementation", "focused-local-verification"):
+                gate.update(status="passed", evidence=["bounded development check"], limitation="")
+                record["claim"]["missingGates"].remove(gate["id"])
+        self.assertEqual(self.validate(record), [])
+
+
 if __name__ == "__main__":
     unittest.main()

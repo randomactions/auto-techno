@@ -57,6 +57,39 @@ class LocalArtifactDoctorTests(unittest.TestCase):
         self.assertEqual(result, 1)
         self.assertIn("required ignore rule is missing: docs/local/", diagnostic)
 
+    def test_optional_result_receipt_class_is_accepted_without_reading_receipts(self) -> None:
+        directory = self.root / doctor.LOCAL_ROOT / "result-records"
+        directory.mkdir()
+        (directory / "AT-0002.json").write_bytes(b"private bytes, not interpreted by the layout gate")
+        result, diagnostic = self.check()
+        self.assertEqual(result, 0)
+        self.assertIn("6 classes, 4 local files", diagnostic)
+
+    def test_result_receipt_class_must_be_a_real_directory(self) -> None:
+        directory = self.root / doctor.LOCAL_ROOT / "result-records"
+        directory.write_text("not a directory\n", encoding="utf-8")
+        result, diagnostic = self.check()
+        self.assertEqual(result, 1)
+        self.assertIn("local artifact class must be a real directory: result-records/", diagnostic)
+
+    def test_result_receipt_directory_symlink_is_rejected_without_following_it(self) -> None:
+        outside = self.root / "outside"
+        outside.mkdir()
+        (self.root / doctor.LOCAL_ROOT / "result-records").symlink_to(outside)
+        result, diagnostic = self.check()
+        self.assertEqual(result, 1)
+        self.assertIn("local artifact symlinks are forbidden: result-records", diagnostic)
+
+    def test_tracked_result_receipt_is_rejected(self) -> None:
+        directory = self.root / doctor.LOCAL_ROOT / "result-records"
+        directory.mkdir()
+        (directory / "AT-0002.json").write_text("{}\n", encoding="utf-8")
+        subprocess.run(["git", "add", "-f", "docs/local/result-records/AT-0002.json"],
+                       cwd=self.root, check=True)
+        result, diagnostic = self.check()
+        self.assertEqual(result, 1)
+        self.assertIn("local-only artifacts are tracked: docs/local/result-records/AT-0002.json", diagnostic)
+
     def test_tracked_local_artifact_is_rejected(self) -> None:
         subprocess.run(
             ["git", "add", "-f", "docs/local/roadmap-plans/AT-0001.md"],

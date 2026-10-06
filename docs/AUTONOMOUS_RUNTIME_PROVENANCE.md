@@ -784,10 +784,12 @@ licence, notice, version, hash, and REDIST re-entry gate in
 `docs/WINDOWS_DISTRIBUTION.md`. Research audio, video evidence, transcripts,
 renders, and the autonomous roadmap remain local and untracked.
 
-The local-only artifact doctor assigns new private evidence to five explicit
-classes under `docs/local/`: `roadmap-plans/`, `reports/`, `audio/`, `profiles/`,
-and `transcripts/`. The roadmap and local layout guide are the only permitted
-root files. `python3 scripts/local_artifact_doctor.py check` fails on a missing
+The local-only artifact doctor requires five explicit classes under `docs/local/`:
+`roadmap-plans/`, `reports/`, `audio/`, `profiles/`, and `transcripts/`.
+`result-records/` is an optional sixth real-directory class for private result
+receipts; a verified-no-change row still requires its current receipt there.
+The roadmap and local layout guide are the only permitted root files.
+`python3 scripts/local_artifact_doctor.py check` fails on a missing required
 class directory or blanket ignore rule, an unexpected root entry, any symlink,
 or any Git-tracked local path. The doctor reads names and Git metadata only; it
 does not open, classify, transform, copy, publish, or infer permission from the
@@ -803,6 +805,84 @@ and an exact list of missing release prerequisites. A professional-release claim
 cannot be verified without all nine objective gates passing for one 40-digit
 revision. Listening is the only `observed` gate and cannot be marked passed or
 used to override automated evidence.
+
+The private roadmap distinguishes focused development slices from complete
+qualification at the active item's named frozen boundary. Each receipt uses the
+existing result vocabulary, exact source and explicit missing gates. A frozen
+boundary records implementation, fixture/evaluator/policy/resource/contract state,
+private initialization and continuation context, toolchain, routes, corpus,
+disjoint holdouts and every required command. Development or failed states cannot
+authorize promotion, item completion or qualified resource replacement. Required
+lifecycle families, subordinate/aggregate checks, shared cohorts, safety,
+rejection, replay, deadline/capacity and promotion gates remain unchanged.
+Dependency reuse requires independently validated installed bindings; unknown or
+legacy evidence remains conservatively stale and original envelopes are immutable.
+The `completed` state uses the same current objective receipt and qualification
+requirements as `verified-no-change`. A status edit, including a matching
+`last_completed_item` edit, cannot supply completion evidence or unlock work.
+Positive current admission remains unavailable until the authoritative
+item-specific machine verifier establishes every required objective gate.
+
+The human-approved 2026-10-06 compatibility boundary preserves items AT-0001
+through AT-0038 only as historical planning prerequisites. The fixed tuple in
+`scripts/roadmap_integrity.py` binds each exact completed row (including outcome,
+ordered dependencies, evidence and formatting) and private acceptance-plan bytes
+by SHA-256. It contains hashes only and cannot reconstruct private content.
+It is reviewed source, never regenerated or extended from current statuses,
+controller fields, receipts, local inventories or new plan hashes. Missing,
+changed or symlinked plans and changed rows lose historical admission and require
+the ordinary current completion evidence. Both historical and current admitted
+rows must satisfy their own prerequisites through the same fixed-point algorithm;
+an unfinished or unproven chain remains unavailable even if its descendant's
+historical bytes match. `last_completed_item` must name an admitted completion.
+These historical bindings assert unchanged planning scope only. They provide no
+current implementation, musical-quality, artifact-currency, runtime, release or
+promotion authority and waive none of the active item's objective gates. The
+single private Markdown roadmap remains the only work queue; the tuple cannot
+choose work, change a state or qualify a resource.
+
+Existing phase boundaries define nearer product milestone views. They never add
+another queue, permit out-of-order work, or turn later research into a release
+prerequisite. The verified-no-change state remains reserved for an existing
+capability whose
+complete measured outcome and every applicable gate have authoritative current
+evidence. Its admission is presently unavailable: the installed result vocabulary
+validates reporting, but no installed item-specific machine verifier establishes
+all required implementation, focused/full verification and automated quality
+evidence. The integrity checker reports that missing foundation and cannot use
+such a row to satisfy a dependency. Passed labels, free text, scope hashes, file
+hashes, generic execution receipts or a Phase-1 passed flag cannot provide the
+missing authority. Phase-1 retains its bounded baseline claims and cannot invent
+item-specific musical qualification. A future verifier must substantiate the
+complete existing acceptance matrix through the canonical quality/evidence owners
+before positive no-change admission becomes available; no new quality owner or
+generic success schema is installed. Ordinary focused development reporting and
+the existing result vocabulary remain usable. The reserved row's evidence cell
+must link `docs/local/result-records/AT-xxxx.json` using the existing result-record
+schema. A no-change row must also have all its own prerequisites satisfied.
+The prerequisite-chain algorithm remains independent of ID order, while an
+unavailable, unfinished or invalid prerequisite cannot unlock descendants.
+Its focused-verification evidence includes
+a `roadmap-scope-sha256:`
+marker for the SHA-256 of canonical JSON with sorted keys, compact separators and
+ASCII escaping: item ID, exact outcome cell, ordered dependencies, and SHA-256 of
+that item's private acceptance plan bytes. The marker accompanies measured
+evidence; it cannot replace it. A changed outcome, dependency or plan invalidates
+the receipt even when tracked source is unchanged. The integrity checker validates
+the receipt and vocabulary, matching item
+subject and clean current 40-digit source revision, passed implementation,
+focused/full local verification and automated qualification, and every other
+applicable objective gate. Only publication, exact-head CI, release app launch,
+app/route QA and physical-output soak may be explicitly not-applicable with
+their required scope limitation. An existing capability must still have positive
+implementation evidence; verified-no-change cannot exempt that gate.
+Listening remains optional. For current completed and verified-no-change rows,
+opaque text, missing or invalid receipts, mutable or
+stale source, and incomplete applicable gates cannot satisfy a dependency or make
+a later row eligible. No cross-revision no-change reuse contract is installed.
+A passed full-local or automated qualification result independently requires an
+immutable revision, even while publication, app QA, soak and the release claim
+remain unverified. Focused development templates may retain `working-tree`.
 
 The private roadmap remains a single Markdown authority. Its offline integrity
 checker parses the exact Control C YAML subset, Control D states, and 390
