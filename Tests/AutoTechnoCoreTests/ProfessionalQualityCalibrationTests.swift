@@ -2828,6 +2828,91 @@ struct ProfessionalQualityCalibrationTests {
         }
     }
 
+    @Test("AT0038 localized duration fails alone while pooled masking stays favorable")
+    func localAcceptanceMaskingDurationMatrix() throws {
+        let observations = try representativeObservations()
+        let profile = try ProfessionalQualityCalibrationProfile(
+            engineVersion: QualityQualificationContract.engineVersion,
+            sourceBankFingerprint: "at0038-duration-mechanistic-profile",
+            sampleRates: ProfessionalQualityCalibrationProfile.requiredSampleRates,
+            observations: observations)
+        let matrix = try AT0038LocalFixtureAcceptanceSupport.maskingDurationMatrix(
+            profile: profile, observations: observations)
+        #expect(matrix.count == 14)
+        #expect(try AT0038LocalFixtureAcceptanceSupport.maskingDurationMatrix(
+            profile: profile, observations: Array(observations.reversed())) == matrix)
+        for control in matrix {
+            let checkpoint = control.baseline.checkpoint
+            let bounds = try #require(profile[checkpoint]?[.maskingLongestRunRatio])
+            let ratio = Double(control.overlapRun) / Double(SpectrumMaskingAnalyzer.analyzedWindowCount)
+            #expect(ratio > bounds.upper)
+            #expect(Double(control.overlapRun - 1) / Double(SpectrumMaskingAnalyzer.analyzedWindowCount) <= bounds.upper)
+            #expect(control.neutral.observations.allSatisfy { $0.activePairWindowCount == 0 })
+            #expect(control.profileFingerprint == profile.fingerprint)
+            for (local, verdict) in zip(control.localized, control.verdicts) {
+                let active = try #require(local.observations.first { $0.longestOverlapRun > 0 })
+                #expect(active.firstRole == MixRole.foundation.rawValue)
+                #expect(active.secondRole == MixRole.percussion.rawValue)
+                #expect([(50, "sub"), (51, "high")].contains { $0.0 == active.bar && $0.1 == active.bandName })
+                #expect(active.activePairWindowCount == control.overlapRun)
+                #expect(active.overlapWindowCount == control.overlapRun)
+                #expect(local.observations.filter { $0.longestOverlapRun == 0 }.count == 23)
+                let analyzed = local.observations.reduce(0) { $0 + $1.analyzedWindowCount }
+                let pooled = Double(local.observations.reduce(0) { $0 + $1.overlapWindowCount }) / Double(analyzed)
+                #expect(try #require(profile[checkpoint]?[.maskingOverlapWindowRatio]).contains(pooled))
+                #expect(try #require(profile[checkpoint]?[.maskingMaximumOverlap]).contains(active.maximumOverlap))
+                #expect(!verdict.accepted && verdict.failedMetrics == [.maskingLongestRunRatio])
+                #expect(try AT0038LocalFixtureAcceptanceSupport.maskingFixtureVerdict(local,
+                    baseline: control.baseline, profile: profile) == verdict)
+            }
+        }
+        // The supplied fixture profile is not native/current artifact authority.
+    }
+
+    @Test("AT0038 duration matrix refuses missing duplicate foreign and unprovable contexts")
+    func localAcceptanceMaskingDurationRefusesIncompleteMatrix() throws {
+        let observations = try representativeObservations()
+        let profile = try ProfessionalQualityCalibrationProfile(
+            engineVersion: QualityQualificationContract.engineVersion,
+            sourceBankFingerprint: "at0038-duration-context-profile",
+            sampleRates: ProfessionalQualityCalibrationProfile.requiredSampleRates,
+            observations: observations)
+        for partial in [Array(observations.dropLast()), observations + [observations[0]],
+                        Array(observations.dropLast()) + [observations[0]]] {
+            #expect(throws: AT0038AcceptanceError.incompleteNativeBank) {
+                try AT0038LocalFixtureAcceptanceSupport.maskingDurationMatrix(profile: profile, observations: partial)
+            }
+        }
+        let unsupported = try observations.map {
+            try ProfessionalQualityObservation(engineVersion: $0.engineVersion, checkpoint: $0.checkpoint,
+                sampleRate: 8_000, hardGatesPassed: $0.hardGatesPassed, liveMaster: $0.liveMaster, metrics: $0.metrics)
+        }
+        #expect(throws: AT0038AcceptanceError.incompleteNativeBank) {
+            try AT0038LocalFixtureAcceptanceSupport.maskingDurationMatrix(profile: profile, observations: unsupported)
+        }
+        let foreign = try observations.map {
+            try ProfessionalQualityObservation(engineVersion: "foreign-engine", checkpoint: $0.checkpoint,
+                sampleRate: $0.sampleRate, hardGatesPassed: $0.hardGatesPassed, liveMaster: $0.liveMaster, metrics: $0.metrics)
+        }
+        #expect(throws: AT0038AcceptanceError.invalidProjection) {
+            try AT0038LocalFixtureAcceptanceSupport.maskingDurationMatrix(profile: profile, observations: foreign)
+        }
+        let unprovable = try observations.map { try $0.replacing(.maskingLongestRunRatio, with: 1) }
+        let unprovableProfile = try ProfessionalQualityCalibrationProfile(
+            engineVersion: QualityQualificationContract.engineVersion,
+            sourceBankFingerprint: "at0038-duration-full-range-profile",
+            sampleRates: ProfessionalQualityCalibrationProfile.requiredSampleRates, observations: unprovable)
+        #expect(throws: AT0038AcceptanceError.invalidProjection) {
+            try AT0038LocalFixtureAcceptanceSupport.maskingDurationMatrix(profile: unprovableProfile, observations: unprovable)
+        }
+        for invalidRun in [0, SpectrumMaskingAnalyzer.analyzedWindowCount + 1] {
+            #expect(throws: AT0038AcceptanceError.invalidProjection) {
+                try AT0038LocalFixtureAcceptanceSupport.maskingFixture(activeBar: 50,
+                    activeBand: "sub", overlapRun: invalidRun)
+            }
+        }
+    }
+
     @Test("Safer one-sided metrics accept improvement but reject regression")
     func directionalSafetyBounds() throws {
         let observations = try representativeObservations()

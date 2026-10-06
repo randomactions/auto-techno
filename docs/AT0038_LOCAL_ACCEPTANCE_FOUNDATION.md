@@ -88,3 +88,23 @@ masking fixture helper refuses incomplete/foreign profile context, mismatched
 checkpoint or rate, and non-native inputs before composing an observation.
 This matrix is still test-owned mechanistic coverage; no native PCM cohort,
 current artifact qualification, perceptual label or positive receipt is supplied.
+
+The duration control uses the smallest valid integer overlap run above the
+supplied profile's existing longest-run bound. It places that run in one bar,
+role pair and band while keeping the pooled window ratio and maximum overlap
+inside their original bounds. All fourteen native checkpoint/rate identities
+must be uniquely represented; missing, duplicate, unsupported, foreign or
+physically unreachable rejection contexts refuse. Neutral conditional sentinels
+and absent measurements are preserved when centering a declared fixture
+challenge; this transformation is not a measurement of original source PCM.
+
+The artifact-bound constructor accepts only the existing canonical
+PrimaryArtifacts value, a complete original typed bank and unique matched actual
+successor receipts. It constructs continuous observations through the original
+source/receipt join and records all three artifact fingerprints plus bank/report/
+successor identities. This is a compositional semantic foundation with explicit
+unavailable authority, not a capture source/image verifier, current resource
+seal, complete36 cohort, full-local/global gate or positive receipt. Its real
+native/continuous positive path must be exercised by the later registered live
+parent on a finally authenticated source; the focused matrix controls exercise
+mechanics with fixture profiles. No diagnostic archive is decoded here.

@@ -385,7 +385,13 @@ enum AT0038LocalFixtureAcceptanceSupport {
     /// by localization and canonical-profile non-compensation controls.
     static func maskingFixture(activeBar: Int, activeBand: String,
         maximumOverlap: Double = 0.8, checkpoint: CanonicalJourneyCheckpoint = .establishment,
-        sampleRate: Double = 44_100) throws -> ProfessionalQualityMaskingLocalEvidence {
+        sampleRate: Double = 44_100,
+        overlapRun: Int? = nil) throws -> ProfessionalQualityMaskingLocalEvidence {
+        if let overlapRun {
+            guard (1...SpectrumMaskingAnalyzer.analyzedWindowCount).contains(overlapRun) else {
+                throw AT0038AcceptanceError.invalidProjection
+            }
+        }
         let bars = [50, 51].map { bar in
             let observations = SpectrumMaskingAnalyzer.rolePairs.flatMap { pair in
                 SpectrumMaskingAnalyzer.bands.map { band in
@@ -395,9 +401,9 @@ enum AT0038LocalFixtureAcceptanceSupport {
                         bandName: band.name, lowerHz: band.lowerHz, upperHz: band.upperHz,
                         firstRole: pair.0.rawValue, secondRole: pair.1.rawValue,
                         analyzedWindowCount: SpectrumMaskingAnalyzer.analyzedWindowCount,
-                        activePairWindowCount: active ? 2 : 0,
-                        overlapWindowCount: active ? 1 : 0,
-                        longestOverlapRun: active ? 1 : 0,
+                        activePairWindowCount: active ? (overlapRun ?? 2) : 0,
+                        overlapWindowCount: active ? (overlapRun ?? 1) : 0,
+                        longestOverlapRun: active ? (overlapRun ?? 1) : 0,
                         maximumOverlap: active ? maximumOverlap : 0)
                 }
             }
@@ -439,4 +445,132 @@ enum AT0038LocalFixtureAcceptanceSupport {
                 Double(SpectrumMaskingAnalyzer.analyzedWindowCount))
         return ProfessionalQualityProfileEvaluator.evaluate(observation, against: profile)
     }
+
+    struct MaskingDurationControl: Encodable, Equatable {
+        let profileFingerprint: String
+        let baseline: ProfessionalQualityObservation
+        let neutral: ProfessionalQualityMaskingLocalEvidence
+        let localized: [ProfessionalQualityMaskingLocalEvidence]
+        let verdicts: [ProfessionalQualityVerdict]
+        let overlapRun: Int
+    }
+
+    /// The smallest valid integer run above the existing duration bound. It
+    /// must leave the pooled ratio and maximum inside their existing bounds.
+    /// Centering is a declared fixture challenge, never measured source PCM.
+    static func maskingDurationControl(profile: ProfessionalQualityCalibrationProfile,
+        baseline: ProfessionalQualityObservation) throws -> MaskingDurationControl {
+        guard profile.isComplete, baseline.isComplete,
+              profile.engineVersion == QualityQualificationContract.engineVersion,
+              baseline.engineVersion == profile.engineVersion,
+              baseline.evidenceVersion == profile.evidenceVersion,
+              baseline.observationVersion == profile.observationVersion,
+              ProfessionalQualityCalibrationProfile.requiredSampleRates.contains(baseline.sampleRate),
+              let runBounds = profile[baseline.checkpoint]?[.maskingLongestRunRatio],
+              let maximumBounds = profile[baseline.checkpoint]?[.maskingMaximumOverlap],
+              runBounds.upper >= 0, runBounds.upper < 1,
+              maximumBounds.upper > SpectrumMaskingAnalyzer.overlapThreshold,
+              maximumBounds.upper <= 1 else { throw AT0038AcceptanceError.invalidProjection }
+        let windows = SpectrumMaskingAnalyzer.analyzedWindowCount
+        let run = Int(floor(runBounds.upper * Double(windows))) + 1
+        guard (1...windows).contains(run) else { throw AT0038AcceptanceError.invalidProjection }
+        var centered = baseline
+        for value in baseline.metrics {
+            guard let bounds = profile.effectiveBounds(for: value.metric,
+                at: baseline.checkpoint, observedValue: value.value) else {
+                throw AT0038AcceptanceError.invalidProjection
+            }
+            // A missing measurement stays omitted, and an existing conditional
+            // neutral sentinel stays neutral rather than inventing activity.
+            if value.metric.conditionalNeutralSentinel == value.value { continue }
+            centered = try centered.replacing(value.metric,
+                with: bounds.lower + (bounds.upper - bounds.lower) * 0.5)
+        }
+        let neutral = try maskingFixture(activeBar: -1, activeBand: "none",
+            checkpoint: baseline.checkpoint, sampleRate: baseline.sampleRate)
+        guard try maskingFixtureVerdict(neutral, baseline: centered, profile: profile).accepted else {
+            throw AT0038AcceptanceError.invalidProjection
+        }
+        var localized: [ProfessionalQualityMaskingLocalEvidence] = []
+        var verdicts: [ProfessionalQualityVerdict] = []
+        for (bar, band) in [(50, "sub"), (51, "high")] {
+            let local = try maskingFixture(activeBar: bar, activeBand: band,
+                maximumOverlap: maximumBounds.upper, checkpoint: baseline.checkpoint,
+                sampleRate: baseline.sampleRate, overlapRun: run)
+            let verdict = try maskingFixtureVerdict(local, baseline: centered, profile: profile)
+            guard !verdict.accepted, verdict.reasons == [.metricOutOfRange],
+                  verdict.failedMetrics == [.maskingLongestRunRatio] else {
+                throw AT0038AcceptanceError.invalidProjection
+            }
+            localized.append(local); verdicts.append(verdict)
+        }
+        return MaskingDurationControl(profileFingerprint: profile.fingerprint,
+            baseline: centered, neutral: neutral, localized: localized,
+            verdicts: verdicts, overlapRun: run)
+    }
+
+    /// Complete mechanics for one uniquely represented observation at each
+    /// native checkpoint. This is not an archive decoder or a qualified corpus.
+    static func maskingDurationMatrix(profile: ProfessionalQualityCalibrationProfile,
+        observations: [ProfessionalQualityObservation]) throws -> [MaskingDurationControl] {
+        let rates = ProfessionalQualityCalibrationProfile.requiredSampleRates
+        let checkpoints = CanonicalJourneyCheckpoint.allCases
+        guard observations.count == rates.count * checkpoints.count else {
+            throw AT0038AcceptanceError.incompleteNativeBank
+        }
+        var controls: [MaskingDurationControl] = []
+        for rate in rates {
+            for checkpoint in checkpoints {
+                let sources = observations.filter { $0.sampleRate == rate && $0.checkpoint == checkpoint }
+                guard sources.count == 1 else { throw AT0038AcceptanceError.incompleteNativeBank }
+                controls.append(try maskingDurationControl(profile: profile, baseline: sources[0]))
+            }
+        }
+        return controls
+    }
+
+    struct ArtifactBoundMaskingDurationMatrix: Encodable, Equatable {
+        let schema = "autotechno-at0038-offline-artifact-bound-masking-controls.v1"
+        let authority = "unavailable-without-current-source-cohort-and-global-gates"
+        let profileFingerprint: String
+        let adversarialFingerprint: String
+        let holdoutFingerprint: String
+        let sourceBankFingerprint: String
+        let sourceReportFingerprints: [String]
+        let successorFingerprints: [String]
+        let controls: [MaskingDurationControl]
+    }
+
+    /// Compose existing canonical constructors over original typed products.
+    /// The PrimaryArtifacts initializer validates the matched offline set; this
+    /// method does not authenticate capture source/image, activate that set, or
+    /// establish any full-local/global gate. A registered live parent must do so.
+    static func artifactBoundMaskingDurationMatrix(artifacts: ProfessionalQualityPrimaryArtifacts,
+        bank: ProfessionalEvidenceReportBank,
+        successors: [ProfessionalQualityModalSuccessorEvidence]) throws -> ArtifactBoundMaskingDurationMatrix {
+        _ = try AT0038LocalEvidenceAcceptanceSupport.reconstruct(bank)
+        guard successors.count == bank.reports.count,
+              Set(successors.map(\.sourceReportFingerprint)).count == successors.count else {
+            throw AT0038AcceptanceError.incompleteNativeBank
+        }
+        var observations: [ProfessionalQualityObservation] = []
+        var orderedSuccessors: [ProfessionalQualityModalSuccessorEvidence] = []
+        for report in bank.reports {
+            guard let successor = successors.first(where: {
+                $0.sourceReportFingerprint == report.evidenceFingerprint
+            }) else { throw AT0038AcceptanceError.incompleteNativeBank }
+            observations.append(try ProfessionalQualityObservation(continuousReport: report,
+                successor: successor))
+            orderedSuccessors.append(successor)
+        }
+        return ArtifactBoundMaskingDurationMatrix(
+            profileFingerprint: artifacts.profile.fingerprint,
+            adversarialFingerprint: artifacts.adversarialSuite.fingerprint,
+            holdoutFingerprint: artifacts.holdoutQualification.fingerprint,
+            sourceBankFingerprint: try ProfessionalQualityCalibrationTrajectory(bank: bank).sourceBankFingerprint,
+            sourceReportFingerprints: bank.reports.map(\.evidenceFingerprint),
+            successorFingerprints: orderedSuccessors.map(\.fingerprint),
+            controls: try maskingDurationMatrix(profile: artifacts.profile, observations: observations))
+    }
+
 }
