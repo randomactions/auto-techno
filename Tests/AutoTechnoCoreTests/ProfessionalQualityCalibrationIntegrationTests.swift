@@ -1645,6 +1645,12 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             throw ProfessionalQualityCalibrationError.invalidLocalFeatureEvidence
         }
 
+        let verifiesCohort = environment["AUTOTECHNO_AT0038_VERIFY_NATIVE_COHORT"] == "1"
+        guard !verifiesCohort || selectedSeeds == calibrationSeeds else {
+            throw AT0038AcceptanceError.invalidCohortMembership
+        }
+        var cohortAudit = try AT0038LocalCohortAudit(expectedSeeds: selectedSeeds)
+
         var reports: [(seed: UInt64,
                        report: ProfessionalQualityKickFoundationLocalEvidence)] = []
         for seed in selectedSeeds {
@@ -1669,6 +1675,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                   localWitnesses.map(\.masking) == maskingReports else {
                 throw AT0038AcceptanceError.invalidProjection
             }
+            if verifiesCohort { try cohortAudit.append(seed: seed, bank: bank) }
             let modalWindows = try bank.modalWindowFeatureReports()
             guard localReports.count ==
                     CanonicalJourneyCheckpoint.allCases.count *
@@ -1760,6 +1767,28 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                 "mean-db.{\(summary(means))} " +
                 "spread-db-paired-bars-ge-2.{\(summary(estimableSpreads))}"
             )
+        }
+
+        if verifiesCohort {
+            // The original plan's fourteen extrema subjects plus its explicitly
+            // requested seed33333 outlier rerender. Current extrema are additive.
+            let historical: [UInt64] = [90_909, 48_291, 161_803, 13, 7, 141_421,
+                30_303, 20_202, 866_025, 80_808, 42, 121_212, 40_404, 99_999, 33_333]
+            let required = try cohortAudit.requiredRerenderSeeds(historical: historical)
+            for seed in required {
+                var sourceReports: [CanonicalJourneyQualificationReport] = []
+                for rate in ProfessionalQualityCalibrationProfile.requiredSampleRates {
+                    sourceReports.append(contentsOf: try renderJourney(seed: seed, sampleRate: rate))
+                }
+                try cohortAudit.verifyRerender(seed: seed,
+                    bank: ProfessionalEvidenceReportBank(reports: sourceReports))
+            }
+            let groups = try cohortAudit.finish()
+            let reportBytes = try cohortAudit.encodedCompletedReport()
+            progress("at0038-descriptive-cohort-report json=" + String(decoding: reportBytes, as: UTF8.self))
+            progress("at0038-descriptive-cohort journeys=\(calibrationSeeds.count) " +
+                "groups=\(groups.count) rerendered=\(required.count) " +
+                "authority=unavailable-full-item-matrix-still-required")
         }
     }
 

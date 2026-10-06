@@ -840,7 +840,12 @@ serialization. Its focused source-field and tamper controls establish only that
 bounded reconstruction. They cannot establish the complete acceptance matrix,
 replace native cohort/rerender evidence, or unlock a roadmap dependency. The
 remaining acceptance obligations are recorded in
-`docs/AT0038_LOCAL_ACCEPTANCE_FOUNDATION.md`. Ordinary focused development reporting and
+`docs/AT0038_LOCAL_ACCEPTANCE_FOUNDATION.md`. The same diagnostic producer's explicit
+full-cohort option requires unchanged calibration membership, complete native
+checkpoint/rate groups and exact original typed projection equality for all
+historical and current extrema rerenders. Its bounded collector and synthetic
+controls do not establish current native/profile qualification or any positive
+item admission. Ordinary focused development reporting and
 the existing result vocabulary remain usable. The reserved row's evidence cell
 must link `docs/local/result-records/AT-xxxx.json` using the existing result-record
 schema. A no-change row must also have all its own prerequisites satisfied.

@@ -1,10 +1,10 @@
 import AutoTechnoCore
-import AutoTechnoDSP
+@testable import AutoTechnoDSP
 import Foundation
 
 /// Test-owned reconstruction of the existing descriptive projections. A witness
 /// proves these bounded fields only; it is not item admission or perceptual quality.
-struct AT0038LocalEvidenceWitness: Equatable {
+struct AT0038LocalEvidenceWitness: Encodable, Equatable {
     let kick: ProfessionalQualityKickFoundationLocalEvidence
     let masking: ProfessionalQualityMaskingLocalEvidence
 }
@@ -12,6 +12,11 @@ struct AT0038LocalEvidenceWitness: Equatable {
 enum AT0038AcceptanceError: Error, Equatable {
     case invalidProjection
     case incompleteNativeBank
+    case invalidCohortMembership
+    case duplicateSourceBank
+    case changedRerender
+    case incompleteRerenders
+    case oversizedProjection
 }
 
 enum AT0038LocalEvidenceAcceptanceSupport {
@@ -135,5 +140,178 @@ enum AT0038LocalEvidenceAcceptanceSupport {
             }
         }
         return AT0038LocalEvidenceWitness(kick: kick, masking: masking)
+    }
+}
+
+/// A detached bounded collector over fresh typed banks. It never decodes a saved
+/// trajectory or promotes descriptive measurements into a quality verdict.
+struct AT0038LocalCohortAudit {
+    struct Group: Encodable, Equatable {
+        let checkpoint: CanonicalJourneyCheckpoint
+        let sampleRate: Double
+        let journeyCount: Int
+        let noActivePairedBarsCount: Int
+        let pairedBarHistogram: [Int: Int]
+        let spreadSupportedJourneyCount: Int
+    }
+
+    struct Source: Encodable, Equatable {
+        let seed: UInt64
+        let bankFingerprint: String
+        let reportFingerprints: [String]
+    }
+
+    struct Report: Encodable, Equatable {
+        let schema = "autotechno-at0038-descriptive-cohort.v1"
+        let engineVersion = QualityQualificationContract.engineVersion
+        let evidenceVersion = ProfessionalEvidenceReportBank.evidenceVersion
+        let sources: [Source]
+        let rerenderedSeeds: [UInt64]
+        let groups: [Group]
+    }
+
+    private struct Journey {
+        let bankFingerprint: String
+        let kick: [ProfessionalQualityKickFoundationLocalEvidence]
+        let bytes: Data
+    }
+
+    let expectedSeeds: [UInt64]
+    private var journeys: [UInt64: Journey] = [:]
+    private var bankFingerprints = Set<String>()
+    private var rerendered = Set<UInt64>()
+    private var retainedBytes = 0
+    private var requiredRerenders: [UInt64]?
+
+    init(expectedSeeds: [UInt64]) throws {
+        guard !expectedSeeds.isEmpty,
+              expectedSeeds.count <= ProfessionalQualityCalibrationCorpus.maximumTrajectoryCount,
+              Set(expectedSeeds).count == expectedSeeds.count else {
+            throw AT0038AcceptanceError.invalidCohortMembership
+        }
+        self.expectedSeeds = expectedSeeds
+    }
+
+    mutating func append(seed: UInt64, bank: ProfessionalEvidenceReportBank) throws {
+        guard expectedSeeds.contains(seed), journeys[seed] == nil else {
+            throw AT0038AcceptanceError.invalidCohortMembership
+        }
+        let local = try AT0038LocalEvidenceAcceptanceSupport.reconstruct(bank)
+        let fingerprint = try ProfessionalQualityCalibrationTrajectory(bank: bank).sourceBankFingerprint
+        guard !bankFingerprints.contains(fingerprint) else {
+            throw AT0038AcceptanceError.duplicateSourceBank
+        }
+        guard bank.reports.allSatisfy({ $0.fixtureFingerprint.hasPrefix("seed-\(seed).") }) else {
+            throw AT0038AcceptanceError.invalidCohortMembership
+        }
+        let bytes = try AutonomousCandidateCanonicalJSON.data(local)
+        guard bytes.count <= ProfessionalEvidenceReportBank.maximumEncodedBytes - retainedBytes else {
+            throw AT0038AcceptanceError.oversizedProjection
+        }
+        journeys[seed] = Journey(bankFingerprint: fingerprint, kick: local.map(\.kick), bytes: bytes)
+        bankFingerprints.insert(fingerprint)
+        retainedBytes += bytes.count
+    }
+
+    func groups() throws -> [Group] {
+        guard Set(journeys.keys) == Set(expectedSeeds),
+              bankFingerprints.count == expectedSeeds.count else {
+            throw AT0038AcceptanceError.invalidCohortMembership
+        }
+        return try ProfessionalQualityCalibrationProfile.requiredSampleRates.flatMap { rate in
+            try CanonicalJourneyCheckpoint.allCases.map { checkpoint in
+                let local = expectedSeeds.compactMap { seed in
+                    journeys[seed]?.kick.first {
+                        $0.checkpoint == checkpoint && $0.sampleRate == rate
+                    }
+                }
+                guard local.count == expectedSeeds.count else {
+                    throw AT0038AcceptanceError.invalidCohortMembership
+                }
+                return Group(checkpoint: checkpoint, sampleRate: rate,
+                    journeyCount: local.count,
+                    noActivePairedBarsCount: local.filter { $0.availability == .noActivePairedBars }.count,
+                    pairedBarHistogram: Dictionary(grouping: local, by: \.pairedBarCount).mapValues(\.count),
+                    spreadSupportedJourneyCount: local.filter { $0.pairedBarCount >= 2 }.count)
+            }
+        }
+    }
+
+    /// Include all supplied historical subjects plus current supported extrema.
+    /// One pair has zero range but cannot establish within-checkpoint dispersion.
+    mutating func requiredRerenderSeeds(historical: [UInt64]) throws -> [UInt64] {
+        _ = try groups()
+        guard requiredRerenders == nil, !historical.isEmpty,
+              Set(historical).count == historical.count,
+              Set(historical).isSubset(of: Set(expectedSeeds)) else {
+            throw AT0038AcceptanceError.invalidCohortMembership
+        }
+        var required = Set(historical)
+        for rate in ProfessionalQualityCalibrationProfile.requiredSampleRates {
+            for checkpoint in CanonicalJourneyCheckpoint.allCases {
+                let supported = expectedSeeds.compactMap { seed -> (UInt64, Double)? in
+                    guard let local = journeys[seed]?.kick.first(where: {
+                        $0.checkpoint == checkpoint && $0.sampleRate == rate
+                    }), local.pairedBarCount >= 2, let spread = local.spreadDB else { return nil }
+                    return (seed, spread)
+                }
+                required.formUnion(try Self.extremalSeeds(supported))
+            }
+        }
+        let selected = expectedSeeds.filter { required.contains($0) }
+        requiredRerenders = selected
+        return selected
+    }
+
+    static func extremalSeeds(_ supported: [(UInt64, Double)]) throws -> Set<UInt64> {
+        guard supported.allSatisfy({ $0.1.isFinite }),
+              Set(supported.map { $0.0 }).count == supported.count else {
+            throw AT0038AcceptanceError.invalidProjection
+        }
+        guard let minimum = supported.map({ $0.1 }).min(),
+              let maximum = supported.map({ $0.1 }).max() else { return [] }
+        return Set(supported.filter { $0.1 == minimum || $0.1 == maximum }.map { $0.0 })
+    }
+
+    mutating func verifyRerender(seed: UInt64, bank: ProfessionalEvidenceReportBank) throws {
+        guard requiredRerenders?.contains(seed) == true,
+              let original = journeys[seed], !rerendered.contains(seed) else {
+            throw AT0038AcceptanceError.invalidCohortMembership
+        }
+        let local = try AT0038LocalEvidenceAcceptanceSupport.reconstruct(bank)
+        let fingerprint = try ProfessionalQualityCalibrationTrajectory(bank: bank).sourceBankFingerprint
+        guard fingerprint == original.bankFingerprint, local.map(\.kick) == original.kick,
+              try AutonomousCandidateCanonicalJSON.data(local) == original.bytes else {
+            throw AT0038AcceptanceError.changedRerender
+        }
+        rerendered.insert(seed)
+    }
+
+    func encodedCompletedReport() throws -> Data {
+        try AutonomousCandidateCanonicalJSON.data(completedReport())
+    }
+
+    func completedReport() throws -> Report {
+        let groups = try finish()
+        let sources = try expectedSeeds.map { seed -> Source in
+            guard let original = journeys[seed] else {
+                throw AT0038AcceptanceError.invalidCohortMembership
+            }
+            return Source(seed: seed, bankFingerprint: original.bankFingerprint,
+                reportFingerprints: original.kick.map(\.sourceReportFingerprint))
+        }
+        return Report(sources: sources,
+            rerenderedSeeds: expectedSeeds.filter { rerendered.contains($0) }, groups: groups)
+    }
+
+    func finish() throws -> [Group] {
+        let result = try groups()
+        guard let requiredRerenders, !requiredRerenders.isEmpty,
+              Set(requiredRerenders).count == requiredRerenders.count,
+              Set(requiredRerenders).isSubset(of: Set(expectedSeeds)),
+              rerendered == Set(requiredRerenders) else {
+            throw AT0038AcceptanceError.incompleteRerenders
+        }
+        return result
     }
 }

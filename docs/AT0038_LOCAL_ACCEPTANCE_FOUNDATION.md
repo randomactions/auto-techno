@@ -45,3 +45,21 @@ partial matrix, missing applicability, generic passed label or diagnostic archiv
 must refuse. This layer does not register such a verifier or manufacture a
 positive receipt. Full native studies remain owned by the qualification chat;
 this change is reviewed and validated with focused controls in an isolated build.
+
+The next producer layer is `AT0038LocalCohortAudit`, called only when the existing
+selected diagnostic explicitly requests `AUTOTECHNO_AT0038_VERIFY_NATIVE_COHORT=1`
+and selects the unchanged full calibration list. It requires complete unique seed
+and bank membership, all fourteen checkpoint/rate groups, exact availability and
+paired-count histograms, and exact original-source/projection equality on fresh
+rerender. The original fifteen subjects remain required; current supported
+minimum/maximum spread subjects, including ties, are added. Required rerenders
+are frozen inside the collector and incomplete closure refuses. One-pair cases
+remain counted but do not support a spread distribution. Retained canonical
+projection bytes share the existing 64 MiB report-bank encoded-byte ceiling;
+this is a detached staging bound, not proof of preparation/process memory.
+
+The collector has no archive decoder, profile constructor or result-record
+admission path. Its synthetic source controls do not constitute a current full
+native cohort, accepted mean under a current qualified profile, or all four
+objective gates. The item-specific controller verifier and complete current
+source/plan/producer qualification context are still required.

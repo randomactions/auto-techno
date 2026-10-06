@@ -655,6 +655,60 @@ struct QualityQualificationFoundationTests {
         }
     }
 
+    @Test("AT0038 typed cohort refuses omitted, duplicate and changed sources")
+    func localCohortMembershipAndRerenderControls() throws {
+        let first = try ProfessionalEvidenceReportBank(reports: qualificationReports(rootSeed: 1))
+        let second = try ProfessionalEvidenceReportBank(reports: qualificationReports(rootSeed: 2))
+        var audit = try AT0038LocalCohortAudit(expectedSeeds: [1, 2])
+        #expect(throws: AT0038AcceptanceError.invalidCohortMembership) { try audit.groups() }
+        #expect(throws: AT0038AcceptanceError.invalidCohortMembership) { try audit.append(seed: 1, bank: second) }
+        try audit.append(seed: 1, bank: first)
+        #expect(throws: AT0038AcceptanceError.invalidCohortMembership) { try audit.append(seed: 1, bank: first) }
+        #expect(throws: AT0038AcceptanceError.invalidCohortMembership) { try audit.append(seed: 3, bank: second) }
+        #expect(throws: AT0038AcceptanceError.duplicateSourceBank) { try audit.append(seed: 2, bank: first) }
+        #expect(throws: AT0038AcceptanceError.invalidCohortMembership) { try audit.groups() }
+        try audit.append(seed: 2, bank: second)
+        #expect(try AT0038LocalCohortAudit.extremalSeeds([]).isEmpty)
+        #expect(try AT0038LocalCohortAudit.extremalSeeds([(1, 0), (2, 4), (3, 4), (4, 2)]) == [1, 2, 3])
+        #expect(try AT0038LocalCohortAudit.extremalSeeds([(1, 0), (2, 0)]) == [1, 2])
+        #expect(throws: AT0038AcceptanceError.invalidProjection) {
+            try AT0038LocalCohortAudit.extremalSeeds([(1, .nan)])
+        }
+        #expect(throws: AT0038AcceptanceError.invalidProjection) {
+            try AT0038LocalCohortAudit.extremalSeeds([(1, 0), (1, 2)])
+        }
+        let groups = try audit.groups()
+        #expect(groups.count == 14)
+        #expect(groups.allSatisfy { $0.journeyCount == 2 })
+        #expect(groups.allSatisfy { $0.pairedBarHistogram.values.reduce(0, +) == 2 })
+        // The one-bar fixtures cannot become evidence of within-checkpoint spread.
+        #expect(groups.allSatisfy { $0.spreadSupportedJourneyCount == 0 })
+        #expect(throws: AT0038AcceptanceError.invalidCohortMembership) {
+            try audit.requiredRerenderSeeds(historical: [3])
+        }
+        #expect(try audit.requiredRerenderSeeds(historical: [1, 2]) == [1, 2])
+        #expect(throws: AT0038AcceptanceError.incompleteRerenders) { try audit.finish() }
+        #expect(throws: AT0038AcceptanceError.changedRerender) { try audit.verifyRerender(seed: 1, bank: second) }
+        try audit.verifyRerender(seed: 1, bank: first)
+        #expect(throws: AT0038AcceptanceError.incompleteRerenders) { try audit.finish() }
+        #expect(throws: AT0038AcceptanceError.invalidCohortMembership) { try audit.verifyRerender(seed: 1, bank: first) }
+        try audit.verifyRerender(seed: 2, bank: second)
+        #expect(try audit.finish() == groups)
+        let report = try audit.completedReport()
+        #expect(report.sources.map(\.seed) == [1, 2])
+        #expect(report.sources.allSatisfy { $0.reportFingerprints.count == 14 })
+        #expect(report.rerenderedSeeds == [1, 2])
+        #expect(report.groups == groups)
+        let encoded = try audit.encodedCompletedReport()
+        #expect(try audit.encodedCompletedReport() == encoded)
+        let decoded = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        #expect((decoded["sources"] as? [Any])?.count == 2)
+        #expect((decoded["groups"] as? [Any])?.count == 14)
+        #expect(throws: AT0038AcceptanceError.invalidCohortMembership) {
+            try AT0038LocalCohortAudit(expectedSeeds: [1, 1])
+        }
+    }
+
     @Test("Calibration cache rejects swapped seed and unbounded banks")
     func calibrationCacheRejectsSwappedOrUnboundedBanks() throws {
         let fileManager = FileManager.default
