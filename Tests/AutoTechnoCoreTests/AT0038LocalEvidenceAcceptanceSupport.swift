@@ -9,7 +9,7 @@ struct AT0038LocalEvidenceWitness: Equatable {
     let masking: ProfessionalQualityMaskingLocalEvidence
 }
 
-enum AT0038AcceptanceError: Error {
+enum AT0038AcceptanceError: Error, Equatable {
     case invalidProjection
     case incompleteNativeBank
 }

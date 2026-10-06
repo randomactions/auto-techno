@@ -562,6 +562,21 @@ struct QualityQualificationFoundationTests {
         #expect(try bank.deterministicJSON() == bank.deterministicJSON())
         #expect(try ProfessionalEvidenceReportBank(reports: reports) == bank)
 
+        // A complete native-rate synthetic typed bank exercises reconstruction,
+        // without claiming that these bounded fixtures are native journeys.
+        let localWitnesses = try AT0038LocalEvidenceAcceptanceSupport.reconstruct(bank)
+        #expect(localWitnesses.count == reports.count)
+        #expect(try localWitnesses.map(\.kick) == bank.kickFoundationLocalFeatureReports())
+        #expect(try localWitnesses.map(\.masking) == bank.maskingLocalFeatureReports())
+        #expect(try AT0038LocalEvidenceAcceptanceSupport.reconstruct(bank) == localWitnesses)
+        let nonNativeBank = try ProfessionalEvidenceReportBank(
+            reports: qualificationReports(sampleRates: [8_000]))
+        #expect(nonNativeBank.sampleRates == [8_000])
+        #expect(nonNativeBank.sourceReportCount == CanonicalJourneyCheckpoint.allCases.count)
+        #expect(throws: AT0038AcceptanceError.incompleteNativeBank) {
+            try AT0038LocalEvidenceAcceptanceSupport.reconstruct(nonNativeBank)
+        }
+
         let modalWindows = try bank.modalWindowFeatureReports()
         #expect(modalWindows.count == bank.sourceReportCount)
         let windowObservations = try bank.windowSupportedObservations()
@@ -926,11 +941,11 @@ struct QualityQualificationFoundationTests {
     )
 
     private func qualificationReports(
-        rootSeed: UInt64? = nil
+        rootSeed: UInt64? = nil,
+        sampleRates: [Double] = ProfessionalQualityCalibrationProfile.requiredSampleRates
     ) throws -> [CanonicalJourneyQualificationReport] {
         var reports: [CanonicalJourneyQualificationReport] = []
-        for sampleRate in ProfessionalQualityCalibrationProfile
-            .requiredSampleRates {
+        for sampleRate in sampleRates {
             let frameCount = StreamingPerceptualEvidenceAnalyzer.fftFrameCount(
                 sampleRate: sampleRate
             )

@@ -16,6 +16,14 @@ A native bank must cover each canonical checkpoint at each required rate exactly
 once. The existing opt-in diagnostic journey invokes this check on fresh typed
 reports; saved trajectory JSON cannot enter the helper.
 
+The existing `professionalEvidenceReportBank` test also exercises a complete
+native-rate synthetic typed bank with all fourteen checkpoint/rate identities,
+repeated reconstruction, and exact equality with both original projections. A
+valid complete one-rate 8 kHz bank must refuse native coverage. These are bounded
+constructor fixtures, not full native journeys or a calibration cohort. Their
+existing test and evidence ownership remain unchanged; no new state, module,
+flow owner or runtime boundary requires a map-manifest change in this follow-up.
+
 The six criteria below come from the private AT-0038 plan's “Tests and automated
 quality evidence” section. Historical v29 completion prose and its observed
 36-seed/504-report cohort and 15-seed/210-report rerenders describe historical
