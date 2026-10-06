@@ -22,8 +22,8 @@ if SCRIPT_DIRECTORY not in sys.path:
 import baseline_lifecycle_policy as lifecycle
 import roadmap_contract_baseline as contracts
 
-SCHEMA = "autotechno-baseline-dependency-snapshot.v1"
-ASSESSMENT_SCHEMA = "autotechno-baseline-dependency-assessment.v1"
+SCHEMA = "autotechno-baseline-dependency-snapshot.v3"
+ASSESSMENT_SCHEMA = "autotechno-baseline-dependency-assessment.v3"
 HEX = re.compile(r"[0-9a-f]{64}")
 MAX_FILES = 4096
 MAX_FILE_BYTES = 64 * 1024 * 1024
@@ -33,14 +33,15 @@ CONTEXT_KEYS = {
     "engineVersion", "buildConfiguration", "swiftCompilerIdentity", "sdkIdentity",
     "targetTriple", "compilerFlagsFingerprint", "routeIdentityFingerprint",
     "initialStateFingerprint", "corpusSha256", "pythonIdentity",
+    "captureCorpusPath", "captureCorpusSha256", "compiledImageSha256", "captureEnvironmentFingerprint",
 }
-CONTEXT_HASHES = {k for k in CONTEXT_KEYS if k.endswith("Fingerprint") or k == "corpusSha256"}
+CONTEXT_HASHES = {k for k in CONTEXT_KEYS if k.endswith("Fingerprint") or k.endswith("Sha256")}
 NAVIGATION = {"docs/codebase-map.json", "docs/CODEBASE_MAP.md", "scripts/codebase_map.py"}
 EXECUTION = {p for _, p in contracts.AUTHORITATIVE_DOCUMENTS} | {
     "docs/ROADMAP_EXECUTION_BASELINE.json"
 }
 COMMON = {"AGENTS.md", "LICENSE", "docs/BASELINE_DEPENDENCY_CONTRACT.md", "docs/BASELINE_LIFECYCLE_POLICY.json",
-          "scripts/baseline_dependency_contract.py", "scripts/baseline_lifecycle_policy.py"}
+          "scripts/baseline_dependency_contract.py", "scripts/baseline_capture_transaction.py", "scripts/baseline_producer_witness.py", "scripts/baseline_producer_capture_driver.py", "scripts/baseline_lifecycle_policy.py"}
 # Every compiled test file remains conservatively capture-bound. Narrowing that
 # closure requires producer proof; neither names nor unchanged PCM confer reuse.
 PRODUCERS = {"whole-mix-render", "role-stem-capture", "long-horizon-session",
@@ -97,7 +98,7 @@ def regular_bytes(root: Path, name: str) -> bytes:
 
 def git(root: Path, *args: str) -> bytes:
     try:
-        return subprocess.check_output(["git", "-c", "core.fsmonitor=false", *args],
+        return subprocess.check_output(["git", "--no-replace-objects", "-c", "core.fsmonitor=false", *args],
                                        cwd=root, stderr=subprocess.PIPE)
     except (OSError, subprocess.CalledProcessError) as exc:
         raise DependencyContractError("git inventory unavailable") from exc
@@ -117,6 +118,7 @@ def inventory(root: Path) -> list[str]:
 def validate_context(context: object) -> None:
     if not isinstance(context, dict) or set(context) != CONTEXT_KEYS:
         raise DependencyContractError("capture context requires exactly all versioned fields")
+    path_name(context["captureCorpusPath"])
     for key, value in context.items():
         if not isinstance(value, str) or not value or len(value) > 1024:
             raise DependencyContractError("invalid capture context: " + key)
@@ -198,6 +200,8 @@ def capture(root: Path, context: dict[str, str]) -> dict[str, Any]:
         if len(data) != record["byteCount"] or hashlib.sha256(data).hexdigest() != record["sha256"]:
             raise DependencyContractError("execution snapshot stale: " + record["path"])
     corpus = hashlib.sha256(regular_bytes(root, "docs/BASELINE_CORPUS.json")).hexdigest()
+    if context["captureCorpusSha256"] != hashlib.sha256(regular_bytes(root, context["captureCorpusPath"])).hexdigest():
+        raise DependencyContractError("capture corpus hash does not match live bytes")
     if context["corpusSha256"] != corpus:
         raise DependencyContractError("context corpus hash does not match live bytes")
     if sum((root / n).stat().st_size for n in names) > MAX_TOTAL_BYTES:
@@ -262,7 +266,7 @@ def committed_files(root: Path, head: str) -> dict[str, bytes]:
     if len(identities) > MAX_FILES:
         raise DependencyContractError("dependency origin inventory exceeds bound")
     try:
-        process = subprocess.run(["git", "cat-file", "--batch"], cwd=root,
+        process = subprocess.run(["git", "--no-replace-objects", "cat-file", "--batch"], cwd=root,
             input=b"".join(sha + b"\n" for _, sha in identities),
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
     except (OSError, subprocess.CalledProcessError) as exc:
@@ -298,6 +302,10 @@ def validate_snapshot(value: object, root: Path | None = None) -> None:
     if not isinstance(value["executionFingerprint"], str) or not HEX.fullmatch(value["executionFingerprint"]):
         raise DependencyContractError("invalid execution fingerprint")
     root = root or Path(__file__).resolve().parents[1]
+    try:
+        git(root, "merge-base", "--is-ancestor", value["gitHead"], "HEAD")
+    except DependencyContractError as exc:
+        raise DependencyContractError("dependency origin is not an available ancestor of current source") from exc
     originals = committed_files(root, value["gitHead"])
     expected = {n["id"]: n for n in lifecycle.NODES}
     if not isinstance(value["families"], dict) or set(value["families"]) != set(expected):

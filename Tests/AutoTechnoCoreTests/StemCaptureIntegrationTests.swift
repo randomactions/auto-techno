@@ -194,6 +194,8 @@ struct StemCaptureIntegrationTests {
             "docs/local/reports/baseline-stems-\(namespace)",
             isDirectory: true
         )
+        let witness = try BaselineProducerCaptureWitness.begin(root: root,
+            family: "role-stem-capture", corpusURL: corpusURL, outputDirectories: [output, report])
         if namespace != "v1",
            (FileManager.default.fileExists(atPath: output.path) ||
             FileManager.default.fileExists(atPath: report.path)) {
@@ -223,7 +225,8 @@ struct StemCaptureIntegrationTests {
                     wholeMix: try #require(
                         wholeEntries[fixture.id + "--" + route.id]
                     ),
-                    output: output
+                    output: output,
+                    witness: witness
                 )
                 entries.append(captured.stems)
                 foundationBehaviorCoverage.append(
@@ -297,6 +300,8 @@ struct StemCaptureIntegrationTests {
             ),
             options: .atomic
         )
+        try witness?.finish(artifactURL: report.appendingPathComponent("manifest.json"),
+            artifactData: manifestData)
         #expect(entries.count == corpus.cases.count * corpus.routes.count)
     }
 
@@ -308,7 +313,8 @@ struct StemCaptureIntegrationTests {
         primary: ProfessionalQualityPrimaryArtifacts,
         longHorizon: LongHorizonProfessionalPolicyArtifacts,
         wholeMix: WholeMixManifest.Entry,
-        output: URL
+        output: URL,
+        witness: BaselineProducerCaptureWitness?
     ) throws -> CapturedEntry {
         let director = AutonomousSessionDirector(rootSeed: fixture.rootSeed)
         var state = director.initialState()
@@ -317,6 +323,11 @@ struct StemCaptureIntegrationTests {
         var previousGraph: DSPGraphPlan?
         var horizon: LongHorizonFutureAdaptationState?
         var previousChapter: InterlockChapter?
+        try witness?.record(BaselineProducerCaptureWitness.initialState(
+            id: fixture.id + "--" + route.id, rootSeed: fixture.rootSeed,
+            sampleRate: route.sampleRate, channelCount: route.channelCount,
+            routeGeneration: route.routeGeneration, routeRecovery: route.routeRecovery,
+            state: state, render: renderState, graph: graphState))
         for _ in 0..<limit {
             let request = PhrasePreparationRequest(
                 key: PhrasePreparationKey(
