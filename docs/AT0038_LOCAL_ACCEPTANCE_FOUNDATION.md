@@ -79,3 +79,12 @@ The shared test fixture moves into the existing support source; the semantic map
 retains the same evidence component while recording its fixture responsibility
 and the new support enum. Its manifest and generated symbol inventory are
 refreshed together; map check remains required.
+
+The fixture controls cover all seven canonical checkpoints at both native rates.
+Each group independently reconstructs the paired mean, retains neutral masking
+windows, verifies a relocated local failure through the unchanged evaluator,
+and keeps absent kick pairs explicitly unavailable with null summaries. The
+masking fixture helper refuses incomplete/foreign profile context, mismatched
+checkpoint or rate, and non-native inputs before composing an observation.
+This matrix is still test-owned mechanistic coverage; no native PCM cohort,
+current artifact qualification, perceptual label or positive receipt is supplied.

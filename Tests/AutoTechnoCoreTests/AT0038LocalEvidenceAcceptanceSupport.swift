@@ -416,7 +416,14 @@ enum AT0038LocalFixtureAcceptanceSupport {
     static func maskingFixtureVerdict(_ local: ProfessionalQualityMaskingLocalEvidence,
         baseline: ProfessionalQualityObservation, profile: ProfessionalQualityCalibrationProfile
     ) throws -> ProfessionalQualityVerdict {
-        guard local.engineVersion == baseline.engineVersion,
+        guard profile.isComplete,
+              profile.engineVersion == QualityQualificationContract.engineVersion,
+              baseline.engineVersion == profile.engineVersion,
+              baseline.isComplete,
+              ProfessionalQualityCalibrationProfile.requiredSampleRates.contains(baseline.sampleRate),
+              profile.sampleRates.contains(baseline.sampleRate),
+              profile[baseline.checkpoint] != nil,
+              local.engineVersion == baseline.engineVersion,
               local.checkpoint == baseline.checkpoint, local.sampleRate == baseline.sampleRate,
               !local.observations.isEmpty,
               local.observations.allSatisfy({
