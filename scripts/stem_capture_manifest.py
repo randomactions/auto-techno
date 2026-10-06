@@ -339,9 +339,23 @@ def validate(
         whole_mix_manifest_path(root, namespace)
     ):
         errors.append("wholeMixManifestSha256 does not match the local manifest")
-    if manifest.get("contractBaselineFingerprint") != baseline.get(
-        "snapshotFingerprint"
-    ):
+    expected_contract = baseline.get('snapshotFingerprint')
+    if proof_directory := os.environ.get('AUTOTECHNO_BASELINE_CAPTURE_PROOF'):
+        if namespace != 'v1':
+            return ['retained capture proof requires its original canonical namespace']
+        try:
+            import baseline_retained_capture as retained_capture
+            retained = retained_capture.origin_for_validator(root, proof_directory, 'role-stem-capture')
+            if whole != retained['manifests']['whole-mix-render'] or manifest != retained['manifests']['role-stem-capture']:
+                return ['loaded whole/stem manifests differ from independently verified originals']
+            if corpus_path.relative_to(root.resolve()).as_posix() != retained['captureCorpusPath'] or sha256(corpus_path) != retained['captureCorpusSha256']:
+                return ['retained capture proof belongs to a different actual corpus']
+            expected_contract = retained['contractBaselineFingerprint']
+            if any(d.get('gitHead') != retained['gitHead'] or d.get('sourceFingerprint') != retained['sourceFingerprint'] for d in [whole, manifest]):
+                return ['retained whole/stem pair changed its original source/Git envelope']
+        except Exception as exc:
+            return ['retained capture proof rejected: ' + str(exc)]
+    if manifest.get("contractBaselineFingerprint") != expected_contract:
         errors.append("contractBaselineFingerprint does not match current baseline")
     if manifest.get("sourceFingerprint") != whole.get("sourceFingerprint"):
         errors.append("sourceFingerprint must match the whole-mix render source")
@@ -355,9 +369,7 @@ def validate(
     if corpus.get("schema") == "autotechno-at0039-foundation-cohort.v1":
         if corpus.get("sourceFingerprint") != whole.get("sourceFingerprint"):
             errors.append("AT-0039 cohort sourceFingerprint differs from whole-mix provenance")
-        if corpus.get("contractBaselineFingerprint") != baseline.get(
-            "snapshotFingerprint"
-        ):
+        if corpus.get("contractBaselineFingerprint") != expected_contract:
             errors.append("AT-0039 cohort contract baseline does not match current baseline")
 
     exceptions = manifest.get("nonlinearExceptions")

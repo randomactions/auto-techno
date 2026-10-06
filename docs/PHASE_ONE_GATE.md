@@ -4,7 +4,7 @@
 
 Status: **passed**
 
-- Gate fingerprint: `34aa861a4ed1fd2e58cfbb5202d0f26bb8e43b46add418b137e6db167427d77f`
+- Gate fingerprint: `9b1b2a860da8d2804bc1b86393021a56eca58b1883685d1b8e9fc7ac64067b78`
 - Contract baseline: `cf348ffd7625a0e2ed8fb92cb2b2133b1031a588e4b88b58b18f2a6c13b24c22`
 - Lifecycle policy: `239dae27a2121db9426f3fe14989913341c53b1a7e1133c51af93f0b6d0abe2b`
 - Build configuration: `release`
@@ -22,23 +22,27 @@ Fourteen whole mixes and 210 role signals are `exact` with 0 changed samples acr
 
 ## Artifact bindings
 
-| # | Family | Schema | Configuration binding | Validator |
-|---:|---|---|---|---|
-| 1 | `long-horizon-session` | `autotechno-long-horizon-session-baseline-report.v1` | `native-artifact-field` | `python3 scripts/session_trajectory_baseline_report.py --check` |
-| 2 | `whole-mix-render` | `autotechno-baseline-render-manifest.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/baseline_render_manifest.py check` |
-| 3 | `pcm-comparison-whole` | `autotechno-pcm-comparison-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/pcm_comparison_report.py check --report <report>` |
-| 4 | `performance-envelope` | `autotechno-performance-envelope-report.v1` | `native-artifact-field` | `python3 scripts/performance_envelope_report.py check <trace-arguments>` |
-| 5 | `role-stem-capture` | `autotechno-role-stem-manifest.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/stem_capture_manifest.py check` |
-| 6 | `score-motif` | `autotechno-score-motif-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/score_motif_baseline_report.py check` |
-| 7 | `section-boundary` | `autotechno-section-boundary-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/section_boundary_baseline_report.py check` |
-| 8 | `kick-foundation-collision` | `autotechno-kick-foundation-collision-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/kick_foundation_collision_report.py check` |
-| 9 | `pcm-comparison-role` | `autotechno-pcm-comparison-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/pcm_comparison_report.py check --report <report>` |
-| 10 | `rhythmic-baseline` | `autotechno-rhythmic-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/rhythmic_baseline_report.py check` |
-| 11 | `signal-baseline` | `autotechno-signal-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/signal_baseline_report.py check` |
-| 12 | `spectral-baseline` | `autotechno-spectral-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/spectral_baseline_report.py check` |
-| 13 | `stereo-compatibility` | `autotechno-stereo-compatibility-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/stereo_compatibility_baseline_report.py check` |
-| 14 | `transient-envelope` | `autotechno-transient-envelope-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/transient_envelope_baseline_report.py check` |
-| 15 | `deficit-register` | `autotechno-deficit-register.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/deficit_register.py check` |
+Original artifact envelopes remain capture facts. Registered current
+verification is recorded separately; unsupported families retain the
+legacy current-contract requirement. Every content gate remains required.
+
+| # | Family | Schema | Configuration binding | Current verification | Validator |
+|---:|---|---|---|---|---|
+| 1 | `long-horizon-session` | `autotechno-long-horizon-session-baseline-report.v1` | `native-artifact-field` | `legacy-current-contract` | `python3 scripts/session_trajectory_baseline_report.py --check` |
+| 2 | `whole-mix-render` | `autotechno-baseline-render-manifest.v1` | `aggregate-release-regeneration-wrapper` | `legacy-current-contract` | `python3 scripts/baseline_render_manifest.py check` |
+| 3 | `pcm-comparison-whole` | `autotechno-pcm-comparison-report.v1` | `aggregate-release-regeneration-wrapper` | `legacy-current-contract` | `python3 scripts/pcm_comparison_report.py check --report <report>` |
+| 4 | `performance-envelope` | `autotechno-performance-envelope-report.v1` | `native-artifact-field` | `legacy-current-contract` | `python3 scripts/performance_envelope_report.py check <trace-arguments>` |
+| 5 | `role-stem-capture` | `autotechno-role-stem-manifest.v1` | `aggregate-release-regeneration-wrapper` | `legacy-current-contract` | `python3 scripts/stem_capture_manifest.py check` |
+| 6 | `score-motif` | `autotechno-score-motif-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `legacy-current-contract` | `python3 scripts/score_motif_baseline_report.py check` |
+| 7 | `section-boundary` | `autotechno-section-boundary-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `legacy-current-contract` | `python3 scripts/section_boundary_baseline_report.py check` |
+| 8 | `kick-foundation-collision` | `autotechno-kick-foundation-collision-report.v1` | `aggregate-release-regeneration-wrapper` | `legacy-current-contract` | `python3 scripts/kick_foundation_collision_report.py check` |
+| 9 | `pcm-comparison-role` | `autotechno-pcm-comparison-report.v1` | `aggregate-release-regeneration-wrapper` | `legacy-current-contract` | `python3 scripts/pcm_comparison_report.py check --report <report>` |
+| 10 | `rhythmic-baseline` | `autotechno-rhythmic-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `legacy-current-contract` | `python3 scripts/rhythmic_baseline_report.py check` |
+| 11 | `signal-baseline` | `autotechno-signal-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `legacy-current-contract` | `python3 scripts/signal_baseline_report.py check` |
+| 12 | `spectral-baseline` | `autotechno-spectral-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `legacy-current-contract` | `python3 scripts/spectral_baseline_report.py check` |
+| 13 | `stereo-compatibility` | `autotechno-stereo-compatibility-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `legacy-current-contract` | `python3 scripts/stereo_compatibility_baseline_report.py check` |
+| 14 | `transient-envelope` | `autotechno-transient-envelope-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `legacy-current-contract` | `python3 scripts/transient_envelope_baseline_report.py check` |
+| 15 | `deficit-register` | `autotechno-deficit-register.v1` | `aggregate-release-regeneration-wrapper` | `legacy-current-contract` | `python3 scripts/deficit_register.py check` |
 
 ## Qualification boundaries
 
@@ -58,6 +62,7 @@ Fourteen whole mixes and 210 role signals are `exact` with 0 changed samples acr
 
 ## Limitations
 
+- Historical format conversion only: this report preserves the original v1 source/context, all fifteen artifact envelopes, nineteen check results and qualification limits. Original gate fingerprint 34aa861a4ed1fd2e58cfbb5202d0f26bb8e43b46add418b137e6db167427d77f. Explicit null current verification establishes no current-source currency; schema conversion does not execute any content validator, native capture or promotion gate.
 - Current metadata does not replace any family-specific content validator.
 - Release configuration is natively recorded where supported and otherwise bound by this exact artifact-hash wrapper.
 - Cross-configuration and floating-point differences are incompatible until explicitly captured and compared; they never weaken exact PCM gates.

@@ -1,6 +1,9 @@
 #if canImport(CryptoKit)
 import CryptoKit
 import Foundation
+import ObjectiveC
+import AutoTechnoCore
+@testable import AutoTechnoDSP
 
 struct BaselineWholeManifest: Decodable {
     struct Entry: Decodable {
@@ -308,4 +311,285 @@ enum BaselineArtifactReportSupport {
         case invalidPCM(String)
     }
 }
+
+/// A local-only witness attached by the actual opt-in exporter. It observes the
+/// existing initialization and writes no score, PCM, continuation or policy.
+final class BaselineProducerCaptureWitness {
+    struct InitialState: Codable, Equatable {
+        let id: String
+        let rootSeedHex: String
+        let sampleRate: Int
+        let channelCount: Int
+        let routeGeneration: Int
+        let routeRecovery: Bool
+        let sessionStateFingerprint: String
+        let renderStateFingerprint: String
+        let graphStateFingerprint: String
+    }
+    struct ProducerIdentity: Encodable {
+        let files: [String: String]
+        let context: [String: String]
+        let upstream: [String: String]
+    }
+    struct Declaration: Decodable {
+        let schema: String
+        let familyId: String
+        let dependencySnapshotFingerprint: String
+        let gitHead: String
+        let contractBaselineFingerprint: String
+        let producerInputs: [String: String]
+        let producerContext: [String: String]
+        let upstreamProducerFingerprints: [String: String]
+        let producerFingerprint: String
+        let compiledImagePath: String
+        let compiledImageSha256: String
+        let captureCorpusPath: String
+        let captureCorpusSha256: String
+        let initialStates: [InitialState]
+        let captureEnvironmentSha256: String
+    }
+    private final class ImageAnchor: NSObject {}
+    private let root: URL
+    private let declaration: Declaration
+    private let declarationURL: URL
+    private let declarationSha256: String
+    private let environmentSha256: String
+    private let arguments: [String]
+    private var observed: [InitialState] = []
+
+    enum WitnessError: Error {
+        case invalidDeclaration, invalidPath, sourceChanged, compiledImageChanged
+        case existingOutput, stateMismatch, incompleteCapture, unavailableImage
+        case captureEnvironmentMismatch, producerFingerprintMismatch
+    }
+
+    static func canonical<T: Encodable>(_ value: T) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        return try encoder.encode(value)
+    }
+    // Informational JSON only. JSONSerialization's sortedKeys uses numeric,
+    // case-insensitive collation; dependency identity needs JSONEncoder's exact
+    // lexical ordering, matching the independently implemented Python contract.
+    static func objectJSON(_ value: Any) throws -> Data {
+        try JSONSerialization.data(withJSONObject: value,
+            options: [.sortedKeys, .withoutEscapingSlashes])
+    }
+    static func digest(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+    static func writeFresh(_ data: Data, to path: URL) throws {
+        // Foundation forbids combining atomic and withoutOverwriting. Exclusive
+        // creation protects existing receipts; a failed partial receipt has no
+        // authority and is rejected by the driver's exact-byte verification.
+        try data.write(to: path, options: .withoutOverwriting)
+        guard try fileDigest(path, maximumBytes: 8 * 1024 * 1024) == digest(data) else {
+            throw WitnessError.sourceChanged
+        }
+    }
+    static func captureEnvironment(_ environment: [String: String]) throws -> String {
+        // These three controls only address this detached witness/probe; the
+        // complete actual environment is separately hashed in the final record.
+        let controls = Set(["AUTOTECHNO_BASELINE_DEPENDENCY_DECLARATION",
+            "AUTOTECHNO_RUN_PRODUCER_WITNESS_PROBE", "AUTOTECHNO_PRODUCER_WITNESS_PROBE_OUTPUT"])
+        return digest(try canonical(environment.filter { !controls.contains($0.key) }))
+    }
+    static func initialState(id: String, rootSeed: UInt64, sampleRate: Int,
+        channelCount: Int, routeGeneration: Int, routeRecovery: Bool,
+        state: AutonomousSessionState, render: RenderState,
+        graph: GeneratedDSPContinuationState) -> InitialState {
+        InitialState(id: id, rootSeedHex: String(format: "%016llx", rootSeed),
+            sampleRate: sampleRate, channelCount: channelCount,
+            routeGeneration: routeGeneration, routeRecovery: routeRecovery,
+            sessionStateFingerprint: AutonomousCandidateFingerprint.sessionState(state),
+            renderStateFingerprint: AutonomousCandidateFingerprint.renderState(render),
+            graphStateFingerprint: AutonomousCandidateFingerprint.generatedDSPState(graph))
+    }
+    static func loadedImage() throws -> URL {
+        guard String(reflecting: ImageAnchor.self).hasPrefix("AutoTechnoCoreTests."),
+              let name = class_getImageName(ImageAnchor.self) else {
+            throw WitnessError.unavailableImage
+        }
+        // The image containing this class, rather than SwiftPM's host runner.
+        return URL(fileURLWithPath: String(cString: name))
+            .standardizedFileURL.resolvingSymlinksInPath()
+    }
+    static func fileDigest(_ path: URL, maximumBytes: Int = 64 * 1024 * 1024) throws -> String {
+        let values = try path.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey, .isSymbolicLinkKey])
+        guard values.isRegularFile == true, values.isSymbolicLink != true,
+              let size = values.fileSize, size <= maximumBytes else { throw WitnessError.invalidPath }
+        let handle = try FileHandle(forReadingFrom: path)
+        defer { try? handle.close() }
+        var hasher = SHA256(), count = 0
+        while let data = try handle.read(upToCount: 1024 * 1024), !data.isEmpty {
+            count += data.count
+            guard count <= maximumBytes else { throw WitnessError.invalidPath }
+            hasher.update(data: data)
+        }
+        guard count == size else { throw WitnessError.sourceChanged }
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+    static func localURL(_ name: String, root: URL, localOnly: Bool = false) throws -> URL {
+        let parts = name.split(separator: "/", omittingEmptySubsequences: false)
+        guard !name.isEmpty, !name.hasPrefix("/"), !name.contains("\\"),
+              !parts.contains(where: { $0.isEmpty || $0 == "." || $0 == ".." }),
+              !name.unicodeScalars.contains(where: { $0.value < 32 }),
+              !localOnly || name.hasPrefix("docs/local/") else { throw WitnessError.invalidPath }
+        // Foundation resolves macOS's /private/tmp alias to /tmp. Compare the
+        // same trusted root identity used by the corpus loader, while retaining
+        // the symlink refusal for every caller-supplied path component below it.
+        var result = root.standardizedFileURL.resolvingSymlinksInPath()
+        for part in parts {
+            result.appendPathComponent(String(part))
+            guard (try? result.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true else {
+                throw WitnessError.invalidPath
+            }
+        }
+        return result
+    }
+    private init(root: URL, declarationURL: URL, declarationData: Data,
+                 declaration: Declaration, environment: [String: String], arguments: [String]) throws {
+        self.root = root
+        self.declarationURL = declarationURL
+        self.declarationSha256 = Self.digest(declarationData)
+        self.declaration = declaration
+        self.environmentSha256 = try Self.captureEnvironment(environment)
+        self.arguments = arguments
+    }
+    static func begin(root: URL, family: String, corpusURL: URL,
+        outputDirectories: [URL], environment: [String: String] = ProcessInfo.processInfo.environment,
+        arguments: [String] = CommandLine.arguments) throws -> BaselineProducerCaptureWitness? {
+        guard let relative = environment["AUTOTECHNO_BASELINE_DEPENDENCY_DECLARATION"] else { return nil }
+        let path = try localURL(relative, root: root, localOnly: true)
+        guard let size = try path.resourceValues(forKeys: [.fileSizeKey]).fileSize,
+              size <= 8 * 1024 * 1024 else { throw WitnessError.invalidDeclaration }
+        let data = try Data(contentsOf: path)
+        let declaration = try JSONDecoder().decode(Declaration.self, from: data)
+        guard declaration.schema == "autotechno-baseline-producer-declaration.v1",
+              declaration.familyId == family,
+              !declaration.producerInputs.isEmpty,
+              declaration.producerInputs.count <= 4096,
+              !declaration.initialStates.isEmpty,
+              declaration.initialStates.count <= 256,
+              declaration.initialStates.map(\.id) == declaration.initialStates.map(\.id).sorted(),
+              Set(declaration.initialStates.map(\.id)).count == declaration.initialStates.count,
+              try localURL(declaration.captureCorpusPath, root: root) == corpusURL,
+              declaration.captureCorpusSha256 == (try fileDigest(corpusURL)),
+              declaration.producerContext["captureCorpusPath"] == declaration.captureCorpusPath,
+              declaration.producerContext["captureCorpusSha256"] == declaration.captureCorpusSha256,
+              declaration.producerContext["compiledImageSha256"] == declaration.compiledImageSha256,
+              declaration.producerContext["captureEnvironmentFingerprint"] == declaration.captureEnvironmentSha256,
+              declaration.producerContext["initialStateFingerprint"] ==
+                digest(try canonical(declaration.initialStates)) else { throw WitnessError.invalidDeclaration }
+        guard declaration.captureEnvironmentSha256 == (try captureEnvironment(environment)) else {
+            throw WitnessError.captureEnvironmentMismatch
+        }
+        let identity = ProducerIdentity(files: declaration.producerInputs,
+            context: declaration.producerContext, upstream: declaration.upstreamProducerFingerprints)
+        guard digest(try canonical(identity)) == declaration.producerFingerprint else {
+            throw WitnessError.producerFingerprintMismatch
+        }
+        for directory in outputDirectories {
+            guard !FileManager.default.fileExists(atPath: directory.path) else { throw WitnessError.existingOutput }
+        }
+        let witness = try BaselineProducerCaptureWitness(root: root, declarationURL: path,
+            declarationData: data, declaration: declaration, environment: environment, arguments: arguments)
+        try witness.verifyInputs()
+        return witness
+    }
+    private func verifyInputs() throws {
+        guard try Self.fileDigest(Self.localURL(declaration.captureCorpusPath, root: root)) == declaration.captureCorpusSha256 else {
+            throw WitnessError.sourceChanged
+        }
+        guard try Self.fileDigest(declarationURL, maximumBytes: 8 * 1024 * 1024) == declarationSha256,
+              try Self.captureEnvironment(ProcessInfo.processInfo.environment) == environmentSha256 else {
+            throw WitnessError.sourceChanged
+        }
+        // Derive the conservative producer closure independently; a resealed
+        // declaration cannot omit a helper or compiled test from this witness.
+        let baselineURL = try Self.localURL("docs/ROADMAP_EXECUTION_BASELINE.json", root: root)
+        let baselineData = try Data(contentsOf: baselineURL)
+        let baseline = try JSONSerialization.jsonObject(with: baselineData) as? [String: Any]
+        guard let documents = baseline?["documents"] as? [[String: Any]],
+              baseline?["snapshotFingerprint"] as? String == declaration.contractBaselineFingerprint else {
+            throw WitnessError.sourceChanged
+        }
+        let navigation = Set(["docs/codebase-map.json", "docs/CODEBASE_MAP.md"])
+        var expected = Set(["AGENTS.md", "LICENSE", "docs/BASELINE_DEPENDENCY_CONTRACT.md",
+            "docs/BASELINE_LIFECYCLE_POLICY.json", "scripts/baseline_dependency_contract.py",
+            "scripts/baseline_capture_transaction.py", "scripts/baseline_producer_witness.py",
+            "scripts/baseline_producer_capture_driver.py", "scripts/baseline_lifecycle_policy.py"])
+        for document in documents {
+            guard let path = document["path"] as? String else { throw WitnessError.invalidDeclaration }
+            if !navigation.contains(path) { expected.insert(path) }
+        }
+        let inventoryProcess = Process(), inventoryPipe = Pipe()
+        inventoryProcess.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        inventoryProcess.arguments = ["--no-replace-objects", "-C", root.path,
+            "ls-files", "-z", "--cached", "--others", "--exclude-standard"]
+        inventoryProcess.standardOutput = inventoryPipe
+        try inventoryProcess.run()
+        let inventoryData = inventoryPipe.fileHandleForReading.readDataToEndOfFile()
+        inventoryProcess.waitUntilExit()
+        guard inventoryProcess.terminationStatus == 0, inventoryData.count <= 1024 * 1024 else {
+            throw WitnessError.invalidDeclaration
+        }
+        let inventory = String(decoding: inventoryData, as: UTF8.self).split(separator: "\0")
+        guard inventory.count <= 4096 else { throw WitnessError.invalidDeclaration }
+        for item in inventory {
+            let name = String(item)
+            if name == "Package.swift" || name == "Package.resolved" ||
+                name.hasPrefix("Sources/") || name.hasPrefix("Tests/") || name.hasPrefix("packaging/") ||
+                (name.hasPrefix("scripts/") && !name.hasSuffix(".py")) { expected.insert(name) }
+        }
+        guard Set(declaration.producerInputs.keys) == expected else { throw WitnessError.invalidDeclaration }
+        for (name, sha) in declaration.producerInputs {
+            guard try Self.fileDigest(Self.localURL(name, root: root)) == sha else { throw WitnessError.sourceChanged }
+        }
+        let image = try Self.loadedImage()
+        guard image.path == declaration.compiledImagePath,
+              try Self.fileDigest(image, maximumBytes: 512 * 1024 * 1024) == declaration.compiledImageSha256 else { throw WitnessError.compiledImageChanged }
+        let process = Process(), pipe = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        process.arguments = ["--no-replace-objects", "-C", root.path, "rev-parse", "HEAD"]
+        process.standardOutput = pipe
+        try process.run(); process.waitUntilExit()
+        guard process.terminationStatus == 0,
+              String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+                .trimmingCharacters(in: .whitespacesAndNewlines) == declaration.gitHead else {
+            throw WitnessError.sourceChanged
+        }
+    }
+    func record(_ state: InitialState) throws {
+        guard !observed.contains(where: { $0.id == state.id }),
+              declaration.initialStates.first(where: { $0.id == state.id }) == state else {
+            throw WitnessError.stateMismatch
+        }
+        observed.append(state)
+    }
+    func finish(artifactURL: URL, artifactData: Data) throws {
+        try verifyInputs()
+        guard observed.sorted(by: { $0.id < $1.id }) == declaration.initialStates,
+              try Self.fileDigest(artifactURL) == Self.digest(artifactData) else { throw WitnessError.incompleteCapture }
+        let sidecar = artifactURL.deletingLastPathComponent().appendingPathComponent("producer-witness.json")
+        guard !FileManager.default.fileExists(atPath: sidecar.path) else { throw WitnessError.existingOutput }
+        let value: [String: Any] = ["schema": "autotechno-baseline-producer-witness.v1",
+            "familyId": declaration.familyId, "gitHead": declaration.gitHead,
+            "contractBaselineFingerprint": declaration.contractBaselineFingerprint,
+            "dependencySnapshotFingerprint": declaration.dependencySnapshotFingerprint,
+            "producerFingerprint": declaration.producerFingerprint,
+            "declarationSha256": declarationSha256,
+            "compiledImagePath": declaration.compiledImagePath,
+            "compiledImageSha256": declaration.compiledImageSha256,
+            "captureCorpusSha256": declaration.captureCorpusSha256,
+            "captureEnvironmentSha256": environmentSha256,
+            "actualEnvironmentSha256": Self.digest(try Self.canonical(ProcessInfo.processInfo.environment)),
+            "actualArguments": arguments, "initialStates": try JSONSerialization.jsonObject(with: Self.canonical(declaration.initialStates)),
+            "artifactSha256": Self.digest(artifactData),
+            "qualification": ["artifactCurrencyEstablished": false, "promotionAuthorized": false, "runtimeInput": false]]
+        let data = try Self.objectJSON(value)
+        try Self.writeFresh(data, to: sidecar)
+    }
+}
+
 #endif

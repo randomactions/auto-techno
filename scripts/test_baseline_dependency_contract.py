@@ -40,6 +40,8 @@ class DependencyContractTests(unittest.TestCase):
         self.context = {key: "0" * 64 if key in dependency.CONTEXT_HASHES else "fixture"
                         for key in dependency.CONTEXT_KEYS}
         self.context["corpusSha256"] = hashlib.sha256((self.root / "docs/BASELINE_CORPUS.json").read_bytes()).hexdigest()
+        self.context["captureCorpusPath"] = "docs/BASELINE_CORPUS.json"
+        self.context["captureCorpusSha256"] = self.context["corpusSha256"]
 
     def run_git(self, *args):
         return subprocess.check_output(["git", *args], cwd=self.root, stderr=subprocess.PIPE)
@@ -67,6 +69,26 @@ class DependencyContractTests(unittest.TestCase):
     def reseal(self, value):
         value["snapshotFingerprint"] = dependency.digest({k: v for k, v in value.items()
                                                           if k != "snapshotFingerprint"})
+
+    def test_private_capture_corpus_is_bound_independently_of_public_corpus(self):
+        self.write('.gitignore', 'docs/local/\n')
+        self.write('docs/local/private.json', '{"resolvedBarCount":4}')
+        context = dict(self.context, captureCorpusPath='docs/local/private.json')
+        context['captureCorpusSha256'] = hashlib.sha256((self.root / context['captureCorpusPath']).read_bytes()).hexdigest()
+        before = self.capture(context)
+        self.write('docs/local/private.json', '{"resolvedBarCount":8}')
+        with self.assertRaisesRegex(dependency.DependencyContractError, 'capture corpus'):
+            dependency.capture(self.root, context)
+        context['captureCorpusSha256'] = hashlib.sha256((self.root / context['captureCorpusPath']).read_bytes()).hexdigest()
+        after = self.capture(context)
+        self.assertEqual(self.assess(before, after)['families']['whole-mix-render']['action'], 'recapture-required')
+
+    def test_v2_snapshot_requires_fresh_freeze_even_when_resealed(self):
+        value = self.capture()
+        value['schema'] = 'autotechno-baseline-dependency-snapshot.v2'
+        self.reseal(value)
+        with self.assertRaisesRegex(dependency.DependencyContractError, 'unsupported'):
+            dependency.validate_snapshot(value, self.root)
 
     def test_unchanged_snapshot_is_exact_and_not_currency(self):
         before, after = self.capture(), self.capture()
@@ -123,7 +145,7 @@ class DependencyContractTests(unittest.TestCase):
 
     def test_changed_route_toolchain_state_and_python_are_distinguished(self):
         before = self.capture()
-        for name in ["routeIdentityFingerprint", "initialStateFingerprint", "swiftCompilerIdentity", "pythonIdentity"]:
+        for name in ["routeIdentityFingerprint", "initialStateFingerprint", "swiftCompilerIdentity", "compiledImageSha256", "captureEnvironmentFingerprint", "pythonIdentity"]:
             with self.subTest(name=name):
                 context = dict(self.context)
                 context[name] = "1" * 64 if name in dependency.CONTEXT_HASHES else "changed"
@@ -206,6 +228,15 @@ class DependencyContractTests(unittest.TestCase):
         self.reseal(bad)
         with self.assertRaisesRegex(dependency.DependencyContractError, "origin dependency bytes"):
             self.assess(bad, before)
+
+    def test_same_bytes_without_capture_ancestry_refuse(self):
+        before = self.capture()
+        self.run_git("checkout", "-q", "--orphan", "unrelated-fixture")
+        self.run_git("add", ".")
+        self.run_git("commit", "-qm", "unrelated capture lineage")
+        after = self.capture()
+        with self.assertRaisesRegex(dependency.DependencyContractError, "available ancestor"):
+            self.assess(before, after)
 
     def test_duplicate_json_keys_refuse(self):
         self.write("duplicate.json", '{"schema":1,"schema":2}')
