@@ -833,7 +833,14 @@ missing authority. Phase-1 retains its bounded baseline claims and cannot invent
 item-specific musical qualification. A future verifier must substantiate the
 complete existing acceptance matrix through the canonical quality/evidence owners
 before positive no-change admission becomes available; no new quality owner or
-generic success schema is installed. Ordinary focused development reporting and
+generic success schema is installed. The AT-0038 test-owned local witness checks
+existing kick/bar and masking/bar-role-band projections against original typed
+candidate reports inside the existing opt-in native diagnostic producer, before
+serialization. Its focused source-field and tamper controls establish only that
+bounded reconstruction. They cannot establish the complete acceptance matrix,
+replace native cohort/rerender evidence, or unlock a roadmap dependency. The
+remaining acceptance obligations are recorded in
+`docs/AT0038_LOCAL_ACCEPTANCE_FOUNDATION.md`. Ordinary focused development reporting and
 the existing result vocabulary remain usable. The reserved row's evidence cell
 must link `docs/local/result-records/AT-xxxx.json` using the existing result-record
 schema. A no-change row must also have all its own prerequisites satisfied.

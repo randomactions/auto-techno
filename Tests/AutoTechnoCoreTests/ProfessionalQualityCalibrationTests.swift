@@ -1951,6 +1951,94 @@ struct ProfessionalQualityCalibrationTests {
             .participatesInRateConsistency)
     }
 
+    @Test("AT0038 typed local witness reconstructs current candidate fields without admission")
+    func localAcceptanceReconstructsCandidateFields() throws {
+        let candidate = try homeCandidate()
+        let phraseKind = try #require(AutonomousPhraseKind(rawValue: candidate.symbolic.phraseKind))
+        let checkpoint = try #require(CanonicalJourneyCheckpoint.applicable(
+            phraseIndex: candidate.symbolic.phraseIndex, phraseKind: phraseKind,
+            chapterChanged: candidate.symbolic.chapterChanged).first)
+        let policy = "at0038-descriptive-fixture.v1", source = "actual-focused-candidate"
+        let kick = try ProfessionalQualityKickFoundationLocalEvidence(candidate: candidate,
+            engineVersion: QualityQualificationContract.engineVersion, policyVersion: policy,
+            sourceReportFingerprint: source, checkpoint: checkpoint)
+        let masking = try ProfessionalQualityMaskingLocalEvidence(candidate: candidate,
+            engineVersion: QualityQualificationContract.engineVersion, policyVersion: policy,
+            sourceReportFingerprint: source, checkpoint: checkpoint)
+        func inspect() throws -> AT0038LocalEvidenceWitness {
+            try AT0038LocalEvidenceAcceptanceSupport.validate(candidate: candidate,
+                checkpoint: checkpoint, engineVersion: QualityQualificationContract.engineVersion,
+                policyVersion: policy, sourceReportFingerprint: source, kick: kick, masking: masking)
+        }
+        let witness = try inspect()
+        #expect(try inspect() == witness)
+        let existing = try ProfessionalQualityObservation(candidate: candidate,
+            engineVersion: QualityQualificationContract.engineVersion, checkpoint: checkpoint)
+        #expect(witness.kick.meanDB == existing[.kickOverFoundationActiveDBMean])
+        #expect(witness.masking.observationCount == candidate.masking.reduce(0) {
+            $0 + $1.observations.count
+        })
+        #expect(ProfessionalQualityKickFoundationLocalEvidence.evidenceCategory == .descriptive)
+        #expect(ProfessionalQualityMaskingLocalEvidence.evidenceCategory == .descriptive)
+    }
+
+    @Test("AT0038 current labels cannot hide changed local projection fields")
+    func localAcceptanceRejectsPoisonedProjection() throws {
+        let candidate = try homeCandidate()
+        let phraseKind = try #require(AutonomousPhraseKind(rawValue: candidate.symbolic.phraseKind))
+        let checkpoint = try #require(CanonicalJourneyCheckpoint.applicable(
+            phraseIndex: candidate.symbolic.phraseIndex, phraseKind: phraseKind,
+            chapterChanged: candidate.symbolic.chapterChanged).first)
+        let policy = "at0038-descriptive-fixture.v1", source = "actual-focused-candidate"
+        let kick = try ProfessionalQualityKickFoundationLocalEvidence(candidate: candidate,
+            engineVersion: QualityQualificationContract.engineVersion, policyVersion: policy,
+            sourceReportFingerprint: source, checkpoint: checkpoint)
+        let masking = try ProfessionalQualityMaskingLocalEvidence(candidate: candidate,
+            engineVersion: QualityQualificationContract.engineVersion, policyVersion: policy,
+            sourceReportFingerprint: source, checkpoint: checkpoint)
+        let encoder = JSONEncoder()
+        let originalKick = try #require(JSONSerialization.jsonObject(
+            with: encoder.encode(kick)) as? [String: Any])
+        let originalMask = try #require(JSONSerialization.jsonObject(
+            with: encoder.encode(masking)) as? [String: Any])
+        for (key, value) in [("sourceReportFingerprint", "foreign-report" as Any),
+                             ("engineVersion", "foreign-engine" as Any),
+                             ("schemaVersion", 999 as Any),
+                             ("spreadDB", ((kick.spreadDB ?? 0) + 1) as Any)] {
+            var poisoned = originalKick
+            poisoned[key] = value
+            let changed = try JSONDecoder().decode(ProfessionalQualityKickFoundationLocalEvidence.self,
+                from: JSONSerialization.data(withJSONObject: poisoned))
+            #expect(throws: AT0038AcceptanceError.self) {
+                try AT0038LocalEvidenceAcceptanceSupport.validate(candidate: candidate,
+                    checkpoint: checkpoint, engineVersion: QualityQualificationContract.engineVersion,
+                    policyVersion: policy, sourceReportFingerprint: source, kick: changed, masking: masking)
+            }
+        }
+        let observations = try #require(originalMask["observations"] as? [[String: Any]])
+        let first = try #require(observations.first)
+        let firstBar = try #require(first["bar"] as? Int)
+        let firstOverlap = try #require(first["maximumOverlap"] as? Double)
+        // Keep the report identity and candidate-wide counts unchanged while
+        // moving one local field; reduced summaries must not conceal this.
+        for (key, value) in [("bar", (firstBar + 1) as Any),
+                             ("bandName", "foreign-band" as Any),
+                             ("firstRole", "foreign-role" as Any),
+                             ("maximumOverlap", (firstOverlap + 0.1) as Any)] {
+            var changedObservations = observations
+            changedObservations[0][key] = value
+            var poisoned = originalMask
+            poisoned["observations"] = changedObservations
+            let changed = try JSONDecoder().decode(ProfessionalQualityMaskingLocalEvidence.self,
+                from: JSONSerialization.data(withJSONObject: poisoned))
+            #expect(throws: AT0038AcceptanceError.self) {
+                try AT0038LocalEvidenceAcceptanceSupport.validate(candidate: candidate,
+                    checkpoint: checkpoint, engineVersion: QualityQualificationContract.engineVersion,
+                    policyVersion: policy, sourceReportFingerprint: source, kick: kick, masking: changed)
+            }
+        }
+    }
+
     @Test("Descriptive local kick-foundation spread exposes a hidden bar defect")
     func kickFoundationLocalSpreadPreservesBarEvidence() throws {
         func report(_ ratios: [Double]) throws ->

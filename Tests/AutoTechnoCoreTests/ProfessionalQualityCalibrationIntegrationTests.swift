@@ -1662,6 +1662,13 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             )
             let localReports = try bank.kickFoundationLocalFeatureReports()
             let maskingReports = try bank.maskingLocalFeatureReports()
+            // Verify the original typed source before emitting diagnostics.
+            // This bounded reconstruction cannot grant roadmap admission.
+            let localWitnesses = try AT0038LocalEvidenceAcceptanceSupport.reconstruct(bank)
+            guard localWitnesses.map(\.kick) == localReports,
+                  localWitnesses.map(\.masking) == maskingReports else {
+                throw AT0038AcceptanceError.invalidProjection
+            }
             let modalWindows = try bank.modalWindowFeatureReports()
             guard localReports.count ==
                     CanonicalJourneyCheckpoint.allCases.count *
