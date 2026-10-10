@@ -64,7 +64,9 @@ jobs:
             --filter BaselineProducerWitnessTests
           python3 - <<'PY'
           import json
+          import os
           import re
+          import subprocess
           import sys
           from pathlib import Path
 
@@ -73,8 +75,11 @@ jobs:
 
           root = Path.cwd()
           probe = json.loads((root / "docs/local/reports/ci-producer-probe.json").read_text())
+          scratch = Path(os.environ["RUNNER_TEMP"]) / "auto-techno-provenance-release"
+          bin_path = Path(subprocess.check_output(["swift", "build", "--show-bin-path",
+              "-c", "release", "--build-path", str(scratch)], text=True).strip())
           witness.validate_probe(root, probe,
-              image=Path(probe["compiledImagePath"]), corpus_name="docs/BASELINE_CORPUS.json")
+              image=witness.registered_image(bin_path, scratch), corpus_name="docs/BASELINE_CORPUS.json")
           source = (root / "Sources/AutoTechnoCore/QualityQualification.swift").read_text()
           version = re.search(r'engineVersion\s*=\s*"([^"]+)"', source)
           if version is None or probe["engineVersion"] != version.group(1):

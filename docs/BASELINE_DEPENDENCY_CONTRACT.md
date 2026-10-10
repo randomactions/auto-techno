@@ -146,8 +146,13 @@ storage and a fresh native initialization probe. It binds actual build arguments
 compiler, SDK settings, target, capture corpus, routes, initialization ledger and
 loaded image. Dependency snapshot v3 adds capture corpus path/hash, image hash
 and environment fingerprint. Previous scope snapshots require a fresh freeze;
-there is no relabel or upgrade path. Non-ASCII canonical input and unknown native
-image layouts currently fail closed. The driver retains environment hashes only.
+there is no relabel or upgrade path. The driver selects exactly one actual package test image from either the Xcode
+`AutoTechnoCoreTests.xctest` or conventional SwiftPM `AutoTechnoPackageTests.xctest`
+layout. Its native probe must bind that same path and image bytes. Missing,
+unknown, ambiguous, symlinked or substituted layouts fail closed. Non-ASCII
+canonical input still fails closed. The driver retains environment hashes only.
+The known separate `AutoTechnoAppTests.xctest` companion may coexist without
+being selected as the producer; two producer candidates still refuse.
 
 The probe does not render audio. Independent witness metadata controls and an
 initialization probe are not whole/role capture parity, lifecycle currency,
@@ -188,6 +193,15 @@ build, probe, loaded image, private initialization, declarations, fresh complete
 upstream bindings, successful registered native and cold commands, diagnostic
 bytes, reference output coverage and exact WAV/typed/foundation parity again.
 An active job, incomplete receipt, changed output or promotional flag refuses.
+Build receipt v2 additionally records the original driver Python version, exact
+invocation path and executable SHA256. Original capture context and all four
+recorded cold validator commands are reconstructed from that sealed witness,
+without reading the current interpreter or requiring the old binary to remain
+installed. Changed current Python bytes/version may require cold reanalysis;
+relocation alone does not change analysis identity or rewrite original argv.
+Build v1 lacks this original interpreter witness and requires regeneration;
+there is no inferred identity, receipt upgrade or historical backfill. Fresh
+operations refuse interpreter movement during build/capture.
 The returned source fingerprint is reconstructed from the original Git bytes,
 including the original execution snapshot; neither artifacts nor provenance are
 rewritten to the current source.
@@ -213,6 +227,11 @@ unchanged actual image. Compiler, SDK, target, private initialization, corpus an
 semantic producer environment must match the original declared context. Missing,
 unknown, changed or unavailable producer inputs require a new capture. The actual
 probe file must equal the embedded probe, including after receipt resealing.
+
+The new actual retained probe observes the current Python identity separately
+from the original build receipt. A Python-only analysis change can reach
+`reanalysis-required` after complete original capture verification; every cold
+content validator and lifecycle currency requirement still applies.
 
 Accepted original envelopes remain unchanged. Every whole/role content, geometry,
 route, replay, WAV hash, accepted PCM and reconstruction check still executes.
