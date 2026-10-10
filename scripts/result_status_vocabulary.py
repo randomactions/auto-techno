@@ -278,6 +278,13 @@ def validate_record(
     if tuple(record_gate_ids) != GATE_IDS:
         errors.append(f"record.gates must use every gate once in order: {list(GATE_IDS)}")
 
+    if any(statuses.get(identifier) == "passed" for identifier in (
+        "full-local-verification", "automated-quality-qualification"
+    )) and not re.fullmatch(r"[0-9a-f]{40}", str(record.get("revision", ""))):
+        errors.append(
+            "passed full verification or automated qualification requires a 40-digit exact revision"
+        )
+
     missing_gates = [
         identifier
         for identifier in RELEASE_REQUIRED_GATES

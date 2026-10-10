@@ -775,6 +775,22 @@ evidence adds no audio-callback work or persistent timing state.
 
 ## Development qualification loop
 
+Complete qualification runs at a coherent frozen candidate boundary within the
+existing active roadmap item. During development, run focused checks and every
+applicable hard safety, continuation, replay, rejection, route, callback, resource
+and deadline control; record intermediate code as unqualified. Freeze stable
+implementation, fixtures, evaluator, policy/resources and contracts before this
+complete loop, naming exact source/context, corpus, disjoint holdouts, routes and
+all required gates. No known implementation defect may be hidden by starting a
+full refresh. Every required gate remains mandatory before promotion, including
+all 15 lifecycle families, all 19 subordinate checks and both aggregate passes when
+Phase-1 is required. Evidence reuse requires the installed validated dependency
+contract; unknown dependencies retain conservative invalidation. Preserve failed
+evidence, repair the cause, freeze a new candidate and rerun required affected
+gates. Development cadence never makes stale evidence current or changes a
+threshold, holdout, rejection, activation or promotion rule.
+
+
 The exact-engine primary evaluator is preloaded at app construction and created
 per covered 44.1/48 kHz route. Missing artifacts and unsupported rates are
 truthfully unavailable and cannot commit. The initial single-journey profile
