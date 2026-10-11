@@ -1053,8 +1053,26 @@ struct FoundationRhythmicRelationTests {
             let drySampleHash: String
             let replayExact: Bool
         }
+        struct RootCoverage: Encodable {
+            let rootSeed: UInt64
+            let phases: [Int]
+            let scoreBars: [Int]
+            let planFingerprints: [String]
+        }
+        struct Selection: Encodable {
+            let split: String
+            let firstRoot: UInt64
+            let lastRoot: UInt64
+            let examined: [RootCoverage]
+        }
+        struct SelectedRoot {
+            let seed: UInt64
+            let split: String
+            let bars: [(Int, AutonomousPhrasePlan, ResolvedPerformanceBar)]
+        }
         struct Report: Encodable {
-            let schema = "autotechno-foundation-release-fault-component.v1"
+            let schema = "autotechno-foundation-release-fault-component.v2"
+            let selection: [Selection]
             let scope = "score-derived-release-support-in-canonical-single-source-render"
             let unavailable = ["full-prepared-transaction", "shared-nonlinear-full-mix-quality",
                 "continuing-source-state", "other-foundation-behavior-truncation",
@@ -1063,23 +1081,52 @@ struct FoundationRhythmicRelationTests {
         }
         #expect(FoundationPreKickPocketContract.releaseLeadInSteps == 3.0 / 16)
         #expect(FoundationPreKickPocketContract.silenceLeadInSteps == 1.0 / 16)
-        var rows: [Row] = []
-        for (seed, split) in [(UInt64(1), "development"), (UInt64(6011), "held-out-root")] {
-            let director = AutonomousSessionDirector(rootSeed: seed)
-            var state = director.initialState()
-            var selected: [(Int, AutonomousPhrasePlan, ResolvedPerformanceBar)] = []
-            for _ in 0..<128 {
-                let plan = director.plan(from: state)
-                for source in plan.resolvedBars {
-                    let phase = source.performance.bar % 2
-                    guard !selected.contains(where: { $0.0 == phase }),
-                          source.foundationRhythmicRelation == .dottedThreeSixteenth,
-                          FoundationPreKickPocketResolver.articulation(in: source) != nil else { continue }
-                    selected.append((phase, plan, source))
+        // v1 failed before PCM because its fixed roots lacked score coverage.
+        // v2 freezes disjoint domains and a score-only first-eligible rule.
+        // Finish both selections before observing any source PCM; never choose
+        // or replace a root based on a rendered result.
+        var selection: [Selection] = []
+        var selectedRoots: [SelectedRoot] = []
+        for (first, last, split) in [(UInt64(1), UInt64(48), "development"),
+                                     (UInt64(6001), UInt64(6048), "held-out-root")] {
+            var examined: [RootCoverage] = []
+            for seed in first...last {
+                let director = AutonomousSessionDirector(rootSeed: seed)
+                var state = director.initialState()
+                var selected: [(Int, AutonomousPhrasePlan, ResolvedPerformanceBar)] = []
+                for _ in 0..<128 {
+                    let plan = director.plan(from: state)
+                    for source in plan.resolvedBars {
+                        let phase = source.performance.bar % 2
+                        guard !selected.contains(where: { $0.0 == phase }),
+                              source.foundationRhythmicRelation == .dottedThreeSixteenth,
+                              FoundationPreKickPocketResolver.articulation(in: source) != nil else { continue }
+                        selected.append((phase, plan, source))
+                    }
+                    if selected.count == 2 { break }
+                    state.advancePlanning(using: plan)
                 }
-                if selected.count == 2 { break }
-                state.advancePlanning(using: plan)
+                let ordered = selected.sorted { $0.0 < $1.0 }
+                examined.append(RootCoverage(rootSeed: seed, phases: ordered.map { $0.0 },
+                    scoreBars: ordered.map { $0.2.performance.bar },
+                    planFingerprints: ordered.map { AutonomousCandidateFingerprint.plan($0.1) }))
+                if selected.count == 2 {
+                    selectedRoots.append(SelectedRoot(seed: seed, split: split, bars: selected))
+                    break
+                }
             }
+            selection.append(Selection(split: split, firstRoot: first, lastRoot: last, examined: examined))
+        }
+        // Preserve missing coverage as a pre-PCM diagnostic, never a pass.
+        let selectionEncoder = JSONEncoder(); selectionEncoder.outputFormatting = [.sortedKeys]
+        FileHandle.standardOutput.write(try selectionEncoder.encode(selection))
+        FileHandle.standardOutput.write(Data([0x0A]))
+        try #require(selectedRoots.count == 2)
+        var rows: [Row] = []
+        for selectedRoot in selectedRoots {
+            let seed = selectedRoot.seed
+            let split = selectedRoot.split
+            let selected = selectedRoot.bars
             for phase in [0, 1] {
                 let (_, plan, source) = try #require(selected.first { $0.0 == phase })
                 let articulation = try #require(FoundationPreKickPocketResolver.articulation(in: source))
@@ -1175,7 +1222,7 @@ struct FoundationRhythmicRelationTests {
         #expect(rows.filter { $0.observedBinding }.count == 8)
         #expect(rows.filter { !$0.observedBinding }.count == 16)
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
-        FileHandle.standardOutput.write(try encoder.encode(Report(rows: rows)))
+        FileHandle.standardOutput.write(try encoder.encode(Report(selection: selection, rows: rows)))
         FileHandle.standardOutput.write(Data([0x0A]))
     }
 

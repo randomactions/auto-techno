@@ -415,10 +415,17 @@ threshold or admission policy changes. The reusable test guarantee is that a
 score-authorized dry-source release can be distinguished from an early cutoff
 and a missing required release using the actual rendered samples.
 
-Before PCM inspection, fix roots 1 (development) and 6011 (held-out root), both
-44.1/48 kHz rates and both dotted-pair phases. Select the first qualifying score
-bar per phase within 128 planned phrases; missing coverage fails without seed
-replacement. Use the score-selected foundation instrument, resolved pitch and
+The original v1 fixed roots 1/6011 failed score coverage before rendering; that
+failed attempt is retained and never relabeled as a passing matrix. Version 2
+freezes development roots 1...48 and disjoint held-out roots 6001...6048 before
+PCM inspection. In ascending order, select the first root in each domain with
+both dotted phases within 128 planned phrases, retaining the first eligible bar
+per phase. Emit the complete examined-root prefix, phase coverage, score bars
+and plan fingerprints before PCM. Both groups must be selected before any source
+render; an exhausted domain fails without widening or outcome-based replacement.
+This is coverage-conditioned sampling, not a claim that every root expresses the
+relation. Both 44.1/48 kHz rates remain paired within each selected root.
+Use the score-selected foundation instrument, resolved pitch and
 event intensity, fixed source level 0.12 and fresh source state. Bass onset uses
 the existing timing contract, whose independent calibration remains unavailable.
 The grounded kick offset must be zero. Independently calculate the original
@@ -437,11 +444,13 @@ PCM bits and source evidence, remain finite, and preserve exact agreement of
 output, role and architecture measurements. No mixed-stem subtraction is used.
 
 The expected matrix is 24 rows: eight authorized bindings and sixteen fault
-rejections. The emitted `autotechno-foundation-release-fault-component.v1` report
-records actual support checks, original/supplied endpoints, natural/applied
+rejections. The emitted `autotechno-foundation-release-fault-component.v2` report
+records the complete score-selection census, actual support checks,
+original/supplied endpoints, natural/applied
 frame counts, exact source hash, replay and binding outcomes. Expected counts
 are not evidence until native execution passes. No population interval or
-perceptual error bound is inferred from paired phases/rates on two fixed roots.
+perceptual error bound is inferred from paired phases/rates on two
+coverage-conditioned roots. The selected-root rule cannot depend on PCM results.
 
 This is an isolated source-primitive control. It does not establish full-bar
 production routing, continuing source state, full prepared transactions, shared
