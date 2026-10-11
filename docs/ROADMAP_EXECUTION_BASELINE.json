@@ -1,8 +1,8 @@
 {
   "schema": "autotechno-roadmap-contract-baseline.v1",
-  "snapshotVersion": 138,
+  "snapshotVersion": 141,
   "digestAlgorithm": "sha256",
-  "snapshotFingerprint": "4671abfed0a0c825fff93ed717b1ccc20b68dd5daa6a55d4c7e905c223cecb0b",
+  "snapshotFingerprint": "1b444920e647fa3bbca8c26f30ffd537adc69a1aa80319bfb0a8c93a72dc1a34",
   "documents": [
     {
       "role": "repository-guidance",
@@ -139,14 +139,14 @@
     {
       "role": "pcm-spectral-baseline-contract",
       "path": "docs/PCM_SPECTRAL_BASELINE.md",
-      "byteCount": 6823,
-      "sha256": "19b0f2b700ad23f3996ad9a80065a726d8bd3e2a445d007365bd733eb53eb572"
+      "byteCount": 12697,
+      "sha256": "ae3ff25a43c487721f8bac9bf3cc607481be43d1f52b3f2f096f329c78272e88"
     },
     {
       "role": "kick-foundation-collision-baseline-contract",
       "path": "docs/KICK_FOUNDATION_COLLISION_BASELINE.md",
-      "byteCount": 12588,
-      "sha256": "f1c1f1a19d6a79a1af2a923edd9a1c24d7f74503aadcc0dbe634117906caba49"
+      "byteCount": 19098,
+      "sha256": "efe2a92814a9770ae7f50975c01217a8a43815afc4bdf34f7cc18ca3db1ea7d3"
     },
     {
       "role": "pcm-transient-envelope-baseline-contract",
