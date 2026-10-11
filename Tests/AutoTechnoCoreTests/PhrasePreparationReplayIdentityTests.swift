@@ -197,6 +197,48 @@ struct PhrasePreparationReplayIdentityTests {
         ))
     }
 
+    @MainActor
+    @Test("Installed preparation completes on a detached worker with an immutable request")
+    func detachedInstalledPreparationPreservesRequest() async throws {
+        let director = AutonomousSessionDirector(rootSeed: 90_909)
+        let input = request(state: director.initialState(), sampleRate: 8_000)
+        let originalIdentity = try input.replayIdentity.deterministicJSON()
+        let originalRender = AutonomousCandidateFingerprint.renderState(input.incomingRenderState)
+        let originalGraph = AutonomousCandidateFingerprint.generatedDSPState(input.incomingGraphState)
+
+        // This enters the exact installed-evaluator specialization that crashed
+        // in its Debug worker-stack prologue. Await completion without racing a
+        // shutdown/cancellation. The synchronous run is the semantic reference.
+        let detached = await Task.detached {
+            AutonomousPerformancePreparer.prepareDiagnosing(request: input,
+                director: director, artifacts: nil, longHorizonArtifacts: nil)
+        }.value
+        let referenceInput = request(state: director.initialState(), sampleRate: 8_000)
+        let ordinary = AutonomousPerformancePreparer.prepareDiagnosing(request: referenceInput,
+            director: director, artifacts: nil, longHorizonArtifacts: nil)
+        let actual = try #require(detached.preparedPhrase)
+        let reference = try #require(ordinary.preparedPhrase)
+        #expect(detached.failure == nil && ordinary.failure == nil)
+        #expect(!actual.prepared.commitEligible && !reference.prepared.commitEligible)
+        #expect(actual.prepared.qualityDecision.outcome == .qualificationUnavailable)
+        #expect(actual.prepared.blocks == reference.prepared.blocks)
+        #expect(actual.prepared.repeatHoldEvolutions == reference.prepared.repeatHoldEvolutions)
+        #expect(actual.prepared.candidateEvaluationFingerprint == reference.prepared.candidateEvaluationFingerprint)
+        #expect(actual.prepared.qualityContinuationState == reference.prepared.qualityContinuationState)
+        #expect(AutonomousCandidateFingerprint.renderState(actual.prepared.endingRenderState) ==
+                AutonomousCandidateFingerprint.renderState(reference.prepared.endingRenderState))
+        #expect(AutonomousCandidateFingerprint.generatedDSPState(actual.prepared.endingGraphState) ==
+                AutonomousCandidateFingerprint.generatedDSPState(reference.prepared.endingGraphState))
+        #expect(actual.prepared.preparationReplayFingerprint == input.replayIdentity.fingerprint)
+        #expect(actual.request.replayIdentity == reference.request.replayIdentity)
+        #expect(actual.retainedContinuations.isEmpty && reference.retainedContinuations.isEmpty)
+        #expect(input.replayIdentity.matches(input))
+        let finalIdentity = try input.replayIdentity.deterministicJSON()
+        #expect(finalIdentity == originalIdentity)
+        #expect(AutonomousCandidateFingerprint.renderState(input.incomingRenderState) == originalRender)
+        #expect(AutonomousCandidateFingerprint.generatedDSPState(input.incomingGraphState) == originalGraph)
+    }
+
     private func request(
         state: AutonomousSessionState,
         sampleRate: Double = 48_000,

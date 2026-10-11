@@ -2627,3 +2627,25 @@ changes neither PCM nor native study inputs, output identity, file-claim semanti
 quality/profile authority, callback work or preparation resource reservations.
 A diagnostic lifetime control is not native preparation allocation, RSS/deadline,
 Windows execution or physical-output qualification.
+
+
+## Immutable preparation request storage
+
+The existing `PhrasePreparationRequest` is an immutable `Sendable` reference
+whose fields retain the same typed Core/DSP input snapshot and replay identity.
+Detached tasks, pending chain frames, prospective continuations and admitted
+transport products share that input instead of embedding large value copies in
+worker frames. This addresses a native Debug cooperative-stack overflow at the
+entry to the existing iterative preparer. It adds no mutable continuation,
+preparation path, callback work, scheduling rule, musical parameter or evaluator.
+
+Independent request construction still reproduces semantic identity; pointer
+identity has no admission authority. Local render mutation cannot alter the
+immutable incoming value fields. Detached installed-evaluator controls compare
+PCM, hold products, quality/replay and outgoing continuation with a synchronous
+reference and require the original request to remain fingerprint-identical.
+Cancellation, resource reservation, diagnostic ownership, refusal, exact-child
+and future-boundary contracts remain unchanged. The existing 128 MiB charge and
+two-pass limit are not lowered; reference allocation overhead remains part of
+outstanding complete physical-storage qualification. A worker-stack repair does
+not establish native deadlines, physical output or current runtime promotion.

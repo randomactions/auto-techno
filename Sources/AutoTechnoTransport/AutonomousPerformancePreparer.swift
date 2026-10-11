@@ -317,7 +317,12 @@ package struct PhrasePreparationReplayIdentity:
     }
 }
 
-package struct PhrasePreparationRequest: Sendable {
+/// One immutable input snapshot shared by detached preparation, pending chain
+/// frames and admitted transport products. Keeping the typed continuation here
+/// avoids embedding and copying its large value representation into each worker
+/// frame. No mutable state, callback work or alternative preparation path is
+/// introduced; semantic identity is still the exact replay fingerprint.
+package final class PhrasePreparationRequest: Sendable {
     package let key: PhrasePreparationKey
     package let sourceState: AutonomousSessionState
     package let incomingLongHorizonState: LongHorizonFutureAdaptationState?
