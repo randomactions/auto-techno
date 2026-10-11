@@ -210,3 +210,42 @@ approval, app/route behavior, or physical-output soak. It changes no production
 PCM and has no continuation or future-boundary effect. Later calibration may
 promote a bounded relationship only through the existing single evaluator and
 controller contract.
+
+
+## Native foundation bass fault construction benchmark
+
+`FoundationRhythmicRelationTests.algorithmicFoundationBassFaults` extends the
+existing foundation-rhythm evidence owner through the canonical `VoiceRenderer`.
+It freezes root1 as development and root6011 as held-out-root before rendering.
+For each root, select the first score bar of each of `subPulse`, `monotone`,
+`point`, `pump` and `absent` within128 planned phrases. Only established rhythm,
+no delayed-bass-entry signature and no rumble/tuned-tom events are eligible.
+Audible selections require declared positive-intensity bass events; the absent
+selection requires none. Missing selection fails; roots are never substituted.
+
+At44.1 and48kHz, render unaltered, deleted-bass, one-step cyclic onset shift,
+wrong-voice and zero-intensity recipes against the original score. The absent
+control uses its unchanged naturally absent score. Deletion and voice changes
+remove rendered bass support; onset shifts retain event count while violating
+original sample starts; zero intensity must produce measured silence. Expected
+starts use the score's existing timing-offset contract, not observed PCM peaks.
+This checks score binding, not an independent calibration of that offset formula.
+Every case compares actual full and protected-rhythm pass evidence. Positive
+cases also replay the canonical full pass exactly. Fresh zero continuation and
+one bar bound every render; no callback or production state changes.
+
+The emitted `autotechno-foundation-bass-fault-component.v1` report expects84
+rows:20 positive controls and64 mandatory fault rejections. Each row retains
+source-plan identity, behavior, root split, rate, original/rendered counts, masks
+and sample starts, dry-foundation PCM hash, peak/RMS and evidence completeness.
+The held-out unit is root, not windows, rates, repeats or a renamed signal family.
+No population confidence interval or generalization claim follows from two roots.
+
+`kickTail` and `tunedPercussive` remain explicit unavailable behavior cells: the
+bass-event ledger cannot establish rumble or modal event fidelity. Dotted
+authorized release, unauthorized truncation, full prepared-transaction binding,
+nonlinear full-mix and perceptual quality also remain unavailable in this
+component benchmark. Existing dotted/pocket tests and all quality promotion
+gates remain required. This adds fault coverage without another renderer,
+metric, parameter, policy or quality threshold. Native execution is required
+before recording a passing matrix.
