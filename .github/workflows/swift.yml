@@ -98,6 +98,13 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(localizedVerticalSlicePCM|upperTimingCascadeVerticalSlice|scoreVelocityVerticalSlice)'
 
+      - name: Run kick source dynamics tests
+        if: matrix.bank == 'remaining'
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter KickSourceDynamicsTests
+
       # Capture the known crashing fixtures before the long qualification bank.
       # Preflight also exited signal 10 after the percussion repairs passed.
       # The original core and preflight groups retain their full coverage.
@@ -567,13 +574,6 @@ jobs:
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter InstrumentPalettePreparedEvidenceTests.testPreparedAcidRelationEvidence
-
-      - name: Run kick source dynamics tests
-        if: matrix.bank == 'remaining'
-        run: >-
-          swift test --no-parallel --skip-build
-          --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter KickSourceDynamicsTests
 
       - name: Run prepared percussion-echo evidence
         if: matrix.bank == 'remaining'

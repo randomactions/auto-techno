@@ -210,3 +210,49 @@ approval, app/route behavior, or physical-output soak. It changes no production
 PCM and has no continuation or future-boundary effect. Later calibration may
 promote a bounded relationship only through the existing single evaluator and
 controller contract.
+
+
+## Native score-to-kick fault controls
+
+`KickSourceDynamicsTests.algorithmicScoreRenderFaults` is a bounded component
+benchmark for the algorithmic calibration path. It uses fixed roots1/42 for
+construction development and6011/7011 as held-out roots. Before any render, each
+root selects the first initial-plan grounded bar containing a downbeat kick.
+A missing eligible bar fails the fixture; no replacement seed is selected from
+an audio or measurement outcome. These roots are not independent musical
+construction families and do not establish population-level uncertainty.
+
+At44100 and48000 Hz the existing `VoiceRenderer.renderBar` renders the same
+bar in its ordinary full and protected-rhythm layers. Six frozen recipes cover
+unchanged score, deleted kicks, one-step shifted kicks, wrong-voice substitution,
+zero kick intensity and intentional absence. A copied bar preserves all fields
+except the declared event changes and, for intentional absence only, the kick
+role/anchor removal. The identity copy is required to equal the original bar.
+No alternative renderer, production fault hook or callback work is introduced.
+
+The existing `AutonomousKickSyntaxBarEvidence.isComplete` predicate is evaluated
+with score count/mask from the original intended events and evidence from the
+actual changed render. Intentional absence supplies its explicitly changed
+withheld intention instead. The test verifies the fault-specific consequence
+(count/mask or zero audible samples), a changed detector hash, matching full and
+protected kick evidence and finite rendered output. This avoids counting an
+unrelated failure as proof that the intended fault was detected.
+
+The emitted `autotechno-score-kick-fault-component.v1` JSON has48 rows, including
+reference plan identity, root split, native rate, role, score/render counts and
+masks, actual PCM hashes and expected/observed completeness. A passing execution
+requires16 positive controls and32 rejected fault controls, with no unexplained
+mismatches. The report's presence alone is not a pass; inspect test exit and
+assertion results at the exact source.
+
+This tests the existing bar-level kick binding contract. It does not construct
+an accepted preparation transaction, establish foundation-companion fidelity,
+prove that a decoded metadata record is authoritative, or qualify nonlinear
+full-mix musical quality. Whole-transaction provenance, complete qualification
+and physical/resource gates remain separate. Existing corpus export and its
+historical reports are unchanged.
+
+Run with `swift test --no-parallel --filter
+KickSourceDynamicsTests/algorithmicScoreRenderFaults`. Hosted CI runs the complete
+existing kick-source suite early in its remaining bank, after the same test
+build. Its command and serial execution are unchanged; it is moved, not duplicated.
