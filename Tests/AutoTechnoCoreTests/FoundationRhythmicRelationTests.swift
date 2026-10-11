@@ -1027,6 +1027,157 @@ struct FoundationRhythmicRelationTests {
         FileHandle.standardOutput.write(Data([0x0A]))
     }
 
+    @MainActor
+    @Test("Native source release distinguishes score authority from truncation")
+    func algorithmicFoundationReleaseFaults() throws {
+        struct Row: Encodable {
+            let rootSeed: UInt64
+            let split: String
+            let referencePlanFingerprint: String
+            let scoreBar: Int
+            let phase: Int
+            let sampleRate: Int
+            let scenario: String
+            let eventStartFrame: Int
+            let authorizedReleaseStartFrame: Int
+            let authorizedReleaseEndFrame: Int
+            let kickFrame: Int
+            let suppliedReleaseStartFrame: Int?
+            let suppliedReleaseEndFrame: Int?
+            let naturalFrameCount: Int
+            let appliedFrameCount: Int
+            let prefixMatchesUngated: Bool
+            let declaredSilenceIsZero: Bool
+            let expectedBinding: Bool
+            let observedBinding: Bool
+            let drySampleHash: String
+            let replayExact: Bool
+        }
+        struct Report: Encodable {
+            let schema = "autotechno-foundation-release-fault-component.v1"
+            let scope = "score-derived-release-support-in-canonical-single-source-render"
+            let unavailable = ["full-prepared-transaction", "shared-nonlinear-full-mix-quality",
+                "continuing-source-state", "other-foundation-behavior-truncation",
+                "independent-bass-timing-offset-equations", "perceptual-quality", "population-error-intervals"]
+            let rows: [Row]
+        }
+        #expect(FoundationPreKickPocketContract.releaseLeadInSteps == 3.0 / 16)
+        #expect(FoundationPreKickPocketContract.silenceLeadInSteps == 1.0 / 16)
+        var rows: [Row] = []
+        for (seed, split) in [(UInt64(1), "development"), (UInt64(6011), "held-out-root")] {
+            let director = AutonomousSessionDirector(rootSeed: seed)
+            var state = director.initialState()
+            var selected: [(Int, AutonomousPhrasePlan, ResolvedPerformanceBar)] = []
+            for _ in 0..<128 {
+                let plan = director.plan(from: state)
+                for source in plan.resolvedBars {
+                    let phase = source.performance.bar % 2
+                    guard !selected.contains(where: { $0.0 == phase }),
+                          source.foundationRhythmicRelation == .dottedThreeSixteenth,
+                          FoundationPreKickPocketResolver.articulation(in: source) != nil else { continue }
+                    selected.append((phase, plan, source))
+                }
+                if selected.count == 2 { break }
+                state.advancePlanning(using: plan)
+            }
+            for phase in [0, 1] {
+                let (_, plan, source) = try #require(selected.first { $0.0 == phase })
+                let articulation = try #require(FoundationPreKickPocketResolver.articulation(in: source))
+                let event = source.ensemble.events[articulation.scoreEventIndex]
+                let synth = SynthPerformancePlan(scene: plan.scene, dna: plan.dna,
+                    kind: plan.kind, resolvedBars: [source])
+                let kickStep = phase == 0 ? 4 : 12
+                #expect(articulation.bassStep == kickStep - 1 && articulation.kickStep == kickStep)
+                #expect(event.voice == .bass && event.step == kickStep - 1)
+                #expect(VoiceRenderer.timingOffsetInSteps(for: .kick, step: kickStep, dna: plan.dna) == 0)
+                for rate in [44_100.0, 48_000.0] {
+                    let frames = Int((240.0 / 130.0 * rate).rounded())
+                    let stepFrames = Double(frames) / 16
+                    let eventStart = Int(((Double(event.step) + VoiceRenderer.timingOffsetInSteps(
+                        for: .bass, step: event.step, dna: plan.dna)) * stepFrames).rounded())
+                    let releaseStart = Int(((Double(kickStep) - 3.0 / 16) * stepFrames).rounded())
+                    let releaseEnd = Int(((Double(kickStep) - 1.0 / 16) * stepFrames).rounded())
+                    let kickFrame = Int((Double(kickStep) * stepFrames).rounded())
+                    let earlyStart = Int(((Double(kickStep) - 3.0 / 16 - 0.25) * stepFrames).rounded())
+                    let earlyEnd = Int(((Double(kickStep) - 1.0 / 16 - 0.25) * stepFrames).rounded())
+                    #expect(eventStart < earlyStart && earlyStart < earlyEnd && earlyEnd < releaseStart)
+                    #expect(releaseStart < releaseEnd && releaseEnd < kickFrame && kickFrame < frames)
+                    let frequency = FoundationPitchResolver.frequency(dna: plan.dna, step: event.step)
+                    func render(_ start: Int?, _ end: Int?) -> (pcm: [Float], result: ResonantMonoFoundationRenderResult) {
+                        var pcm = [Float](repeating: 0, count: frames)
+                        var measurement = pcm; var architecture = pcm
+                        var echo = pcm; var reverb = pcm
+                        var sourceState = ResonantMonoState()
+                        var nonlinear = TPTAntialiasedNonlinearCoreEvidenceAccumulator()
+                        let result = ResonantMonoVoice.renderFoundation(&pcm, measurement: &measurement,
+                            architectureMeasurement: &architecture, pulseEchoSend: &echo,
+                            spatialReverbSend: &reverb, start: eventStart, sampleRate: rate, level: 0.12,
+                            frequency: frequency, assignment: synth.bars[0].foundationInstrument,
+                            velocity: event.intensity, terminalReleaseStartFrame: start,
+                            terminalReleaseEndFrame: end, state: &sourceState, nonlinearCoreEvidence: &nonlinear)
+                        #expect(pcm.map(\.bitPattern) == measurement.map(\.bitPattern))
+                        #expect(pcm.map(\.bitPattern) == architecture.map(\.bitPattern))
+                        #expect(pcm.allSatisfy(\.isFinite))
+                        return (pcm, result)
+                    }
+                    let ungated = render(nil, nil)
+                    #expect(!ungated.result.terminalReleaseApplied)
+                    #expect(eventStart + ungated.result.naturalFrameCount > kickFrame)
+                    #expect(ungated.pcm[earlyEnd..<releaseStart].contains { $0 != 0 })
+                    #expect(ungated.pcm[releaseEnd..<kickFrame].contains { $0 != 0 })
+                    for scenario in ["authorized-release", "early-release", "omitted-release"] {
+                        let start: Int? = scenario == "omitted-release" ? nil :
+                            (scenario == "early-release" ? earlyStart : releaseStart)
+                        let end: Int? = scenario == "omitted-release" ? nil :
+                            (scenario == "early-release" ? earlyEnd : releaseEnd)
+                        let actual = render(start, end)
+                        let replay = render(start, end)
+                        let replayExact = actual.pcm.map(\.bitPattern) == replay.pcm.map(\.bitPattern) &&
+                            actual.result == replay.result
+                        #expect(replayExact)
+                        let prefixMatches = actual.pcm[..<releaseStart].map(\.bitPattern) ==
+                            ungated.pcm[..<releaseStart].map(\.bitPattern)
+                        let silenceIsZero = actual.pcm[releaseEnd...].allSatisfy { $0 == 0 }
+                        let expected = scenario == "authorized-release"
+                        let binding = prefixMatches && silenceIsZero && actual.result.terminalReleaseApplied &&
+                            eventStart + actual.result.appliedFrameCount == releaseEnd
+                        #expect(binding == expected)
+                        #expect(actual.result.naturalFrameCount == ungated.result.naturalFrameCount)
+                        if scenario == "early-release" {
+                            #expect(!prefixMatches && silenceIsZero)
+                            #expect(eventStart + actual.result.appliedFrameCount == earlyEnd)
+                            #expect(actual.pcm[earlyEnd...].allSatisfy { $0 == 0 })
+                        } else if scenario == "omitted-release" {
+                            #expect(prefixMatches && !silenceIsZero)
+                            #expect(actual.pcm.map(\.bitPattern) == ungated.pcm.map(\.bitPattern))
+                        } else {
+                            #expect(prefixMatches && silenceIsZero)
+                            #expect(actual.pcm[releaseStart..<releaseEnd].contains { $0 != 0 })
+                            #expect(actual.pcm != ungated.pcm)
+                        }
+                        rows.append(Row(rootSeed: seed, split: split,
+                            referencePlanFingerprint: AutonomousCandidateFingerprint.plan(plan),
+                            scoreBar: source.performance.bar, phase: phase, sampleRate: Int(rate), scenario: scenario,
+                            eventStartFrame: eventStart, authorizedReleaseStartFrame: releaseStart,
+                            authorizedReleaseEndFrame: releaseEnd, kickFrame: kickFrame,
+                            suppliedReleaseStartFrame: start, suppliedReleaseEndFrame: end,
+                            naturalFrameCount: actual.result.naturalFrameCount,
+                            appliedFrameCount: actual.result.appliedFrameCount,
+                            prefixMatchesUngated: prefixMatches, declaredSilenceIsZero: silenceIsZero,
+                            expectedBinding: expected, observedBinding: binding,
+                            drySampleHash: ExactPCMFingerprint.mono(actual.pcm), replayExact: replayExact))
+                    }
+                }
+            }
+        }
+        #expect(rows.count == 24)
+        #expect(rows.filter { $0.observedBinding }.count == 8)
+        #expect(rows.filter { !$0.observedBinding }.count == 16)
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        FileHandle.standardOutput.write(try encoder.encode(Report(rows: rows)))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
     private struct CompanionProjection: Equatable {
         // Test-local exact PCM comparison; never encoded in the report.
         let sampleBits: [UInt32]

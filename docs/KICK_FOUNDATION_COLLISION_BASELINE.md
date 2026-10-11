@@ -403,3 +403,53 @@ This test-only extension adds no runtime parameter, renderer, continuation,
 future decision, fallback or production threshold. It reuses the canonical
 voice/evidence owners and existing capture path. Native execution must verify
 the frozen matrix before any passing component result is recorded.
+
+
+## Native score-authorized source release controls
+
+`FoundationRhythmicRelationTests.algorithmicFoundationReleaseFaults` extends the
+existing pre-kick-pocket source test through `ResonantMonoVoice.renderFoundation`.
+The resolved dotted score and `FoundationPreKickPocketResolver` retain ownership
+of musical intent. No production parameter, callback, continuation, renderer,
+threshold or admission policy changes. The reusable test guarantee is that a
+score-authorized dry-source release can be distinguished from an early cutoff
+and a missing required release using the actual rendered samples.
+
+Before PCM inspection, fix roots 1 (development) and 6011 (held-out root), both
+44.1/48 kHz rates and both dotted-pair phases. Select the first qualifying score
+bar per phase within 128 planned phrases; missing coverage fails without seed
+replacement. Use the score-selected foundation instrument, resolved pitch and
+event intensity, fixed source level 0.12 and fresh source state. Bass onset uses
+the existing timing contract, whose independent calibration remains unavailable.
+The grounded kick offset must be zero. Independently calculate the original
+release start/end as kick step minus 3/16 and 1/16 of a step, respectively, and
+round at the declared native rate. Contract constants must equal those fractions.
+
+For each source, an ungated render supplies the same-event prefix and verifies
+nonzero support in the relevant intervals. Rerender three cases through the
+canonical source: authorized endpoints, both endpoints advanced by one quarter
+step, and omitted endpoints. Exact prefix equality before the original release
+start and exact zero from the original release end, together with the source
+render result, distinguish authorized release from both faults. Early release
+must alter the prefix and end before the authorized start; omission must leave
+nonzero PCM in the declared silent interval. Every case must replay with exact
+PCM bits and source evidence, remain finite, and preserve exact agreement of
+output, role and architecture measurements. No mixed-stem subtraction is used.
+
+The expected matrix is 24 rows: eight authorized bindings and sixteen fault
+rejections. The emitted `autotechno-foundation-release-fault-component.v1` report
+records actual support checks, original/supplied endpoints, natural/applied
+frame counts, exact source hash, replay and binding outcomes. Expected counts
+are not evidence until native execution passes. No population interval or
+perceptual error bound is inferred from paired phases/rates on two fixed roots.
+
+This is an isolated source-primitive control. It does not establish full-bar
+production routing, continuing source state, full prepared transactions, shared
+nonlinear mix behavior, truncation coverage for other foundation behaviors or
+perceptual quality. It consolidates with the existing pre-kick source tests and
+adds no alternative engine or fallback; existing runtime and qualification
+gates remain in force. CI runs the selector once in its remaining bank using
+the same compiled test binary and excludes it from the later broad core group.
+
+No map impact: existing test and source owners, persistent state, module
+dependencies, runtime evidence flow and execution boundaries remain unchanged.
