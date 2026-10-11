@@ -541,7 +541,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         let claimed = output.path.withCString { mkdir($0, 0o700) == 0 }
         #elseif canImport(WinSDK)
         let claimed = output.path.withCString(encodedAs: UTF16.self) {
-            CreateDirectoryW($0, nil) != 0
+            CreateDirectoryW($0, nil)
         }
         #else
         let claimed = false
