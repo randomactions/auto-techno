@@ -45,6 +45,11 @@ struct PhrasePreparationReplayIdentityTests {
     }
 
     @Test("Replay identity round trips and rejects every boundary-family mutation")
+    // The native Debug fixture needs a 924 KiB frame; Swift Testing's
+    // cooperative worker has a 544 KiB stack on the hosted macOS runner.
+    // Keep the synchronous serialization proof on the main actor, as with the
+    // larger prospective fixtures below. Production preparation is unchanged.
+    @MainActor
     func deterministicReplayIdentity() throws {
         let state = AutonomousSessionState(rootSeed: 42)
         let first = request(state: state)

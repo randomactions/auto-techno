@@ -991,7 +991,13 @@ struct ModalSuccessorReportJoinTests {
             "qualification": "diagnostic-not-activated"
         ], options: [.sortedKeys]))
         FileHandle.standardOutput.write(Data([0x0A]))
-        #expect(complete.sourceBankFingerprint == "11743474e0cedea5")
+        // This digest includes the engine identity and full canonical reports.
+        // The v48 value 11743474e0cedea5 predates the v49 timing-policy change.
+        // Refresh from the native construction run 38143331435/job114481483602;
+        // keep the exact version and missing-population refusal independently
+        // pinned. This one-bank fixture cannot qualify or activate a policy.
+        #expect(bank.engineVersion == "autotechno-canonical-engine.v49")
+        #expect(complete.sourceBankFingerprint == "05d18c479efe25a3")
         #expect(unsupportedTrainingMetrics == [.upperPercussionTailRenderedTailToAttackDBMean])
         #expect(throws: ProfessionalQualityCalibrationError.invalidMetricSet) {
             try ProfessionalQualityCalibrationProfile(continuousBank: bank, successors: receipts)

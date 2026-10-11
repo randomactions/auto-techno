@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
-import sys
 from typing import Any
 
 import baseline_dependency_contract as dependency
@@ -28,11 +27,13 @@ RECEIPT_FIELDS = {
     producer.BUILD_SCHEMA: {'schema', 'source', 'buildArgv', 'buildConfiguration',
         'driverEnvironmentSha256', 'swiftCompilerIdentity', 'sdkIdentity', 'targetTriple',
         'compilerFlagsFingerprint', 'probeArgv', 'probePath', 'probeSha256', 'probe',
-        'qualification', 'receiptFingerprint'},
+        'pythonWitness', 'qualification', 'receiptFingerprint'},
 }
 
 
 def sealed(value: object, schema: str, field: str) -> dict[str, Any]:
+    if schema == producer.BUILD_SCHEMA and isinstance(value, dict) and value.get('schema') == 'autotechno-baseline-producer-build.v1':
+        raise CaptureScopeError('original Python witness unavailable; regeneration required')
     if not isinstance(value, dict) or value.get('schema') != schema:
         raise CaptureScopeError('unsupported completed capture receipt')
     if schema in RECEIPT_FIELDS and set(value) != RECEIPT_FIELDS[schema]:
@@ -95,6 +96,7 @@ def read_completed_capture(root: Path, directory: str) -> dict[str, Any]:
     producer.validate_probe(root, probe, image=Path(probe['compiledImagePath']), corpus_name=probe['captureCorpusPath'])
     if read('context.json') != snapshot['context'] or producer.capture_context(root, build) != snapshot['context']:
         raise CaptureScopeError('native context differs from original dependency context')
+    original_python = producer.original_python_witness(build)
     if validation.get('captureCorpusPath') != probe['captureCorpusPath'] or validation.get('initialStateCount') != len(probe['initialStates']):
         raise CaptureScopeError('completed validation has different private initialization coverage')
     bindings = {family: read(family + '-binding.json') for family in driver.LAYOUT}
@@ -112,9 +114,9 @@ def read_completed_capture(root: Path, directory: str) -> dict[str, Any]:
             suffix = 'reference-' if reference else ''
             expected_processes.extend([
                 (driver.select_filter(build['probeArgv'], target), family + '-' + suffix + 'native.log'),
-                ([sys.executable, 'scripts/' + validator, 'check', '--namespace', selected, '--corpus', probe['captureCorpusPath']], family + '-' + suffix + 'cold-check.log')])
-            # The successful validator's interpreter must still have the exact
-            # independently bound Python identity; capture_context checked it.
+                ([original_python['executablePath'], 'scripts/' + validator, 'check', '--namespace', selected, '--corpus', probe['captureCorpusPath']], family + '-' + suffix + 'cold-check.log')])
+            # Original commands bind the sealed driver witness. Current Python
+            # belongs to later reanalysis and must not rewrite capture history.
             if reference:
                 observed_name = 'docs/local/reports/' + kind + '-v1/manifest.json'
                 reference_name = 'docs/local/reports/' + kind + '-' + namespace + '/manifest.json'

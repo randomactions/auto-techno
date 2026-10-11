@@ -1580,10 +1580,19 @@ qualification is separate from runtime eligibility; delayed future-boundary
 integration and matching installed primary/long-horizon qualification remain
 required before promotion.
 
-The reduced one-bank construction test preserves its original bank identity
-`11743474e0cedea5` as a negative control: it has no foreground-clearance
-population for the upper-percussion tail-to-attack metric and must refuse
-fitting with `invalidMetricSet`. A positive construction counterpart selects
+The reduced one-bank construction test preserves its original score selection
+as a negative control: it has no foreground-clearance population for the
+upper-percussion tail-to-attack metric and must refuse fitting with
+`invalidMetricSet`. Its full-report digest is engine-version dependent. The
+historical engine-v48 digest `11743474e0cedea5` is retained as provenance; the
+engine-v49 construction emitted `05d18c479efe25a3` in native run38143331435,
+job114481483602 at sourcee640dac6e441ee887998d0b752202dd6929f44b8.
+That run completed33 tests with the old digest comparison as its sole issue;
+all other construction assertions, including missing-population refusal, passed.
+The fixture now pins engine v49 and its observed digest together. This updates
+mechanical source identity after the versioned timing-policy change, not any
+quality bound, frozen qualification corpus or installed authority. Native
+validation of the refreshed assertion remains required. A positive construction counterpart selects
 the first eligible score-declared foreground-clearance phrase before any PCM,
 using the same public seed and a 128-phrase bound. It replaces only that actual
 checkpoint's native-rate source pair in the counterpart bank; the original
