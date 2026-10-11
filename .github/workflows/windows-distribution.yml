@@ -11,6 +11,7 @@ on:
         options:
           - windows
           - modal-continuation
+          - rumble-duration
 
 permissions:
   contents: read
@@ -91,3 +92,25 @@ jobs:
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-component"
           --filter '(algorithmicModalContinuationFaults|continuousModalWindowMatrix|continuousModalInterruptionAndBounds)'
+
+  rumble-duration:
+    if: inputs.validation == 'rumble-duration'
+    name: Native rumble duration component
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Record candidate and toolchain
+        run: |
+          git rev-parse HEAD
+          swift --version
+      - name: Verify canonical rumble duration and terminal controls
+        run: >-
+          swift test --no-parallel
+          --build-path "$RUNNER_TEMP/auto-techno-component"
+          --filter SourceTerminalDeclickTests
+      - name: Verify semantic codebase map
+        run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/auto-techno-component"

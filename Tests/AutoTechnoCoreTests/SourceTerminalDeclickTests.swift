@@ -100,6 +100,89 @@ struct SourceTerminalDeclickTests {
         }
     }
 
+    @Test("AT-0039 rumble support distinguishes bar clipping from unauthorized shortening")
+    func algorithmicRumbleDurationFaults() throws {
+        // Freeze support before PCM: the existing source lasts 17/25 second,
+        // clipped only by the original destination boundary. Roots/rates share
+        // one constructor and cannot supply population uncertainty.
+        var rows: [[String: Any]] = []
+        for (seed, split) in [(UInt64(1), "development"), (UInt64(6011), "held-out-root")] {
+            for rate in [44_100.0, 48_000.0] {
+                let barFrames = Int((240.0 / 130.0 * rate).rounded())
+                let naturalFrames = Int(rate) * 17 / 25
+                for step in [0, 15] {
+                    let start = Int((Double(step) * Double(barFrames) / 16).rounded())
+                    let expectedFrames = min(naturalFrames, barFrames - start)
+                    var reference = [Float](repeating: 0, count: barFrames)
+                    var referenceMeasurement = reference
+                    let referenceEvidence = try #require(VoiceRenderer.rumble(&reference,
+                        measurement: &referenceMeasurement, scoreEventIndex: 0, start: start,
+                        sampleRate: rate, level: 0.072, seed: seed, step: step))
+                    #expect(reference == referenceMeasurement)
+                    #expect(referenceEvidence.renderedFrameCount == expectedFrames)
+                    for shortened in [false, true] {
+                        let suppliedFrames = shortened ? start + expectedFrames / 2 : barFrames
+                        var actual = [Float](repeating: 0, count: suppliedFrames)
+                        var measurement = actual
+                        let evidence = try #require(VoiceRenderer.rumble(&actual,
+                            measurement: &measurement, scoreEventIndex: 0, start: start,
+                            sampleRate: rate, level: 0.072, seed: seed, step: step))
+                        #expect(actual == measurement)
+                        let declickComplete = evidence.isComplete(sampleRate: rate)
+                        let supportBinding = evidence.renderedFrameCount == expectedFrames
+                        #expect(declickComplete) // Valid de-clicking does not prove duration.
+                        #expect(supportBinding == !shortened)
+                        let suppliedSupport = min(naturalFrames, suppliedFrames - start)
+                        #expect(evidence.renderedFrameCount == suppliedSupport)
+                        // The fault is applied before canonical rendering. Zero
+                        // extension only aligns source outputs for comparison;
+                        // it is never used as a nonlinear-mix counterfactual.
+                        let aligned = actual + [Float](repeating: 0, count: barFrames - actual.count)
+                        let protectedEnd = start + evidence.renderedFrameCount - evidence.fadeFrameCount
+                        #expect(Array(aligned.prefix(protectedEnd)) == Array(reference.prefix(protectedEnd)))
+                        let energy = zip(aligned, reference).reduce(0.0) {
+                            let delta = Double($1.0) - Double($1.1)
+                            return $0 + delta * delta
+                        }
+                        let errorRMS = sqrt(energy / Double(barFrames))
+                        if shortened {
+                            #expect(aligned != reference && errorRMS > 0)
+                            #expect(reference.dropFirst(suppliedFrames).contains { $0 != 0 })
+                        } else {
+                            #expect(aligned == reference && errorRMS == 0)
+                            #expect(evidence == referenceEvidence)
+                        }
+                        var replay = [Float](repeating: 0, count: suppliedFrames)
+                        var replayMeasurement = replay
+                        let replayEvidence = VoiceRenderer.rumble(&replay,
+                            measurement: &replayMeasurement, scoreEventIndex: 0, start: start,
+                            sampleRate: rate, level: 0.072, seed: seed, step: step)
+                        #expect(replay == actual && replayMeasurement == measurement && replayEvidence == evidence)
+                        rows.append(["rootSeed": seed, "split": split, "sampleRate": Int(rate),
+                            "step": step, "scenario": shortened ? "unauthorized-shortening" : "original-support",
+                            "originalBarFrames": barFrames, "eventStartFrame": start,
+                            "naturalFrames": naturalFrames, "expectedFrames": expectedFrames,
+                            "suppliedBufferFrames": suppliedFrames, "renderedFrames": evidence.renderedFrameCount,
+                            "declickComplete": declickComplete, "expectedSupportBinding": !shortened,
+                            "observedSupportBinding": supportBinding, "sampleErrorRMS": errorRMS,
+                            "actualAlignedSampleHash": ExactPCMFingerprint.mono(aligned),
+                            "referenceSampleHash": ExactPCMFingerprint.mono(reference), "replayExact": replay == actual])
+                    }
+                }
+            }
+        }
+        #expect(rows.count == 16)
+        FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: [
+            "schema": "autotechno-rumble-duration-fault-component.v1",
+            "scope": "canonical-rumble-source-support-with-original-destination-binding",
+            "qualification": "unavailable",
+            "unavailable": ["full-prepared-transaction", "nonlinear-full-mix",
+                "perceptual-quality", "independent-constructor-holdout", "population-error-intervals"],
+            "rows": rows
+        ], options: [.sortedKeys]))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
     @Test("Unsupported voices remain bit-exact")
     func unsupportedVoiceIdentity() {
         let samples: [Float] = [
