@@ -205,3 +205,53 @@ target. Record compiler and input hashes beside results. A successful component
 run does not assert that the ordinary suite, semantic map, whole package, score
 fidelity, resource gates or runtime qualification passed. No production build
 uses this flag, and no source or runtime parameter changes.
+
+## Independent causal-filter response controls
+
+`SpectrumMaskingAnalyzerTests.algorithmicFilterResponse` tests all four declared
+bands at 44,100 and 48,000 Hz using 4,096-frame inputs of exactly representable
+amplitude 1/4. A constant step is development; a single impulse and an alternating
+sign sequence are held-out constructions. The definitions and error envelopes
+are fixed before analyzer access, with no fit, search or output-based selection.
+They test distinct finite-input responses of the declared linear filter, not
+independent musical populations or general frequency-response calibration.
+
+For a pole `q = exp(-2*pi*cutoff/sampleRate)` and zero initial state, the oracle
+evaluates these finite geometric sums directly at frame `n`:
+
+- step: `(1 - q^(n+1))/4`;
+- impulse: `(1-q)*q^n/4`;
+- alternating: `(1-q)*((-1)^n + q^(n+1))/(4*(1+q))`.
+
+Each band's expected output is the upper-cutoff response minus the lower-cutoff
+response. Integer powers use exponentiation by squaring, independently of the
+production recurrence. The native-rate cutoff clamp is inactive. Both paths
+use the platform exponential to construct the declared pole; this does not
+independently qualify the math library. Expected window energies are integrated
+from those analytic samples, with exact window boundaries fixed by the fixture.
+
+Absolute error bounds use `gamma(k) = k*Double.ulpOfOne/(1-k*Double.ulpOfOne)`:
+`k=32*(N+1)` for samples and `k=128*(N+1)` for window energies. These conservative
+forward-error envelopes cover two contractive pole recurrences, coefficient
+subtraction, finite-series evaluation, band subtraction and window accumulation
+for bounded input magnitude 1/4. Integer-power error is bounded by its equivalent
+multiplication tree of at most N operations. Division in the alternating formula
+has denominator at least one; subtraction is assessed absolutely, including
+near-zero tails. The energy envelope additionally covers squaring and averaging
+samples whose band magnitude is at most 1/2. `ulpOfOne` is twice unit roundoff.
+These are arithmetic bounds, not musical tolerances, and neither is fitted to
+observed errors.
+
+The `autotechno-masking-filter-response.v1` report contains 24 family/rate/band
+rows with sample and window-energy MAE, RMSE, signed and maximum error, counts,
+bounds and explicit failures. Missing/nonfinite results cannot pass; unavailable
+summaries omit error values. Replays must be identical. Fixed constructions do
+not justify population confidence intervals. Score realization, shared nonlinear
+mix quality and perceptual masking remain separate requirements. Existing
+frequency-holdout results and counterexamples remain unchanged.
+
+The component command above can exercise the exact same helper by replacing
+`AlgorithmicMaskingBenchmark` with `AlgorithmicFilterResponseBenchmark`; it still
+does not execute the ordinary Swift Testing suite or qualify the whole runtime.
+The existing test suite and analyzer retain their ownership, execution boundary,
+state and dependency semantics; this addition has no semantic-map impact.

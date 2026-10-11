@@ -1,8 +1,8 @@
 {
   "schema": "autotechno-roadmap-contract-baseline.v1",
-  "snapshotVersion": 139,
+  "snapshotVersion": 140,
   "digestAlgorithm": "sha256",
-  "snapshotFingerprint": "baff2902e7730a77422f0eebdd918239c3b958564433f3ec110dff3ab95cc69d",
+  "snapshotFingerprint": "f21d7de8c835cc65e3752e32dd8adc9a3df741a0628696d06ff801c3bfe12b7c",
   "documents": [
     {
       "role": "repository-guidance",
@@ -139,8 +139,8 @@
     {
       "role": "pcm-spectral-baseline-contract",
       "path": "docs/PCM_SPECTRAL_BASELINE.md",
-      "byteCount": 9625,
-      "sha256": "7563572b6784b867ee1709bf55a8d8e56543cad4b04fa3c87ce8ac30b45d826a"
+      "byteCount": 12697,
+      "sha256": "ae3ff25a43c487721f8bac9bf3cc607481be43d1f52b3f2f096f329c78272e88"
     },
     {
       "role": "kick-foundation-collision-baseline-contract",

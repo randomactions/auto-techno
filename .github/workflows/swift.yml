@@ -105,6 +105,13 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter PCMKickFoundationCollisionAnalyzerTests.algorithmicSourceEnergy
 
+      - name: Verify closed-form masking filter responses
+        if: matrix.bank == 'remaining'
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter SpectrumMaskingAnalyzerTests.algorithmicFilterResponse
+
       - name: Run kick source dynamics tests
         if: matrix.bank == 'remaining'
         run: >-

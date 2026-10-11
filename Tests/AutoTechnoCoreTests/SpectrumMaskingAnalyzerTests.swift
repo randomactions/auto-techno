@@ -414,6 +414,18 @@ struct SpectrumMaskingAnalyzerTests {
         FileHandle.standardOutput.write(Data([0x0A]))
     }
 
+    @Test("Masking filters agree with independent closed-form causal responses")
+    func algorithmicFilterResponse() throws {
+        let report = AlgorithmicFilterResponseBenchmark.run()
+        #expect(report.rows.count == 24)
+        #expect(report.failures.isEmpty)
+        #expect(report == AlgorithmicFilterResponseBenchmark.run())
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        FileHandle.standardOutput.write(try encoder.encode(report))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
     private func tone(
         sampleRate: Double,
         framesPerWindow: Int,
@@ -437,6 +449,171 @@ struct SpectrumMaskingAnalyzerTests {
         }
     }
 #endif
+
+    enum AlgorithmicFilterResponseBenchmark {
+        struct Errors: Encodable, Equatable {
+            let count: Int
+            let meanAbsoluteError: Double?
+            let rootMeanSquareError: Double?
+            let meanSignedError: Double?
+            let maximumAbsoluteError: Double?
+
+            init(_ values: [Double]) {
+                count = values.count
+                guard !values.isEmpty, values.allSatisfy(\.isFinite) else {
+                    meanAbsoluteError = nil
+                    rootMeanSquareError = nil
+                    meanSignedError = nil
+                    maximumAbsoluteError = nil
+                    return
+                }
+                meanAbsoluteError = values.reduce(0) { $0 + abs($1) } / Double(count)
+                rootMeanSquareError = sqrt(values.reduce(0) { $0 + $1 * $1 } / Double(count))
+                meanSignedError = values.reduce(0, +) / Double(count)
+                maximumAbsoluteError = values.map(abs).max() ?? 0
+            }
+        }
+
+        struct Row: Encodable, Equatable {
+            let family: String
+            let split: String
+            let sampleRate: Int
+            let band: String
+            let samples: Errors
+            let windowEnergies: Errors
+            let sampleAbsoluteErrorBound: Double
+            let energyAbsoluteErrorBound: Double
+        }
+
+        struct Report: Encodable, Equatable {
+            let schema = "autotechno-masking-filter-response.v1"
+            let scope = "declared-causal-filter-transfer-and-window-energy-only"
+            let uncertainty = "fixed-constructions-no-population-interval-or-fitted-classifier"
+            let unavailable = ["perceptual-masking-harm", "score-to-render-fidelity",
+                               "nonlinear-full-mix-quality", "general-frequency-response-calibration"]
+            let rows: [Row]
+            let failures: [String]
+        }
+
+        // The oracle evaluates the finite geometric series directly; it never
+        // calls the production filter or reproduces its state-update loop.
+        private static func power(_ base: Double, _ exponent: Int) -> Double {
+            var result = 1.0
+            var factor = base
+            var remaining = exponent
+            while remaining > 0 {
+                if remaining & 1 == 1 { result *= factor }
+                remaining >>= 1
+                if remaining > 0 { factor *= factor }
+            }
+            return result
+        }
+
+        private static func response(_ family: String, frame: Int, pole: Double) -> Double {
+            switch family {
+            case "step": return 0.25 * (1 - power(pole, frame + 1))
+            case "impulse": return 0.25 * (1 - pole) * power(pole, frame)
+            default:
+                let sign = frame.isMultiple(of: 2) ? 1.0 : -1.0
+                return 0.25 * (1 - pole) / (1 + pole) *
+                    (sign + power(pole, frame + 1))
+            }
+        }
+
+        static func run() -> Report {
+            let frameCount = 4_096
+            let cutoffs = [35.0, 120.0, 420.0, 2_400.0, 10_000.0]
+            let names = ["sub", "low-mid", "mid", "high"]
+            let families = [("step", "development"), ("impulse", "held-out-construction"),
+                            ("alternating", "held-out-construction")]
+            // Absolute forward-error envelopes for bounded |input| <= 1/4.
+            // Contractive recurrences accumulate at most O(N*u) roundoff;
+            // 32 operations/frame covers both poles, coefficient subtraction,
+            // geometric-series evaluation and band subtraction. 128 covers
+            // squaring, accumulation and division for each window as well.
+            // ulpOfOne is twice unit roundoff, adding conservative headroom.
+            func gamma(_ operations: Int) -> Double {
+                let nu = Double(operations) * Double.ulpOfOne
+                return nu / (1 - nu)
+            }
+            let sampleBound = gamma(32 * (frameCount + 1))
+            let energyBound = gamma(128 * (frameCount + 1))
+            var rows: [Row] = []
+            var failures: [String] = []
+            if SpectrumMaskingAnalyzer.bands.map(\.name) != names ||
+                SpectrumMaskingAnalyzer.bands.map(\.lowerHz) != Array(cutoffs.dropLast()) ||
+                SpectrumMaskingAnalyzer.bands.map(\.upperHz) != Array(cutoffs.dropFirst()) {
+                failures.append("declared-band-metadata")
+            }
+            for rate in [44_100, 48_000] {
+                let poles = cutoffs.map { exp(-2 * Double.pi * $0 / Double(rate)) }
+                for (family, split) in families {
+                    let input: [Float] = (0..<frameCount).map { frame in
+                        switch family {
+                        case "step": return 0.25
+                        case "impulse": return frame == 0 ? 0.25 : 0
+                        default: return frame.isMultiple(of: 2) ? 0.25 : -0.25
+                        }
+                    }
+                    // Freeze every expected sample before accessing the analyzer.
+                    let expected = (0..<frameCount).map { frame in
+                        (0..<4).map { band in
+                            response(family, frame: frame, pole: poles[band + 1]) -
+                                response(family, frame: frame, pole: poles[band])
+                        }
+                    }
+                    guard var filter = MaskingBandFilter(sampleRate: Double(rate)),
+                          let windows = SpectrumMaskingAnalyzer.bandEnergyWindows(
+                            input, sampleRate: Double(rate)), windows.count == 16 else {
+                        failures.append("\(family):\(rate):unavailable")
+                        continue
+                    }
+                    var errors = [[Double]](repeating: [], count: 4)
+                    for frame in 0..<frameCount {
+                        guard let actual = filter.process(Double(input[frame])) else {
+                            failures.append("\(family):\(rate):sample-\(frame)-unavailable")
+                            continue
+                        }
+                        for band in 0..<4 {
+                            let error = actual[band] - expected[frame][band]
+                            if !error.isFinite || abs(error) > sampleBound {
+                                failures.append("\(family):\(rate):\(band):sample-\(frame)")
+                            }
+                            errors[band].append(error)
+                        }
+                    }
+                    for band in 0..<4 {
+                        var energyErrors: [Double] = []
+                        for index in 0..<16 {
+                            let lower = index * frameCount / 16
+                            let upper = (index + 1) * frameCount / 16
+                            let window = windows[index]
+                            guard window.index == index, window.startFrame == lower,
+                                  window.frameCount == upper - lower,
+                                  window.bandMeanSquares.count == 4 else {
+                                failures.append("\(family):\(rate):\(band):window-\(index)-shape")
+                                continue
+                            }
+                            let energy = (lower..<upper).reduce(0.0) {
+                                $0 + expected[$1][band] * expected[$1][band]
+                            } / Double(upper - lower)
+                            let error = window.bandMeanSquares[band] - energy
+                            if !error.isFinite || abs(error) > energyBound {
+                                failures.append("\(family):\(rate):\(band):energy-\(index)")
+                            }
+                            energyErrors.append(error)
+                        }
+                        rows.append(Row(family: family, split: split, sampleRate: rate,
+                            band: names[band], samples: Errors(errors[band]),
+                            windowEnergies: Errors(energyErrors),
+                            sampleAbsoluteErrorBound: sampleBound,
+                            energyAbsoluteErrorBound: energyBound))
+                    }
+                }
+            }
+            return Report(rows: rows, failures: failures)
+        }
+    }
 
     // Test-only equations and expected relations are frozen before analyzer access.
     // The component build compiles this exact file with the production analyzer;
