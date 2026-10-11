@@ -1,8 +1,8 @@
 {
   "schema": "autotechno-roadmap-contract-baseline.v1",
-  "snapshotVersion": 138,
+  "snapshotVersion": 139,
   "digestAlgorithm": "sha256",
-  "snapshotFingerprint": "26c39cbaae711817efda950ea01c14d4192b2c611314acb8429fe1c385dea4db",
+  "snapshotFingerprint": "baff2902e7730a77422f0eebdd918239c3b958564433f3ec110dff3ab95cc69d",
   "documents": [
     {
       "role": "repository-guidance",
@@ -145,8 +145,8 @@
     {
       "role": "kick-foundation-collision-baseline-contract",
       "path": "docs/KICK_FOUNDATION_COLLISION_BASELINE.md",
-      "byteCount": 12881,
-      "sha256": "cea40e1c29481ac484324b4e8be7a35331f2a77da0ad6b343f56d8d8627a399b"
+      "byteCount": 16575,
+      "sha256": "1bd691c06241571ed2e9328cefe8438203036b1755e4bb2b61e82811f8eaea8e"
     },
     {
       "role": "pcm-transient-envelope-baseline-contract",

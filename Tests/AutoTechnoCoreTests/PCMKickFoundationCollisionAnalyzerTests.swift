@@ -1,9 +1,27 @@
 import Foundation
+#if !AUTOTECHNO_COLLISION_COMPONENT_CHECK
 import Testing
 @testable import AutoTechnoDSP
+#endif
 
+#if !AUTOTECHNO_COLLISION_COMPONENT_CHECK
 @Suite("PCM kick/foundation collision evidence")
+#endif
 struct PCMKickFoundationCollisionAnalyzerTests {
+#if !AUTOTECHNO_COLLISION_COMPONENT_CHECK
+    @Test("Closed-form source energy survives gain, truncation and absence controls")
+    func algorithmicSourceEnergy() throws {
+        let report = AlgorithmicSourceEnergyBenchmark.run()
+        #expect(report.failures.isEmpty)
+        #expect(report == AlgorithmicSourceEnergyBenchmark.run())
+        #expect(report.rows.count == 36)
+        #expect(report.rows.allSatisfy { $0.windows.count == 16 })
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        FileHandle.standardOutput.write(try encoder.encode(report))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
     @Test("AT-0039 swept-kick and enveloped-bass probe retains counterexamples")
     func sweptKickBassMechanisticControls() throws {
         struct Row: Codable {
@@ -1455,4 +1473,182 @@ struct PCMKickFoundationCollisionAnalyzerTests {
     }
 
     private enum FixtureError: Error { case unavailable }
+#endif
+
+    // Independent integer prefix sums are frozen construction oracles. These
+    // fixtures describe source energy, never perceptual or band-filter quality.
+    enum AlgorithmicSourceEnergyBenchmark {
+        struct Window: Codable, Equatable {
+            let start: Int
+            let count: Int
+            let expectedKick: Double
+            let observedKick: Double
+            let expectedFoundation: Double
+            let observedFoundation: Double
+        }
+        struct Row: Codable, Equatable {
+            let family: String
+            let split: String
+            let rate: Int
+            let scenario: String
+            let requiredCompanion: Bool
+            let missingRequiredCompanion: Bool
+            let intendedFoundationEnergy: Double
+            let observedFoundationEnergy: Double
+            let expectedTemporalWindows: Int
+            let observedTemporalWindows: Int
+            let windows: [Window]
+        }
+        struct Summary: Codable, Equatable {
+            let family: String
+            let rate: Int
+            let measurements: Int
+            let meanAbsoluteError: Double
+            let rootMeanSquareError: Double
+            let signedError: Double
+        }
+        struct Report: Encodable, Equatable {
+            let schema = "autotechno-collision-source-energy.v1"
+            let rows: [Row]
+            let summaries: [Summary]
+            let failures: [String]
+            let unavailable = ["perceptual-masking-harm", "band-filter-calibration",
+                "score-to-foundation-render-binding", "nonlinear-full-mix-quality",
+                "population-uncertainty-fixed-construction-families"]
+        }
+
+        // PCM equations and energy equations deliberately use different forms:
+        // sample evaluation versus exact polynomial/periodic prefix integrals.
+        static func units(_ frame: Int, family: Int) -> Int {
+            switch family {
+            case 0: return frame % 64 < 32 ? 64 : -64
+            case 1: return frame % 32 - 16
+            default:
+                return frame % 97 == 0 ? 64 : (frame % 97 == 1 ? -64 : 0)
+            }
+        }
+        static func prefix(_ count: Int, family: Int) -> Int {
+            switch family {
+            case 0: return count * 4096
+            case 1:
+                let n = count % 32
+                let partial = n * (n - 1) * (2 * n - 1) / 6
+                    - 16 * n * (n - 1) + 256 * n
+                return (count / 32) * 2736 + partial
+            default: return ((count / 97) * 2 + min(count % 97, 2)) * 4096
+            }
+        }
+
+        static func run() -> Report {
+            let names = ["bipolar-square", "bipolar-ramp", "sparse-bipolar-pulse"]
+            let scenarios: [(String, Double, Bool, Bool)] = [
+                ("intentional-overlap", 1, false, true),
+                ("half-amplitude", 0.5, false, true),
+                ("double-amplitude", 2, false, true),
+                ("unauthorized-truncation", 1, true, true),
+                ("deleted-required-companion", 0, false, true),
+                ("intentional-absence", 0, false, false),
+            ]
+            var rows: [Row] = []
+            var failures: [String] = []
+            for family in names.indices {
+                for rate in [44_100, 48_000] {
+                    let barFrames = Int((Double(rate) * 240 / 130).rounded())
+                    let span = Int((Double(barFrames) / 8).rounded())
+                    let kick = (0..<barFrames).map { frame in
+                        frame < span ? Float(units(frame, family: family)) / 1024 : 0
+                    }
+                    for (scenario, gain, truncated, required) in scenarios {
+                        let support = truncated ? span / 2 : span
+                        let foundation = (0..<barFrames).map { frame in
+                            frame < support ? kick[frame] * Float(gain) : 0
+                        }
+                        let input = PCMKickFoundationEventInput(
+                            id: "closed-form-step-zero", bar: 0, step: 0,
+                            barStartFrame: 0, barFrameCount: barFrames, onsetFrame: 0,
+                            authoredFoundationRolesInBar: required ? ["bass"] : [])
+                        let result = PCMKickFoundationCollisionAnalyzer.analyze(
+                            kick: kick, foundation: foundation,
+                            sampleRate: Double(rate), events: [input])
+                        guard case let .available(evidence) = result,
+                              evidence.events.count == 1,
+                              let event = evidence.events.first,
+                              event.windows.count == 16 else {
+                            failures.append("unavailable-or-incomplete:\(family):\(rate):\(scenario)")
+                            continue
+                        }
+                        var windows: [Window] = []
+                        var expectedActive = 0
+                        for index in 0..<16 {
+                            // Ceil boundaries independently express the documented
+                            // sixteen causal cells, without consulting output geometry.
+                            let start = (index * span + 15) / 16
+                            let end = ((index + 1) * span + 15) / 16
+                            let count = end - start
+                            let expectedKick = Double(prefix(end, family: family)
+                                - prefix(start, family: family)) / 1_048_576 / Double(count)
+                            let expectedFoundation = Double(prefix(min(end, support), family: family)
+                                - prefix(min(start, support), family: family))
+                                * gain * gain / 1_048_576 / Double(count)
+                            let actual = event.windows[index]
+                            if expectedFoundation > 0 { expectedActive += 1 }
+                            if actual.startFrame != start || actual.frameCount != count
+                                || actual.kickMeanSquare != expectedKick
+                                || actual.foundationMeanSquare != expectedFoundation {
+                                failures.append("energy-or-geometry:\(family):\(rate):\(scenario):\(index)")
+                            }
+                            windows.append(Window(start: start, count: count,
+                                expectedKick: expectedKick, observedKick: actual.kickMeanSquare,
+                                expectedFoundation: expectedFoundation,
+                                observedFoundation: actual.foundationMeanSquare))
+                        }
+                        // Total energy from actual window means may have division
+                        // roundoff; fault comparisons below only require direction.
+                        let observed = windows.reduce(0.0) {
+                            $0 + $1.observedFoundation * Double($1.count)
+                        }
+                        let intended = required ? Double(prefix(span, family: family)) / 1_048_576 : 0
+                        let missing = required && observed == 0
+                        if !event.finite || event.temporalOverlapWindowCount != expectedActive
+                            || missing != (scenario == "deleted-required-companion") {
+                            failures.append("activity-or-role:\(family):\(rate):\(scenario)")
+                        }
+                        if ["half-amplitude", "unauthorized-truncation", "deleted-required-companion"].contains(scenario)
+                            && !(observed < intended) {
+                            failures.append("lost-energy-fault-not-detected:\(family):\(rate):\(scenario)")
+                        }
+                        if scenario == "double-amplitude" && !(observed > intended) {
+                            failures.append("added-energy-fault-not-detected:\(family):\(rate)")
+                        }
+                        rows.append(Row(family: names[family],
+                            split: family == 0 ? "development" : "held-out-construction-family",
+                            rate: rate, scenario: scenario, requiredCompanion: required,
+                            missingRequiredCompanion: missing,
+                            intendedFoundationEnergy: intended, observedFoundationEnergy: observed,
+                            expectedTemporalWindows: expectedActive,
+                            observedTemporalWindows: event.temporalOverlapWindowCount,
+                            windows: windows))
+                    }
+                }
+            }
+            var summaries: [Summary] = []
+            for family in names {
+                for rate in [44_100, 48_000] {
+                    let errors = rows.filter { $0.family == family && $0.rate == rate }
+                        .flatMap(\.windows).flatMap {
+                            [$0.observedKick - $0.expectedKick,
+                             $0.observedFoundation - $0.expectedFoundation]
+                        }
+                    if errors.count != 192 { failures.append("missing-family-rate-cells:\(family):\(rate)") }
+                    let count = Double(max(1, errors.count))
+                    summaries.append(Summary(family: family, rate: rate,
+                        measurements: errors.count,
+                        meanAbsoluteError: errors.reduce(0) { $0 + abs($1) } / count,
+                        rootMeanSquareError: sqrt(errors.reduce(0) { $0 + $1 * $1 } / count),
+                        signedError: errors.reduce(0, +) / count))
+                }
+            }
+            return Report(rows: rows, summaries: summaries, failures: failures)
+        }
+    }
 }

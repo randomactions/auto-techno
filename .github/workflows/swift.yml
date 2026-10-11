@@ -98,6 +98,13 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(localizedVerticalSlicePCM|upperTimingCascadeVerticalSlice|scoreVelocityVerticalSlice)'
 
+      - name: Verify closed-form collision source energy
+        if: matrix.bank == 'remaining'
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter PCMKickFoundationCollisionAnalyzerTests.algorithmicSourceEnergy
+
       - name: Run kick source dynamics tests
         if: matrix.bank == 'remaining'
         run: >-
