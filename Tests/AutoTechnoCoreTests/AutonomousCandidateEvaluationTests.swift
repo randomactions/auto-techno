@@ -138,7 +138,9 @@ struct AutonomousCandidateEvaluationTests {
     @Test("Each hard-gate input rejects and suppresses unrelated recovery")
     func everyHardGateInputIsNonCompensable() throws {
         let source = fixtureVector()
-        let evaluator = try ProfessionalQualityPrimaryArtifacts.load().evaluator
+        // Provenance and hard-gate rejection carry no calibration authority.
+        let policyVersion = "test-primary-provenance-only.v1"
+        let evaluatorVersion = "test-rejection-boundary-only.v1"
         let hardGateFields = [
             "symbolicValid",
             "graphValid",
@@ -182,8 +184,8 @@ struct AutonomousCandidateEvaluationTests {
 
             let transaction = AutonomousCandidateEvaluationTransaction(
                 engineVersion: QualityQualificationContract.engineVersion,
-                policyVersion: evaluator.policyVersion,
-                evaluatorVersion: evaluator.evaluatorVersion,
+                policyVersion: policyVersion,
+                evaluatorVersion: evaluatorVersion,
                 planFingerprint: failedCandidate.planFingerprint,
                 attempts: [AutonomousCandidateAttempt(
                     kind: .initialRender,
@@ -193,10 +195,10 @@ struct AutonomousCandidateEvaluationTests {
                 selectedAttemptIndex: 0,
                 correctionCount: 0
             )
-            let terminal = evaluator.terminalVerdict(
-                selected: failedCandidate,
-                transaction: transaction
-            )
+            let terminal = try #require(ProfessionalQualityPrimaryEvaluator
+                .preparationBoundaryRejection(selected: failedCandidate,
+                    transaction: transaction, policyVersion: policyVersion,
+                    evaluatorVersion: evaluatorVersion))
             #expect(terminal.outcome == .rejected, "field=\(field)")
             #expect(terminal.decisionBasis == .hardGate, "field=\(field)")
             #expect(terminal.reasonCodes == [.hardGateFailedV1],
@@ -356,7 +358,9 @@ struct AutonomousCandidateEvaluationTests {
 
     @Test("Transaction provenance reproduces and rejects identity mismatches visibly")
     func deterministicTransactionProvenanceEnvelope() throws {
-        let evaluator = try ProfessionalQualityPrimaryArtifacts.load().evaluator
+        // Provenance and hard-gate rejection carry no calibration authority.
+        let policyVersion = "test-primary-provenance-only.v1"
+        let evaluatorVersion = "test-rejection-boundary-only.v1"
         let vector = fixtureVector()
         func transaction(
             engineVersion: String,
@@ -379,14 +383,14 @@ struct AutonomousCandidateEvaluationTests {
         }
         let first = transaction(
             engineVersion: QualityQualificationContract.engineVersion,
-            policyVersion: evaluator.policyVersion,
-            evaluatorVersion: evaluator.evaluatorVersion,
+            policyVersion: policyVersion,
+            evaluatorVersion: evaluatorVersion,
             planFingerprint: vector.planFingerprint
         )
         let second = transaction(
             engineVersion: QualityQualificationContract.engineVersion,
-            policyVersion: evaluator.policyVersion,
-            evaluatorVersion: evaluator.evaluatorVersion,
+            policyVersion: policyVersion,
+            evaluatorVersion: evaluatorVersion,
             planFingerprint: vector.planFingerprint
         )
 
@@ -400,10 +404,10 @@ struct AutonomousCandidateEvaluationTests {
             from: first.deterministicJSON()
         ) == first)
 
-        let baselineVerdict = evaluator.terminalVerdict(
-            selected: vector,
-            transaction: first
-        )
+        let baselineRejection = ProfessionalQualityPrimaryEvaluator
+            .preparationBoundaryRejection(selected: vector, transaction: first,
+                policyVersion: policyVersion, evaluatorVersion: evaluatorVersion)
+        #expect(baselineRejection == nil)
         for mismatch in [
             "transaction-incomplete",
             "engine-version",
@@ -411,40 +415,39 @@ struct AutonomousCandidateEvaluationTests {
             "evaluator-version",
             "plan-fingerprint",
         ] {
-            #expect(!baselineVerdict.diagnosticDetails.contains(mismatch))
+            #expect(!(baselineRejection?.diagnosticDetails.contains(mismatch) ?? false))
         }
 
         let attacks: [(AutonomousCandidateEvaluationTransaction, [String])] = [
             (transaction(
                 engineVersion: "wrong-engine",
-                policyVersion: evaluator.policyVersion,
-                evaluatorVersion: evaluator.evaluatorVersion,
+                policyVersion: policyVersion,
+                evaluatorVersion: evaluatorVersion,
                 planFingerprint: vector.planFingerprint
             ), ["transaction-incomplete", "engine-version"]),
             (transaction(
                 engineVersion: QualityQualificationContract.engineVersion,
                 policyVersion: "wrong-policy",
-                evaluatorVersion: evaluator.evaluatorVersion,
+                evaluatorVersion: evaluatorVersion,
                 planFingerprint: vector.planFingerprint
             ), ["policy-version"]),
             (transaction(
                 engineVersion: QualityQualificationContract.engineVersion,
-                policyVersion: evaluator.policyVersion,
+                policyVersion: policyVersion,
                 evaluatorVersion: "wrong-evaluator",
                 planFingerprint: vector.planFingerprint
             ), ["evaluator-version"]),
             (transaction(
                 engineVersion: QualityQualificationContract.engineVersion,
-                policyVersion: evaluator.policyVersion,
-                evaluatorVersion: evaluator.evaluatorVersion,
+                policyVersion: policyVersion,
+                evaluatorVersion: evaluatorVersion,
                 planFingerprint: "wrong-plan"
             ), ["transaction-incomplete", "plan-fingerprint"]),
         ]
         for (attacked, expectedDiagnostics) in attacks {
-            let verdict = evaluator.terminalVerdict(
-                selected: vector,
-                transaction: attacked
-            )
+            let verdict = try #require(ProfessionalQualityPrimaryEvaluator
+                .preparationBoundaryRejection(selected: vector, transaction: attacked,
+                    policyVersion: policyVersion, evaluatorVersion: evaluatorVersion))
             #expect(verdict.outcome == .rejected)
             #expect(verdict.reasonCodes == [.hardGateFailedV1])
             #expect(verdict.diagnosticDetails == expectedDiagnostics)
@@ -1692,9 +1695,9 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
         #expect(vector.schemaVersion == 43)
-        #expect(QualityQualificationContract.schemaVersion == 49)
+        #expect(QualityQualificationContract.schemaVersion == 50)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v48")
+                "autotechno-canonical-engine.v49")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector().fingerprint)
@@ -4310,7 +4313,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-            "0cd0790eafeb6017")
+            "35614a1677c3c42b")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7

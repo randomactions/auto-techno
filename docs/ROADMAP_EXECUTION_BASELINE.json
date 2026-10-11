@@ -1,8 +1,8 @@
 {
   "schema": "autotechno-roadmap-contract-baseline.v1",
-  "snapshotVersion": 85,
+  "snapshotVersion": 141,
   "digestAlgorithm": "sha256",
-  "snapshotFingerprint": "0f3e8dbb4335270e65272b793a71465397d7f7c8438c919a3a1e27da81e8c6e5",
+  "snapshotFingerprint": "1b444920e647fa3bbca8c26f30ffd537adc69a1aa80319bfb0a8c93a72dc1a34",
   "documents": [
     {
       "role": "repository-guidance",
@@ -19,20 +19,20 @@
     {
       "role": "product-contract",
       "path": "docs/PRODUCT.md",
-      "byteCount": 30360,
-      "sha256": "b5eb3fd501ae39a9eb7afd838f2555302cba8a2b03782f2f9dc6804a38cff47d"
+      "byteCount": 30925,
+      "sha256": "839a63c0f6e9fc8cc1405ffd0f802b74286d5c09be0414f4017be4ad16c30a64"
     },
     {
       "role": "sound-quality-contract",
       "path": "docs/SOUND_QUALITY.md",
-      "byteCount": 73503,
-      "sha256": "f32912536f2892426a4b5ea1b62dcd1dfce5adda488009151f0e47b4d6c03fc3"
+      "byteCount": 109339,
+      "sha256": "591c3a37f8715f4a061e91da97634e16019ef094635bfb7a22ecc342291b1a44"
     },
     {
       "role": "runtime-provenance-contract",
       "path": "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
-      "byteCount": 103554,
-      "sha256": "30d3aa0548827df2343f004546f4cb21c4dc5f9d9d0feda0e54ff25cdaac0e89"
+      "byteCount": 175950,
+      "sha256": "432cde8497eda85fdd2ba443e4a4c78c25f86118fb5f1716741c8a860bbce047"
     },
     {
       "role": "component-license-asset-manifest-source",
@@ -139,14 +139,14 @@
     {
       "role": "pcm-spectral-baseline-contract",
       "path": "docs/PCM_SPECTRAL_BASELINE.md",
-      "byteCount": 6823,
-      "sha256": "19b0f2b700ad23f3996ad9a80065a726d8bd3e2a445d007365bd733eb53eb572"
+      "byteCount": 12697,
+      "sha256": "ae3ff25a43c487721f8bac9bf3cc607481be43d1f52b3f2f096f329c78272e88"
     },
     {
       "role": "kick-foundation-collision-baseline-contract",
       "path": "docs/KICK_FOUNDATION_COLLISION_BASELINE.md",
-      "byteCount": 10065,
-      "sha256": "3ebf6d7d02f79b1f0be2e46dc5c2b2a2f020359285a7ce1a6dc97505efd97cfd"
+      "byteCount": 19098,
+      "sha256": "efe2a92814a9770ae7f50975c01217a8a43815afc4bdf34f7cc18ca3db1ea7d3"
     },
     {
       "role": "pcm-transient-envelope-baseline-contract",
@@ -163,14 +163,14 @@
     {
       "role": "semantic-codebase-map-source",
       "path": "docs/codebase-map.json",
-      "byteCount": 117497,
-      "sha256": "25e95cb156a2b594e652d94768592e37c6bf710ef0d260b5436d50555538a880"
+      "byteCount": 155912,
+      "sha256": "02335c9132ba9809e40eded9b971d0320409b09cf8a72700c836afcb226ed1d0"
     },
     {
       "role": "semantic-codebase-map-rendering",
       "path": "docs/CODEBASE_MAP.md",
-      "byteCount": 283746,
-      "sha256": "cde489509ebcc74279163251a92a0978ed65b949851de8fa0dda6e2b5f7f04f5"
+      "byteCount": 342073,
+      "sha256": "bb8c327aa954ea1ebc2203ed8fc0d221b34a357d7364bcd9d74f96e37eca6c32"
     }
   ]
 }

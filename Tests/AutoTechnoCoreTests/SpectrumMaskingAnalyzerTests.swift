@@ -1,9 +1,14 @@
 import Foundation
+#if !AUTOTECHNO_MASKING_COMPONENT_CHECK
 import Testing
 @testable import AutoTechnoDSP
+#endif
 
+#if !AUTOTECHNO_MASKING_COMPONENT_CHECK
 @Suite("Spectrum masking analyzer")
+#endif
 struct SpectrumMaskingAnalyzerTests {
+#if !AUTOTECHNO_MASKING_COMPONENT_CHECK
     @Test("Reusable sample filter preserves exact band-window evidence")
     func reusableFilterParity() throws {
         let sampleRate = 48_000.0
@@ -394,6 +399,33 @@ struct SpectrumMaskingAnalyzerTests {
         FileHandle.standardOutput.write(Data([0x0A]))
     }
 
+    @Test("Algorithmic masking benchmark preserves independent fault evidence")
+    func algorithmicFaultBenchmark() throws {
+        let report = AlgorithmicMaskingBenchmark.run()
+        #expect(report.rows.count == 36)
+        #expect(report.failures.isEmpty)
+        #expect(report.rows.filter { $0.missingRequiredCompanion }.count == 6)
+        #expect(report.rows.filter { $0.exactCancellation }.count == 6)
+        #expect(report.rows.filter { $0.scenario == "intentional-absence" }
+            .allSatisfy { !$0.missingRequiredCompanion })
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        FileHandle.standardOutput.write(try encoder.encode(report))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
+    @Test("Masking filters agree with independent closed-form causal responses")
+    func algorithmicFilterResponse() throws {
+        let report = AlgorithmicFilterResponseBenchmark.run()
+        #expect(report.rows.count == 24)
+        #expect(report.failures.isEmpty)
+        #expect(report == AlgorithmicFilterResponseBenchmark.run())
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        FileHandle.standardOutput.write(try encoder.encode(report))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
     private func tone(
         sampleRate: Double,
         framesPerWindow: Int,
@@ -414,6 +446,331 @@ struct SpectrumMaskingAnalyzerTests {
     ) -> RoleMaskingObservation? {
         observations.first {
             $0.firstRole == first && $0.secondRole == second && $0.band.name == band
+        }
+    }
+#endif
+
+    enum AlgorithmicFilterResponseBenchmark {
+        struct Errors: Encodable, Equatable {
+            let count: Int
+            let meanAbsoluteError: Double?
+            let rootMeanSquareError: Double?
+            let meanSignedError: Double?
+            let maximumAbsoluteError: Double?
+
+            init(_ values: [Double]) {
+                count = values.count
+                guard !values.isEmpty, values.allSatisfy(\.isFinite) else {
+                    meanAbsoluteError = nil
+                    rootMeanSquareError = nil
+                    meanSignedError = nil
+                    maximumAbsoluteError = nil
+                    return
+                }
+                meanAbsoluteError = values.reduce(0) { $0 + abs($1) } / Double(count)
+                rootMeanSquareError = sqrt(values.reduce(0) { $0 + $1 * $1 } / Double(count))
+                meanSignedError = values.reduce(0, +) / Double(count)
+                maximumAbsoluteError = values.map(abs).max() ?? 0
+            }
+        }
+
+        struct Row: Encodable, Equatable {
+            let family: String
+            let split: String
+            let sampleRate: Int
+            let band: String
+            let samples: Errors
+            let windowEnergies: Errors
+            let sampleAbsoluteErrorBound: Double
+            let energyAbsoluteErrorBound: Double
+        }
+
+        struct Report: Encodable, Equatable {
+            let schema = "autotechno-masking-filter-response.v1"
+            let scope = "declared-causal-filter-transfer-and-window-energy-only"
+            let uncertainty = "fixed-constructions-no-population-interval-or-fitted-classifier"
+            let unavailable = ["perceptual-masking-harm", "score-to-render-fidelity",
+                               "nonlinear-full-mix-quality", "general-frequency-response-calibration"]
+            let rows: [Row]
+            let failures: [String]
+        }
+
+        // The oracle evaluates the finite geometric series directly; it never
+        // calls the production filter or reproduces its state-update loop.
+        private static func power(_ base: Double, _ exponent: Int) -> Double {
+            var result = 1.0
+            var factor = base
+            var remaining = exponent
+            while remaining > 0 {
+                if remaining & 1 == 1 { result *= factor }
+                remaining >>= 1
+                if remaining > 0 { factor *= factor }
+            }
+            return result
+        }
+
+        private static func response(_ family: String, frame: Int, pole: Double) -> Double {
+            switch family {
+            case "step": return 0.25 * (1 - power(pole, frame + 1))
+            case "impulse": return 0.25 * (1 - pole) * power(pole, frame)
+            default:
+                let sign = frame.isMultiple(of: 2) ? 1.0 : -1.0
+                return 0.25 * (1 - pole) / (1 + pole) *
+                    (sign + power(pole, frame + 1))
+            }
+        }
+
+        static func run() -> Report {
+            let frameCount = 4_096
+            let cutoffs = [35.0, 120.0, 420.0, 2_400.0, 10_000.0]
+            let names = ["sub", "low-mid", "mid", "high"]
+            let families = [("step", "development"), ("impulse", "held-out-construction"),
+                            ("alternating", "held-out-construction")]
+            // Absolute forward-error envelopes for bounded |input| <= 1/4.
+            // Contractive recurrences accumulate at most O(N*u) roundoff;
+            // 32 operations/frame covers both poles, coefficient subtraction,
+            // geometric-series evaluation and band subtraction. 128 covers
+            // squaring, accumulation and division for each window as well.
+            // ulpOfOne is twice unit roundoff, adding conservative headroom.
+            func gamma(_ operations: Int) -> Double {
+                let nu = Double(operations) * Double.ulpOfOne
+                return nu / (1 - nu)
+            }
+            let sampleBound = gamma(32 * (frameCount + 1))
+            let energyBound = gamma(128 * (frameCount + 1))
+            var rows: [Row] = []
+            var failures: [String] = []
+            if SpectrumMaskingAnalyzer.bands.map(\.name) != names ||
+                SpectrumMaskingAnalyzer.bands.map(\.lowerHz) != Array(cutoffs.dropLast()) ||
+                SpectrumMaskingAnalyzer.bands.map(\.upperHz) != Array(cutoffs.dropFirst()) {
+                failures.append("declared-band-metadata")
+            }
+            for rate in [44_100, 48_000] {
+                let poles = cutoffs.map { exp(-2 * Double.pi * $0 / Double(rate)) }
+                for (family, split) in families {
+                    let input: [Float] = (0..<frameCount).map { frame in
+                        switch family {
+                        case "step": return 0.25
+                        case "impulse": return frame == 0 ? 0.25 : 0
+                        default: return frame.isMultiple(of: 2) ? 0.25 : -0.25
+                        }
+                    }
+                    // Freeze every expected sample before accessing the analyzer.
+                    let expected = (0..<frameCount).map { frame in
+                        (0..<4).map { band in
+                            response(family, frame: frame, pole: poles[band + 1]) -
+                                response(family, frame: frame, pole: poles[band])
+                        }
+                    }
+                    guard var filter = MaskingBandFilter(sampleRate: Double(rate)),
+                          let windows = SpectrumMaskingAnalyzer.bandEnergyWindows(
+                            input, sampleRate: Double(rate)), windows.count == 16 else {
+                        failures.append("\(family):\(rate):unavailable")
+                        continue
+                    }
+                    var errors = [[Double]](repeating: [], count: 4)
+                    for frame in 0..<frameCount {
+                        guard let actual = filter.process(Double(input[frame])) else {
+                            failures.append("\(family):\(rate):sample-\(frame)-unavailable")
+                            continue
+                        }
+                        for band in 0..<4 {
+                            let error = actual[band] - expected[frame][band]
+                            if !error.isFinite || abs(error) > sampleBound {
+                                failures.append("\(family):\(rate):\(band):sample-\(frame)")
+                            }
+                            errors[band].append(error)
+                        }
+                    }
+                    for band in 0..<4 {
+                        var energyErrors: [Double] = []
+                        for index in 0..<16 {
+                            let lower = index * frameCount / 16
+                            let upper = (index + 1) * frameCount / 16
+                            let window = windows[index]
+                            guard window.index == index, window.startFrame == lower,
+                                  window.frameCount == upper - lower,
+                                  window.bandMeanSquares.count == 4 else {
+                                failures.append("\(family):\(rate):\(band):window-\(index)-shape")
+                                continue
+                            }
+                            let energy = (lower..<upper).reduce(0.0) {
+                                $0 + expected[$1][band] * expected[$1][band]
+                            } / Double(upper - lower)
+                            let error = window.bandMeanSquares[band] - energy
+                            if !error.isFinite || abs(error) > energyBound {
+                                failures.append("\(family):\(rate):\(band):energy-\(index)")
+                            }
+                            energyErrors.append(error)
+                        }
+                        rows.append(Row(family: family, split: split, sampleRate: rate,
+                            band: names[band], samples: Errors(errors[band]),
+                            windowEnergies: Errors(energyErrors),
+                            sampleAbsoluteErrorBound: sampleBound,
+                            energyAbsoluteErrorBound: energyBound))
+                    }
+                }
+            }
+            return Report(rows: rows, failures: failures)
+        }
+    }
+
+    // Test-only equations and expected relations are frozen before analyzer access.
+    // The component build compiles this exact file with the production analyzer;
+    // it does not compile or claim to execute the Swift Testing suite above.
+    enum AlgorithmicMaskingBenchmark {
+        struct Row: Codable, Equatable {
+            let family: String
+            let split: String
+            let sampleRate: Int
+            let scenario: String
+            let expectedOverlap: Double
+            let observedOverlap: Double?
+            let activePairWindows: Int?
+            let absoluteError: Double?
+            let expectedLinearSumEnergyRatio: Double
+            let linearSumEnergyRatio: Double
+            let exactCancellation: Bool
+            let missingRequiredCompanion: Bool
+            let replayExact: Bool
+        }
+
+        struct Summary: Encodable, Equatable {
+            let family: String
+            let split: String
+            let sampleRate: Int
+            let rowCount: Int
+            let meanAbsoluteError: Double?
+            let rootMeanSquareError: Double?
+            let meanSignedError: Double?
+        }
+
+        struct Report: Encodable, Equatable {
+            let schema = "autotechno-algorithmic-masking-component.v1"
+            let scope = "constructed-linear-signals-no-score-or-perceptual-qualification"
+            let uncertainty = "not-estimated-fixed-families-not-random-independent-listeners"
+            let unavailable = ["score-to-render-fidelity", "shared-nonlinear-mix-damage",
+                               "perceptual-masking-harm", "musical-preference", "groove-quality"]
+            let rows: [Row]
+            let summaries: [Summary]
+            let failures: [String]
+        }
+
+        static func run() -> Report {
+            var rows: [Row] = []
+            var failures: [String] = []
+            // Different construction families, not renamed frequency holdouts.
+            // No threshold fitting or parameter search is performed on either split.
+            let families = [("sine", "development", 80.0),
+                            ("triangle", "held-out-family", 73.0),
+                            ("asymmetric-pulse", "held-out-family", 91.0)]
+            let cases: [(String, Float, Bool, Double, Double)] = [
+                ("intentional-overlap", 1, true, 1, 4),
+                ("phase-cancellation", -1, true, 1, 0),
+                ("half-amplitude", 0.5, true, 0.25, 2.25),
+                ("double-amplitude", 2, true, 0.25, 9),
+                ("deleted-required-companion", 0, true, 0, 1),
+                ("intentional-absence", 0, false, 0, 1),
+            ]
+            for rate in [44_100, 48_000] {
+                for (family, split, frequency) in families {
+                    let signal: [Float] = (0..<(rate / 4)).map { frame in
+                        let cycles = frequency * Double(frame) / Double(rate)
+                        let phase = cycles - floor(cycles)
+                        let value: Double
+                        switch family {
+                        case "sine": value = sin(2 * .pi * cycles)
+                        case "triangle": value = 1 - 4 * abs(phase - 0.5)
+                        default: value = phase < 0.25 ? 1 : -1.0 / 3.0
+                        }
+                        return Float(0.125 * value)
+                    }
+                    let silence = [Float](repeating: 0, count: signal.count)
+                    for (scenario, gain, required, expectedOverlap, sumRatio) in cases {
+                        let companion = signal.map { $0 * gain }
+                        let inputs: [MaskingRole: [Float]] = [
+                            .foundation: signal, .percussion: companion, .upper: silence,
+                        ]
+                        let evidence = SpectrumMaskingAnalyzer.analyze(
+                            signals: inputs, sampleRate: Double(rate))
+                        let observed = evidence.first {
+                            $0.firstRole == .foundation && $0.secondRole == .percussion &&
+                                $0.band.name == "sub"
+                        }
+                        var sourceEnergy = 0.0
+                        var companionEnergy = 0.0
+                        var sumEnergy = 0.0
+                        for index in signal.indices {
+                            let a = Double(signal[index])
+                            let b = Double(companion[index])
+                            sourceEnergy += a * a
+                            companionEnergy += b * b
+                            sumEnergy += (a + b) * (a + b)
+                        }
+                        let measuredSumRatio = sumEnergy / sourceEnergy
+                        let cancelled = sumEnergy == 0 && sourceEnergy > 0 && companionEnergy > 0
+                        let missing = required && companionEnergy == 0
+                        let exactReplay = evidence == SpectrumMaskingAnalyzer.analyze(
+                            signals: inputs, sampleRate: Double(rate))
+                        let key = "\(family)/\(rate)/\(scenario)"
+                        if evidence.count != 12 { failures.append(key + ":evidence-shape") }
+                        // Binary-power gains preserve this linear filter's arithmetic
+                        // exactly. This is not a tolerance fitted to the cohort.
+                        if observed?.maximumOverlap != expectedOverlap {
+                            failures.append(key + ":overlap-homogeneity")
+                        }
+                        if observed?.activePairWindowCount != (gain == 0 ? 0 : 16) {
+                            failures.append(key + ":source-activity")
+                        }
+                        // Positive energy summation: a conservative gamma(8N) bound
+                        // covers products, accumulated sums and final division. It is
+                        // a numerical bound only, unrelated to musical acceptance.
+                        let nEpsilon = Double(8 * signal.count) * Double.ulpOfOne
+                        let numericalBound = nEpsilon / (1 - nEpsilon) * max(1, sumRatio)
+                        if !measuredSumRatio.isFinite || abs(measuredSumRatio - sumRatio) > numericalBound {
+                            failures.append(key + ":linear-sum-energy")
+                        }
+                        if cancelled != (scenario == "phase-cancellation") {
+                            failures.append(key + ":cancellation-witness")
+                        }
+                        if missing != (scenario == "deleted-required-companion") {
+                            failures.append(key + ":required-role-witness")
+                        }
+                        if !exactReplay { failures.append(key + ":replay") }
+                        rows.append(Row(
+                            family: family, split: split, sampleRate: rate, scenario: scenario,
+                            expectedOverlap: expectedOverlap, observedOverlap: observed?.maximumOverlap,
+                            activePairWindows: observed?.activePairWindowCount,
+                            absoluteError: observed.map { abs($0.maximumOverlap - expectedOverlap) },
+                            expectedLinearSumEnergyRatio: sumRatio,
+                            linearSumEnergyRatio: measuredSumRatio, exactCancellation: cancelled,
+                            missingRequiredCompanion: missing, replayExact: exactReplay))
+                    }
+                    var invalid = signal
+                    invalid[invalid.count / 2] = .nan
+                    if !SpectrumMaskingAnalyzer.analyze(signals: [
+                        .foundation: signal, .percussion: invalid, .upper: silence,
+                    ], sampleRate: Double(rate)).isEmpty {
+                        failures.append("\(family)/\(rate):nonfinite-not-refused")
+                    }
+                }
+            }
+            let summaries = [44_100, 48_000].flatMap { rate in
+                families.map { family, split, _ in
+                    let group = rows.filter { $0.sampleRate == rate && $0.family == family }
+                    let errors = group.compactMap { row in
+                        row.observedOverlap.map { $0 - row.expectedOverlap }
+                    }
+                    let complete = errors.count == group.count && !errors.isEmpty
+                    let count = Double(errors.count)
+                    return Summary(family: family, split: split, sampleRate: rate,
+                        rowCount: group.count,
+                        meanAbsoluteError: complete ? errors.reduce(0) { $0 + abs($1) } / count : nil,
+                        rootMeanSquareError: complete ? sqrt(errors.reduce(0) { $0 + $1 * $1 } / count) : nil,
+                        meanSignedError: complete ? errors.reduce(0, +) / count : nil)
+                }
+            }
+            return Report(rows: rows, summaries: summaries, failures: failures)
         }
     }
 }

@@ -270,6 +270,29 @@ struct StreamingPerceptualEvidenceTests {
         ) > 0.01)
     }
 
+    @Test("Sub-floor PCM and exact silence share the RMS trajectory floor")
+    func rmsTrajectoryNumericalFloorContinuity() throws {
+        // Independent constant-window oracle. Values below the existing exact
+        // silence level must not manufacture hundreds of dB of movement.
+        for sampleRate in [44_100.0, 48_000.0, 96_000.0] {
+            let window = StreamingPerceptualEvidenceAnalyzer
+                .analysisFrameCount(sampleRate: sampleRate)
+            let quiet = [Float](repeating: Float.leastNormalMagnitude / 128, count: window * 3)
+            let silent = [Float](repeating: 0, count: window * 3)
+            let active = [Float](repeating: 0.1, count: window * 3)
+            let exact = try evidence(silent + active, sampleRate: sampleRate)
+            let tiny = try evidence(quiet + active, sampleRate: sampleRate)
+            #expect(exact.isComplete && tiny.isComplete)
+            #expect(abs(exact.rmsTrajectoryDeltaPeakDB -
+                        tiny.rmsTrajectoryDeltaPeakDB) < 0.000_001)
+            #expect(abs(exact.rmsTrajectoryDeltaMeanDB -
+                        tiny.rmsTrajectoryDeltaMeanDB) < 0.000_001)
+            #expect(abs(tiny.rmsTrajectoryDeltaPeakDB -
+                        (120 + 20 * log10(Double(Float(0.1)) / sqrt(2)))) <
+                    0.000_001)
+        }
+    }
+
     @Test("Active-window population and RMS trajectory preserve silence transitions")
     func activityAndTrajectoryWindowPopulation() throws {
         let sampleRate = 48_000.0

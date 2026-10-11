@@ -14,6 +14,15 @@ package enum LongHorizonSignalTrajectorySchema {
     "no-calibrated-long-horizon-policy"
 }
 
+/// Report interpretation is independent of unchanged same-pass phrase evidence.
+/// A neutral fallback has no episode-completion authority; the next bound
+/// episode either resumes the pending identity or closes it by replacement.
+package enum LongHorizonSignalTrajectoryReportSchema {
+  package static let schemaVersion = 2
+  package static let schemaIdentifier =
+    "autotechno-long-horizon-signal-trajectory-report.v2"
+}
+
 package enum LongHorizonSignalTrajectoryAvailability: String, Codable,
   Sendable
 {
@@ -288,14 +297,46 @@ package struct LongHorizonSignalPhraseEvidence: Codable, Equatable, Sendable {
   package static func make(
     prepared: PreparedAutonomousPhrase
   ) -> LongHorizonSignalPhraseEvidence? {
-    let plan = prepared.plan
-    let vector = prepared.selectedCandidateEvidence
+    guard prepared.commitEligible else { return nil }
+    return make(
+      plan: prepared.plan, vector: prepared.selectedCandidateEvidence,
+      rootSeed: prepared.graph.sessionSeed,
+      candidateEvaluationFingerprint: prepared.candidateEvaluationFingerprint,
+      audioPreflight: prepared.audioPreflight,
+      dose: prepared.longHorizonEffectDoseEvidence,
+      playbackHardGatesPassed: prepared.playbackHardGatesPassed)
+  }
+
+  /// The typed private preview supplies the same immutable signal inputs. This
+  /// produces evidence for a prospective projection, never source admission.
+  package static func make(
+    preview: AutonomousCandidatePreparedPreview
+  ) -> LongHorizonSignalPhraseEvidence? {
+    guard preview.hasProspectiveAcceptanceBinding else { return nil }
+    return make(
+      plan: preview.plan, vector: preview.selectedCandidateEvidence,
+      rootSeed: preview.graph.sessionSeed,
+      candidateEvaluationFingerprint: preview.candidateEvaluationFingerprint,
+      audioPreflight: preview.audioPreflight,
+      dose: preview.longHorizonEffectDoseEvidence,
+      playbackHardGatesPassed: preview.selectedCandidateEvidence.playbackHardGatesPassed)
+  }
+
+  private static func make(
+    plan: AutonomousPhrasePlan,
+    vector: AutonomousCandidateEvaluationVector,
+    rootSeed: UInt64,
+    candidateEvaluationFingerprint: String,
+    audioPreflight: PhraseAudioPreflight,
+    dose: LongHorizonEffectDosePhraseEvidence?,
+    playbackHardGatesPassed: Bool
+  ) -> LongHorizonSignalPhraseEvidence? {
     let fullMix = vector.fullMix
-    guard vector.isComplete, prepared.commitEligible,
+    guard vector.isComplete, playbackHardGatesPassed,
       vector.planFingerprint == AutonomousTypedFingerprint.plan(plan),
-      fullMix.sampleHash == prepared.audioPreflight.quality.sampleHash,
+      fullMix.sampleHash == audioPreflight.quality.sampleHash,
       fullMix.bars.count == plan.barCount,
-      let dose = prepared.longHorizonEffectDoseEvidence,
+      let dose,
       dose.isComplete, dose.bars.count == fullMix.bars.count
     else {
       return nil
@@ -327,7 +368,7 @@ package struct LongHorizonSignalPhraseEvidence: Codable, Equatable, Sendable {
       bars.append(bar)
     }
 
-    let musical = prepared.audioPreflight.quality.musical
+    let musical = audioPreflight.quality.musical
     let crestValues = bars.map(\.crestFactorDB)
     let transientValues = bars.map(\.transientDensityPerSecond)
     let wetValues = bars.compactMap(\.wetToDryDB)
@@ -352,16 +393,16 @@ package struct LongHorizonSignalPhraseEvidence: Codable, Equatable, Sendable {
       movementScore: fullMix.movementScore
     )
     let evidence = LongHorizonSignalPhraseEvidence(
-      rootSeed: prepared.graph.sessionSeed,
+      rootSeed: rootSeed,
       phraseIndex: plan.phraseIndex,
       startBar: plan.startBar,
       phraseKind: plan.kind,
       coordination: plan.longHorizonEnergyCoordination,
       sampleRate: vector.routeContinuation.sampleRate,
       planFingerprint: vector.planFingerprint,
-      candidateEvidenceFingerprint: prepared.candidateEvaluationFingerprint,
+      candidateEvidenceFingerprint: candidateEvaluationFingerprint,
       pcmFingerprint: fullMix.sampleHash,
-      hardGatesPassed: prepared.playbackHardGatesPassed,
+      hardGatesPassed: playbackHardGatesPassed,
       signal: signal,
       bars: bars
     )
@@ -636,6 +677,7 @@ package struct LongHorizonSignalTrajectoryAccumulator: Sendable {
     )
     self.rootSeed = rootSeed
     self.sampleRate = sampleRate
+    trajectoryHasher.combine(LongHorizonSignalTrajectoryReportSchema.schemaIdentifier)
   }
 
   package mutating func observe(
@@ -665,8 +707,8 @@ package struct LongHorizonSignalTrajectoryAccumulator: Sendable {
       )
     }
     return LongHorizonSignalTrajectoryReport(
-      schemaVersion: LongHorizonSignalTrajectorySchema.schemaVersion,
-      schemaIdentifier: LongHorizonSignalTrajectorySchema.schemaIdentifier,
+      schemaVersion: LongHorizonSignalTrajectoryReportSchema.schemaVersion,
+      schemaIdentifier: LongHorizonSignalTrajectoryReportSchema.schemaIdentifier,
       availability: reason == nil ? .available : .unavailable,
       unavailableReason: reason,
       qualificationStatus: "unavailable",
@@ -850,7 +892,9 @@ package struct LongHorizonSignalTrajectoryAccumulator: Sendable {
     guard let episodeID = evidence.coordination.episodeID,
       let operatorKind = evidence.coordination.operatorKind
     else {
-      finalizeCurrentEpisode()
+      // A complete conservative fallback is counted globally, without an
+      // invented operator attribution. It cannot prove Core completed the
+      // last bound episode. Only a different bound identity closes it.
       return
     }
     if currentEpisode?.id != episodeID {

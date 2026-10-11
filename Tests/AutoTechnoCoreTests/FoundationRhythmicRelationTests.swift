@@ -668,6 +668,171 @@ struct FoundationRhythmicRelationTests {
         Issue.record("Expected a naturally reachable dotted foundation phrase")
     }
 
+    @MainActor
+    @Test("Native foundation bass binding rejects score-to-PCM faults")
+    func algorithmicFoundationBassFaults() throws {
+        struct Row: Encodable {
+            let rootSeed: UInt64
+            let split: String
+            let behavior: String
+            let referencePlanFingerprint: String
+            let sampleRate: Int
+            let scenario: String
+            let scoreBar: Int
+            let scoreEventCount: Int
+            let renderedEventCount: Int
+            let scoreStepMask: UInt16
+            let renderedStepMask: UInt16
+            let expectedStartFrames: [Int]
+            let renderedStartFrames: [Int]
+            let drySampleHash: String
+            let peak: Double
+            let rms: Double
+            let expectedComplete: Bool
+            let observedComplete: Bool
+            let renderPassesMatch: Bool
+        }
+        struct Report: Encodable {
+            let schema = "autotechno-foundation-bass-fault-component.v1"
+            let scope = "native-established-bass-score-binding-and-declared-absence"
+            let behaviors = ["subPulse", "monotone", "point", "pump", "absent"]
+            let unavailableBehaviors = ["kickTail:requires-rumble-event-evidence",
+                                       "tunedPercussive:requires-modal-event-evidence"]
+            let unavailable = ["dotted-authorized-release", "unauthorized-truncation",
+                               "full-prepared-transaction", "nonlinear-full-mix-quality",
+                               "perceptual-quality", "population-error-intervals",
+                               "independent-timing-offset-equations"]
+            let rows: [Row]
+        }
+        // Freeze roots, selection and recipes before observing PCM. Each root
+        // contributes paired rate/fault measurements, not independent samples.
+        // First eligible score bar per behavior within 128 planned phrases;
+        // missing coverage fails rather than selecting a replacement root.
+        let roots: [(UInt64, String)] = [(1, "development"), (6011, "held-out-root")]
+        let behaviors: [FoundationBehavior] = [.subPulse, .monotone, .point, .pump, .absent]
+        var rows: [Row] = []
+        for (seed, split) in roots {
+            let director = AutonomousSessionDirector(rootSeed: seed)
+            var state = director.initialState()
+            var selected: [(FoundationBehavior, AutonomousPhrasePlan, ResolvedPerformanceBar)] = []
+            for _ in 0..<128 {
+                let plan = director.plan(from: state)
+                for source in plan.resolvedBars {
+                    let behavior = source.foundationBehavior
+                    guard behaviors.contains(behavior),
+                          !selected.contains(where: { $0.0 == behavior }),
+                          source.foundationRhythmicRelation == .established,
+                          source.performance.signatureEvent != .delayedBassEntry,
+                          !source.ensemble.events.contains(where: {
+                              $0.voice == .rumble || $0.voice == .tunedTom
+                          }) else { continue }
+                    let bass = source.ensemble.events.filter { $0.voice == .bass }
+                    guard behavior == .absent ? bass.isEmpty :
+                        !bass.isEmpty && bass.allSatisfy({ (0..<16).contains($0.step) && $0.intensity > 0 })
+                    else { continue }
+                    selected.append((behavior, plan, source))
+                }
+                if selected.count == behaviors.count { break }
+                state.advancePlanning(using: plan)
+            }
+            for behavior in behaviors {
+                let (_, plan, source) = try #require(selected.first { $0.0 == behavior })
+                let originalEvents = source.ensemble.events.filter { $0.voice == .bass }
+                let expectedMask = originalEvents.reduce(UInt16(0)) {
+                    $0 | (UInt16(1) << UInt16($1.step))
+                }
+                let assignment = SynthPerformancePlan(scene: plan.scene, dna: plan.dna,
+                    kind: plan.kind, resolvedBars: [source]).bars[0].foundationInstrument
+                for rate in [44_100.0, 48_000.0] {
+                    let frames = Int((240.0 / 130.0 * rate).rounded())
+                    // Score-owned offsets define the declared timing semantics;
+                    // rendered starts or observed peaks never choose the oracle.
+                    let expectedStarts = originalEvents.map { event in
+                        Int(((Double(event.step) + VoiceRenderer.timingOffsetInSteps(
+                            for: .bass, step: event.step, dna: plan.dna)) * Double(frames) / 16.0).rounded())
+                    }
+                    let scenarios = behavior == .absent ? ["declared-absence"] :
+                        ["unaltered", "deleted-bass", "shifted-bass", "wrong-voice", "zero-intensity"]
+                    var baselineHash: String?
+                    for scenario in scenarios {
+                        let events = source.ensemble.events.compactMap { event -> EnsembleResolvedEvent? in
+                            guard event.voice == .bass else { return event }
+                            switch scenario {
+                            case "deleted-bass": return nil
+                            case "shifted-bass":
+                                return EnsembleResolvedEvent(voice: .bass, step: (event.step + 1) % 16,
+                                    intensity: event.intensity, relocated: event.relocated)
+                            case "wrong-voice":
+                                return EnsembleResolvedEvent(voice: .percussion, step: event.step,
+                                    intensity: event.intensity, relocated: event.relocated)
+                            case "zero-intensity":
+                                return EnsembleResolvedEvent(voice: .bass, step: event.step,
+                                    intensity: 0, relocated: event.relocated)
+                            default: return event
+                            }
+                        }
+                        let altered = replacingRelation(in: source, with: source.foundationRhythmicRelation,
+                            ensemble: EnsembleContext(focusRole: source.ensemble.focusRole, events: events,
+                                kickAnchors: source.ensemble.kickAnchors,
+                                intentionalPileup: source.ensemble.intentionalPileup))
+                        let expectedComplete = scenario == "unaltered" || scenario == "declared-absence"
+                        if expectedComplete { #expect(altered == source) }
+                        let actual = renderProjection(resolved: altered, plan: plan,
+                            sampleRate: rate, layer: .full).foundation
+                        let protected = renderProjection(resolved: altered, plan: plan,
+                            sampleRate: rate, layer: .protectedRhythm).foundation
+                        let passMatch = actual == protected
+                        if scenario == "unaltered" { baselineHash = actual.dryFoundationSampleHash }
+                        else if behavior != .absent { #expect(actual.dryFoundationSampleHash != baselineHash) }
+                        let binding = actual.bar == source.performance.bar &&
+                            actual.relation == source.foundationRhythmicRelation && actual.sampleRate == rate &&
+                            actual.renderedStartFrames == expectedStarts
+                        let evidence = AutonomousFoundationRhythmBarEvidence(
+                            bar: source.performance.bar, relation: source.foundationRhythmicRelation,
+                            pairPhase: FoundationRhythmicRelationContract.pairPhase(absoluteBar: source.performance.bar),
+                            scoreBassEventCount: originalEvents.count, scoreBassStepMask: expectedMask,
+                            renderedBassEventCount: actual.renderedBassEventCount,
+                            renderedBassStepMask: actual.renderedBassStepMask, renderedFrameCount: actual.renderedFrameCount,
+                            renderedStartFrameFingerprint: AutonomousFoundationRhythmBarEvidence.startFrameFingerprint(actual.renderedStartFrames),
+                            dryFoundationSampleHash: actual.dryFoundationSampleHash, peak: actual.peak, rms: actual.rms,
+                            bassPluckAssigned: assignment.patch == .bassPluck,
+                            preKickPocket: AutonomousFoundationPreKickPocketEvidence(render: actual.preKickPocket),
+                            renderPassesMatch: passMatch, bindingValid: binding, finite: actual.finite)
+                        let complete = evidence.isComplete(sampleRate: rate)
+                        #expect(passMatch && actual.finite)
+                        #expect(complete == expectedComplete)
+                        if ["deleted-bass", "wrong-voice", "zero-intensity", "declared-absence"].contains(scenario) {
+                            #expect(actual.peak == 0 && actual.rms == 0)
+                        }
+                        if scenario == "shifted-bass" {
+                            #expect(actual.renderedBassEventCount == originalEvents.count)
+                            #expect(actual.renderedStartFrames != expectedStarts)
+                        }
+                        if expectedComplete {
+                            if behavior != .absent { #expect(actual.peak > 0 && actual.rms > 0) }
+                            #expect(actual == renderProjection(resolved: altered, plan: plan,
+                                sampleRate: rate, layer: .full).foundation)
+                        }
+                        rows.append(Row(rootSeed: seed, split: split, behavior: behavior.rawValue,
+                            referencePlanFingerprint: AutonomousCandidateFingerprint.plan(plan), sampleRate: Int(rate),
+                            scenario: scenario, scoreBar: source.performance.bar, scoreEventCount: originalEvents.count,
+                            renderedEventCount: actual.renderedBassEventCount, scoreStepMask: expectedMask,
+                            renderedStepMask: actual.renderedBassStepMask, expectedStartFrames: expectedStarts,
+                            renderedStartFrames: actual.renderedStartFrames, drySampleHash: actual.dryFoundationSampleHash,
+                            peak: actual.peak, rms: actual.rms, expectedComplete: expectedComplete,
+                            observedComplete: complete, renderPassesMatch: passMatch))
+                    }
+                }
+            }
+        }
+        #expect(rows.count == 84)
+        #expect(rows.filter { $0.expectedComplete }.count == 20)
+        #expect(rows.filter { !$0.expectedComplete }.count == 64)
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        FileHandle.standardOutput.write(try encoder.encode(Report(rows: rows)))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
     private struct RenderProjection {
         let foundation: FoundationRhythmRenderEvidence
         let kickMix: KickMixEvidence
