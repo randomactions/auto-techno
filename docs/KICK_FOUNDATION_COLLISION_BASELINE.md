@@ -256,3 +256,59 @@ Run with `swift test --no-parallel --filter
 KickSourceDynamicsTests/algorithmicScoreRenderFaults`. Hosted CI runs the complete
 existing kick-source suite early in its remaining bank, after the same test
 build. Its command and serial execution are unchanged; it is moved, not duplicated.
+
+## Closed-form source-energy benchmark
+
+`PCMKickFoundationCollisionAnalyzerTests.algorithmicSourceEnergy` extends the
+existing collision evidence owner with a test-only measurement oracle. It leaves
+production state, rendering, continuation, future-boundary decisions, thresholds
+and fallback unchanged. The reusable guarantee is that source-energy evidence
+preserves known PCM energy and temporal activity under declared gain, truncation
+and absence controls. It does not add a competing analyzer or runtime parameter.
+
+Three frozen constructions use integer samples divided by1024: bipolar square
+(development), bipolar ramp and sparse bipolar pulse (held-out construction
+families). Square magnitude is64; the32-frame ramp is `frame % 32 - 16`; the
+97-frame pulse has values64,-64 at offsets0,1 and zero elsewhere. The oracle
+uses periodic prefix sums and the polynomial sum of squares, independently of
+the production per-sample energy accumulator and band filters. Ramp energy per
+period is2736 integer-square units. No feature output selects a fixture, family,
+split, or pass threshold.
+
+Six recipes at each native rate give36 rows: intentional overlap, half amplitude,
+double amplitude, unauthorized truncation at half the analysis support, deleted
+required companion, and intentional absence. All576 causal windows retain exact
+expected and observed source means, independently calculated geometry, temporal
+activity counts and the declared companion requirement. Loss and gain controls
+must change energy in the prescribed direction; a missing required companion
+must be distinguished from intentional absence. This required-role witness is
+test-only and does not assert a score-to-foundation render binding.
+
+Each sample, square and accumulated square is exactly representable in Double:
+integer magnitudes are at most128 after gain, powers-of-two denominators are
+exact, and the accumulated numerator is far below2^53. Oracle and accumulator
+perform the same final division by the independently determined cell length.
+Therefore per-window source means require exact equality, with no fitted
+numerical or perceptual tolerance. Six family/rate summaries report MAE, RMSE
+and signed error across both roles. Windows, rates and recipes are paired
+measurements, not independent population samples; these three fixed
+constructions do not support a population confidence interval.
+
+The emitted `autotechno-collision-source-energy.v1` report keeps unavailable
+perceptual harm, band-filter calibration, score-to-foundation binding, nonlinear
+full-mix quality and population uncertainty explicit. Historical constructed
+signal pilots and their counterexamples remain unchanged. This benchmark
+supports measurement fidelity only; it cannot qualify musical preference or
+replace the remaining native, provenance, resource or physical-output gates.
+
+Run the Swift Testing case with `swift test --no-parallel --filter
+PCMKickFoundationCollisionAnalyzerTests.algorithmicSourceEnergy`. Hosted CI also
+runs it explicitly in the remaining bank after compilation, retaining the full
+existing collision suite in the foundation bank. For a component-only check,
+compile `SpectrumMaskingAnalyzer.swift`, `PCMKickFoundationCollisionAnalyzer.swift`
+and the existing test file together with `-package-name AutoTechno
+-D AUTOTECHNO_COLLISION_COMPONENT_CHECK`. A small executable entry point calls
+`PCMKickFoundationCollisionAnalyzerTests.AlgorithmicSourceEnergyBenchmark.run()`,
+encodes the report and exits nonzero if `failures` is nonempty. That mode compiles
+the exact production analyzers and shared helper; it excludes Swift Testing
+wrappers and does not establish a package-test or semantic-map pass.
