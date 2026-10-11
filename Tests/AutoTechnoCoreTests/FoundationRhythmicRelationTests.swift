@@ -833,6 +833,233 @@ struct FoundationRhythmicRelationTests {
         FileHandle.standardOutput.write(Data([0x0A]))
     }
 
+    @MainActor
+    @Test("Native rumble and modal companions preserve original score binding")
+    func algorithmicFoundationCompanionFaults() throws {
+        struct Row: Encodable {
+            let rootSeed: UInt64
+            let split: String
+            let behavior: String
+            let referencePlanFingerprint: String
+            let sampleRate: Int
+            let scenario: String
+            let scoreBar: Int
+            let scoreEventIndexes: [Int]
+            let renderedEventIndexes: [Int]
+            let scoreSteps: [Int]
+            let renderedSteps: [Int]
+            let expectedStartFrames: [Int]
+            let renderedStartFrames: [Int]?
+            let firstNonzeroFrame: Int?
+            let expectedFirstOnsetShift: Int?
+            let observedFirstOnsetShift: Int?
+            let drySampleHash: String
+            let peak: Double
+            let rms: Double
+            let expectedBinding: Bool
+            let observedBinding: Bool
+            let renderPassesMatch: Bool
+        }
+        struct Report: Encodable {
+            let schema = "autotechno-foundation-companion-fault-component.v1"
+            let scope = "native-rumble-and-modal-source-score-binding"
+            let behaviors = ["kickTail", "tunedPercussive"]
+            let unavailable = ["absolute-per-event-rumble-sample-starts",
+                "continuing-modal-tail-support", "unauthorized-truncation",
+                "dotted-authorized-release", "full-prepared-transaction",
+                "nonlinear-full-mix-quality", "perceptual-quality", "population-error-intervals"]
+            let rows: [Row]
+        }
+        // Frozen before rendering: paired rates/recipes are not independent
+        // samples. The first score match is used; missing coverage fails.
+        let roots: [(UInt64, String)] = [(1, "development"), (6011, "held-out-root")]
+        let behaviors: [FoundationBehavior] = [.kickTail, .tunedPercussive]
+        var rows: [Row] = []
+        for (seed, split) in roots {
+            let director = AutonomousSessionDirector(rootSeed: seed)
+            var state = director.initialState()
+            var selected: [(FoundationBehavior, AutonomousPhrasePlan, ResolvedPerformanceBar)] = []
+            for _ in 0..<128 {
+                let plan = director.plan(from: state)
+                for source in plan.resolvedBars {
+                    let behavior = source.foundationBehavior
+                    guard behaviors.contains(behavior),
+                          !selected.contains(where: { $0.0 == behavior }) else { continue }
+                    let voice: EnsembleVoice = behavior == .kickTail ? .rumble : .tunedTom
+                    let declared = source.ensemble.events.enumerated().filter { $0.element.voice == voice }
+                    guard !declared.isEmpty,
+                          declared.allSatisfy({ (0..<15).contains($0.element.step) && $0.element.intensity > 0 }),
+                          !source.ensemble.events.contains(where: {
+                              [.bass, .rumble, .tunedTom].contains($0.voice) && $0.voice != voice
+                          }) else { continue }
+                    if behavior == .tunedPercussive {
+                        guard source.modalPercussionArticulations.count == declared.count,
+                              declared.allSatisfy({ indexed in
+                                  source.modalPercussionArticulations.contains {
+                                      $0.scoreEventIndex == indexed.offset && $0.step == indexed.element.step &&
+                                          $0.eventIntensity == indexed.element.intensity && $0.use == .foundationCompanion
+                                  }
+                              }) else { continue }
+                    }
+                    selected.append((behavior, plan, source))
+                }
+                if selected.count == behaviors.count { break }
+                state.advancePlanning(using: plan)
+            }
+            for behavior in behaviors {
+                let (_, plan, source) = try #require(selected.first { $0.0 == behavior })
+                let voice: EnsembleVoice = behavior == .kickTail ? .rumble : .tunedTom
+                let declared = source.ensemble.events.enumerated().filter { $0.element.voice == voice }
+                let indexes = declared.map(\.offset)
+                let steps = declared.map { $0.element.step }
+                for rate in [44_100.0, 48_000.0] {
+                    let frames = Int((240.0 / 130.0 * rate).rounded())
+                    // Rumble and tunedTom are unswung. Use independent score
+                    // arithmetic, never an onset found in observed PCM.
+                    let starts = steps.map { Int((Double($0) * Double(frames) / 16).rounded()) }
+                    let firstStep = try #require(steps.min())
+                    let expectedShift = Int((Double(firstStep + 1) * Double(frames) / 16).rounded()) -
+                        Int((Double(firstStep) * Double(frames) / 16).rounded())
+                    var baseline: CompanionProjection?
+                    for scenario in ["unaltered", "deleted-companion", "shifted-companion", "wrong-voice", "zero-intensity"] {
+                        let events = source.ensemble.events.compactMap { event -> EnsembleResolvedEvent? in
+                            guard event.voice == voice else { return event }
+                            if scenario == "deleted-companion" { return nil }
+                            return EnsembleResolvedEvent(
+                                voice: scenario == "wrong-voice" ? .percussion : event.voice,
+                                step: scenario == "shifted-companion" ? event.step + 1 : event.step,
+                                intensity: scenario == "zero-intensity" ? 0 : event.intensity,
+                                relocated: event.relocated)
+                        }
+                        // Modal intent owns its intensity independently of the
+                        // ensemble record. Mutate both coherently for this fault.
+                        let articulations = source.modalPercussionArticulations.map { articulation in
+                            ModalPercussionArticulation(scoreEventIndex: articulation.scoreEventIndex,
+                                step: scenario == "shifted-companion" ? articulation.step + 1 : articulation.step,
+                                use: articulation.use, modalIdentity: articulation.modalIdentity,
+                                modalDegree: articulation.modalDegree, octave: articulation.octave,
+                                fundamentalHz: articulation.fundamentalHz, excitation: articulation.excitation,
+                                damping: articulation.damping, brightness: articulation.brightness,
+                                inharmonicity: articulation.inharmonicity,
+                                eventIntensity: scenario == "zero-intensity" ? 0 : articulation.eventIntensity,
+                                seed: articulation.seed, material: articulation.material, coupling: articulation.coupling)
+                        }
+                        let altered = replacingRelation(in: source, with: source.foundationRhythmicRelation,
+                            ensemble: EnsembleContext(focusRole: source.ensemble.focusRole, events: events,
+                                kickAnchors: source.ensemble.kickAnchors,
+                                intentionalPileup: source.ensemble.intentionalPileup),
+                            modalArticulations: articulations)
+                        let expectedBinding = scenario == "unaltered"
+                        if expectedBinding { #expect(altered == source) }
+                        let actual = try renderCompanionProjection(resolved: altered, plan: plan, sampleRate: rate, layer: .full)
+                        let protected = try renderCompanionProjection(resolved: altered, plan: plan, sampleRate: rate, layer: .protectedRhythm)
+                        let passMatch = actual == protected
+                        #expect(passMatch && actual.finite && actual.frameCount == frames)
+                        let renderedIndexes: [Int]
+                        let renderedSteps: [Int]
+                        let renderedStarts: [Int]?
+                        let sourceBinding: Bool
+                        if behavior == .kickTail {
+                            renderedIndexes = actual.rumble.map(\.scoreEventIndex)
+                            renderedSteps = actual.rumble.map(\.step)
+                            renderedStarts = nil // Terminal evidence has no absolute sample-start field.
+                            sourceBinding = renderedIndexes == indexes && renderedSteps == steps &&
+                                actual.rumble.allSatisfy { $0.isComplete(sampleRate: rate) }
+                        } else {
+                            renderedIndexes = actual.modal.events.map { $0.articulation.scoreEventIndex }
+                            renderedSteps = actual.modal.events.map { $0.articulation.step }
+                            renderedStarts = actual.modal.events.map { $0.windowSupport.startFrame }
+                            sourceBinding = actual.modal.bar == source.performance.bar && actual.modal.sampleRate == rate &&
+                                actual.modal.renderedFrameCount == frames && actual.modal.finite && actual.modalRoutingValid &&
+                                renderedIndexes == indexes && renderedSteps == steps && renderedStarts == starts &&
+                                actual.modal.dryBarSampleHash == actual.sampleHash &&
+                                actual.modal.events.allSatisfy { event in
+                                    source.modalPercussionArticulations.contains(event.articulation) &&
+                                        event.appliedFundamentalHz == event.articulation.fundamentalHz &&
+                                        event.requestedFundamentalHz == event.articulation.fundamentalHz &&
+                                        event.nonzeroSampleCount > 0 && event.peak > 0 && event.rms > 0 &&
+                                        event.finite && event.stable && event.capacityValid && event.routeBindingValid &&
+                                        event.windowSupport.isValid(sampleRate: rate, frameCount: frames)
+                                }
+                        }
+                        let binding = passMatch && sourceBinding && actual.peak > 0 && actual.rms > 0 && actual.finite
+                        #expect(binding == expectedBinding)
+                        var onsetShift: Int?
+                        if expectedBinding {
+                            #expect(actual.firstNonzeroFrame != nil)
+                            #expect(actual == (try renderCompanionProjection(resolved: altered,
+                                plan: plan, sampleRate: rate, layer: .full)))
+                            baseline = actual
+                        } else {
+                            let original = try #require(baseline)
+                            #expect(actual.sampleHash != original.sampleHash)
+                            if scenario == "shifted-companion" {
+                                let changedStart = try #require(actual.firstNonzeroFrame)
+                                let originalStart = try #require(original.firstNonzeroFrame)
+                                onsetShift = changedStart - originalStart
+                                #expect(onsetShift == expectedShift)
+                                #expect(renderedIndexes == indexes && renderedSteps == steps.map { $0 + 1 })
+                            } else {
+                                #expect(actual.firstNonzeroFrame == nil && actual.peak == 0 && actual.rms == 0)
+                            }
+                        }
+                        rows.append(Row(rootSeed: seed, split: split, behavior: behavior.rawValue,
+                            referencePlanFingerprint: AutonomousCandidateFingerprint.plan(plan), sampleRate: Int(rate),
+                            scenario: scenario, scoreBar: source.performance.bar, scoreEventIndexes: indexes,
+                            renderedEventIndexes: renderedIndexes, scoreSteps: steps, renderedSteps: renderedSteps,
+                            expectedStartFrames: starts, renderedStartFrames: renderedStarts,
+                            firstNonzeroFrame: actual.firstNonzeroFrame,
+                            expectedFirstOnsetShift: scenario == "shifted-companion" ? expectedShift : nil,
+                            observedFirstOnsetShift: onsetShift, drySampleHash: actual.sampleHash,
+                            peak: actual.peak, rms: actual.rms, expectedBinding: expectedBinding,
+                            observedBinding: binding, renderPassesMatch: passMatch))
+                    }
+                }
+            }
+        }
+        #expect(rows.count == 40)
+        #expect(rows.filter { $0.observedBinding }.count == 8)
+        #expect(rows.filter { !$0.observedBinding }.count == 32)
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        FileHandle.standardOutput.write(try encoder.encode(Report(rows: rows)))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
+    private struct CompanionProjection: Equatable {
+        let frameCount: Int
+        let sampleHash: String
+        let firstNonzeroFrame: Int?
+        let peak: Double
+        let rms: Double
+        let finite: Bool
+        let rumble: [SourceTerminalDeclickRenderEvidence]
+        let modal: ModalPercussionBarRenderEvidence
+        let modalRoutingValid: Bool
+    }
+
+    @inline(never)
+    private func renderCompanionProjection(resolved: ResolvedPerformanceBar,
+        plan: AutonomousPhrasePlan, sampleRate: Double, layer: RenderLayer) throws -> CompanionProjection {
+        let synth = SynthPerformancePlan(scene: plan.scene, dna: plan.dna,
+            kind: plan.kind, resolvedBars: [resolved])
+        var state = RenderState(); state.barIndex = resolved.performance.bar
+        var workspace = RenderWorkspace()
+        let rendered = VoiceRenderer.renderBar(scene: plan.scene, sampleRate: sampleRate,
+            state: &state, dna: plan.dna, resolved: resolved, synthWorld: synth.world,
+            synthPerformance: synth.bars[0], workspace: &workspace, layer: layer,
+            phraseKind: plan.kind, diagnosticRoleStemCapture: true)
+        let capture = try #require(rendered.diagnosticRoleStemCapture)
+        let samples = resolved.foundationBehavior == .kickTail ? capture.foundation : capture.modalFoundation
+        let energy = samples.reduce(0.0) { $0 + Double($1) * Double($1) }
+        return CompanionProjection(frameCount: samples.count, sampleHash: ExactPCMFingerprint.mono(samples),
+            firstNonzeroFrame: samples.firstIndex(where: { $0 != 0 }),
+            peak: samples.reduce(0.0) { max($0, abs(Double($1))) },
+            rms: sqrt(energy / Double(max(1, samples.count))), finite: samples.allSatisfy(\.isFinite),
+            rumble: rendered.sourceTerminalDeclickRenderEvidence.filter { $0.voice == .rumble },
+            modal: rendered.modalPercussionRenderEvidence,
+            modalRoutingValid: rendered.modalPercussionFoundationRoutingValid)
+    }
+
     private struct RenderProjection {
         let foundation: FoundationRhythmRenderEvidence
         let kickMix: KickMixEvidence
@@ -920,7 +1147,8 @@ struct FoundationRhythmicRelationTests {
     private func replacingRelation(
         in resolved: ResolvedPerformanceBar,
         with relation: FoundationRhythmicRelation,
-        ensemble: EnsembleContext? = nil
+        ensemble: EnsembleContext? = nil,
+        modalArticulations: [ModalPercussionArticulation]? = nil
     ) -> ResolvedPerformanceBar {
         ResolvedPerformanceBar(
             performance: resolved.performance,
@@ -938,7 +1166,7 @@ struct FoundationRhythmicRelationTests {
             upperPercussionTailArticulations:
                 resolved.upperPercussionTailArticulations,
             modalPercussionArticulations:
-                resolved.modalPercussionArticulations,
+                modalArticulations ?? resolved.modalPercussionArticulations,
             spatialContrast: resolved.spatialContrast,
             narrative: resolved.narrative,
             kickSyntaxRole: resolved.kickSyntaxRole,
