@@ -1117,7 +1117,8 @@ struct FoundationRhythmicRelationTests {
                             terminalReleaseEndFrame: end, state: &sourceState, nonlinearCoreEvidence: &nonlinear)
                         #expect(pcm.map(\.bitPattern) == measurement.map(\.bitPattern))
                         #expect(pcm.map(\.bitPattern) == architecture.map(\.bitPattern))
-                        #expect(pcm.allSatisfy(\.isFinite))
+                        let finite = pcm.allSatisfy { $0.isFinite }
+                        #expect(finite)
                         return (pcm, result)
                     }
                     let ungated = render(nil, nil)
