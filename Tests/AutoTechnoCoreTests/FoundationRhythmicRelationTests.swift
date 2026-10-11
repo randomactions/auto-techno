@@ -987,8 +987,10 @@ struct FoundationRhythmicRelationTests {
                         var onsetShift: Int?
                         if expectedBinding {
                             #expect(actual.firstNonzeroFrame != nil)
-                            #expect(actual == (try renderCompanionProjection(resolved: altered,
-                                plan: plan, sampleRate: rate, layer: .full)))
+                            let replay = try renderCompanionProjection(
+                                resolved: altered, plan: plan, sampleRate: rate, layer: .full
+                            )
+                            #expect(actual == replay)
                             baseline = actual
                         } else {
                             let original = try #require(baseline)
