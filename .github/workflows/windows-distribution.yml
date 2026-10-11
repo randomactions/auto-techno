@@ -26,15 +26,35 @@ jobs:
         shell: pwsh
         run: |
           winget install --id Swift.Toolchain --exact --version 6.3.3 --source winget --accept-package-agreements --accept-source-agreements
-          $swift = Get-ChildItem @("$env:ProgramFiles\Swift", "$env:LocalAppData\Programs\Swift") -Filter swift.exe -Recurse -ErrorAction SilentlyContinue |
-            Where-Object { $_.DirectoryName -match "usr\\bin$" } |
-            Select-Object -First 1
-          if ($null -eq $swift) { throw "Unable to locate swift.exe after installation." }
-          $swift.DirectoryName | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          if ($LASTEXITCODE -ne 0) { throw "Swift installation failed with exit code $LASTEXITCODE." }
+          # The running Actions worker predates installation. Carry registered
+          # runtime and toolchain paths into later steps, not only swift.exe's bin.
+          $registeredPaths = foreach ($scope in @("Machine", "User")) {
+            [Environment]::GetEnvironmentVariable("Path", $scope) -split ";" |
+              Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+          }
+          $registeredPaths | Select-Object -Unique |
+            Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          $sdkRoot = [Environment]::GetEnvironmentVariable("SDKROOT", "User")
+          if ([string]::IsNullOrWhiteSpace($sdkRoot)) {
+            $sdkRoot = [Environment]::GetEnvironmentVariable("SDKROOT", "Machine")
+          }
+          if (-not [string]::IsNullOrWhiteSpace($sdkRoot)) {
+            "SDKROOT=$sdkRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
 
       - name: Show toolchain
         shell: pwsh
-        run: swift --version
+        run: |
+          $swift = Get-Command swift -CommandType Application -ErrorAction Stop
+          Write-Host "Swift executable: $($swift.Source)"
+          $versionOutput = & $swift.Source --version 2>&1
+          $swiftExit = $LASTEXITCODE
+          $versionOutput | Write-Output
+          if ($swiftExit -ne 0) { throw "Swift startup failed with exit code $swiftExit." }
+          if (($versionOutput -join "`n") -notmatch 'Swift version 6\.3\.3(?:\s|$)') {
+            throw "The selected Swift executable does not match the pinned 6.3.3 toolchain."
+          }
 
       - name: Build and test without distribution
         shell: pwsh
