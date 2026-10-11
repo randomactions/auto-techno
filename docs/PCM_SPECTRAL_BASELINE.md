@@ -151,3 +151,57 @@ filters, and folds stereo to mono. It does not establish audibility, masking
 severity, mix correction, continuous spectral occupancy, stereo translation,
 professional quality, listening approval, app/route behavior, or physical-
 output soak. Those remain separate roadmap and release gates.
+
+## Algorithmic masking component benchmark
+
+`SpectrumMaskingAnalyzerTests.algorithmicFaultBenchmark` exercises the existing
+analyzer against a frozen 36-case mathematical matrix: three construction
+families, both native rates, and six role relations. Sine is development;
+triangle and asymmetric pulse are held-out construction families. No threshold
+is fitted. These fixed cases are not random population samples and do not
+justify confidence intervals about listeners or arbitrary music.
+
+The test emits `autotechno-algorithmic-masking-component.v1` JSON with every
+case, family/rate error summaries, explicit failures and unavailable dimensions.
+Binary-power amplitude scaling has an exact band-energy-ratio oracle. A separate
+test-only linear-sum calculation detects complete cancellation, and an explicit
+required-role check distinguishes deletion from intentional absence. Identical
+overlap values therefore do not imply identical signal consequences. The
+linear-sum arithmetic bound is derived from Double precision and sample count;
+it is not a musical tolerance. This diagnostic is not the nonlinear production
+mix, a rendered score check, a perceptual model or a calibrated quality gate.
+
+Existing frequency-holdout and collision counterexamples remain unchanged.
+Run the ordinary suite with `swift test --no-parallel --filter
+SpectrumMaskingAnalyzerTests`. A compiler-only component check is also possible
+when XCTest/Testing modules are unavailable:
+
+```sh
+at0039_check_dir=$(mktemp -d)
+cat > "$at0039_check_dir/Run.swift" <<'SWIFT'
+import Foundation
+@main struct Run {
+    static func main() throws {
+        let report = SpectrumMaskingAnalyzerTests.AlgorithmicMaskingBenchmark.run()
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        FileHandle.standardOutput.write(try encoder.encode(report))
+        FileHandle.standardOutput.write(Data([0x0A]))
+        if !report.failures.isEmpty { exit(1) }
+    }
+}
+SWIFT
+swiftc -O -package-name AutoTechno -D AUTOTECHNO_MASKING_COMPONENT_CHECK \
+  -module-cache-path "$at0039_check_dir/module-cache" \
+  Sources/AutoTechnoDSP/SpectrumMaskingAnalyzer.swift \
+  Tests/AutoTechnoCoreTests/SpectrumMaskingAnalyzerTests.swift \
+  "$at0039_check_dir/Run.swift" -o "$at0039_check_dir/check"
+"$at0039_check_dir/check" > "$at0039_check_dir/report.json"
+```
+
+The component flag excludes the Swift Testing declarations only. The benchmark
+helper and production analyzer are the exact source files compiled by the test
+target. Record compiler and input hashes beside results. A successful component
+run does not assert that the ordinary suite, semantic map, whole package, score
+fidelity, resource gates or runtime qualification passed. No production build
+uses this flag, and no source or runtime parameter changes.

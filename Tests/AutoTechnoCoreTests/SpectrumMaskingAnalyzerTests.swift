@@ -1,9 +1,14 @@
 import Foundation
+#if !AUTOTECHNO_MASKING_COMPONENT_CHECK
 import Testing
 @testable import AutoTechnoDSP
+#endif
 
+#if !AUTOTECHNO_MASKING_COMPONENT_CHECK
 @Suite("Spectrum masking analyzer")
+#endif
 struct SpectrumMaskingAnalyzerTests {
+#if !AUTOTECHNO_MASKING_COMPONENT_CHECK
     @Test("Reusable sample filter preserves exact band-window evidence")
     func reusableFilterParity() throws {
         let sampleRate = 48_000.0
@@ -394,6 +399,21 @@ struct SpectrumMaskingAnalyzerTests {
         FileHandle.standardOutput.write(Data([0x0A]))
     }
 
+    @Test("Algorithmic masking benchmark preserves independent fault evidence")
+    func algorithmicFaultBenchmark() throws {
+        let report = AlgorithmicMaskingBenchmark.run()
+        #expect(report.rows.count == 36)
+        #expect(report.failures.isEmpty)
+        #expect(report.rows.filter { $0.missingRequiredCompanion }.count == 6)
+        #expect(report.rows.filter { $0.exactCancellation }.count == 6)
+        #expect(report.rows.filter { $0.scenario == "intentional-absence" }
+            .allSatisfy { !$0.missingRequiredCompanion })
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        FileHandle.standardOutput.write(try encoder.encode(report))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
     private func tone(
         sampleRate: Double,
         framesPerWindow: Int,
@@ -414,6 +434,166 @@ struct SpectrumMaskingAnalyzerTests {
     ) -> RoleMaskingObservation? {
         observations.first {
             $0.firstRole == first && $0.secondRole == second && $0.band.name == band
+        }
+    }
+#endif
+
+    // Test-only equations and expected relations are frozen before analyzer access.
+    // The component build compiles this exact file with the production analyzer;
+    // it does not compile or claim to execute the Swift Testing suite above.
+    enum AlgorithmicMaskingBenchmark {
+        struct Row: Codable, Equatable {
+            let family: String
+            let split: String
+            let sampleRate: Int
+            let scenario: String
+            let expectedOverlap: Double
+            let observedOverlap: Double?
+            let activePairWindows: Int?
+            let absoluteError: Double?
+            let expectedLinearSumEnergyRatio: Double
+            let linearSumEnergyRatio: Double
+            let exactCancellation: Bool
+            let missingRequiredCompanion: Bool
+            let replayExact: Bool
+        }
+
+        struct Summary: Encodable, Equatable {
+            let family: String
+            let split: String
+            let sampleRate: Int
+            let rowCount: Int
+            let meanAbsoluteError: Double?
+            let rootMeanSquareError: Double?
+            let meanSignedError: Double?
+        }
+
+        struct Report: Encodable, Equatable {
+            let schema = "autotechno-algorithmic-masking-component.v1"
+            let scope = "constructed-linear-signals-no-score-or-perceptual-qualification"
+            let uncertainty = "not-estimated-fixed-families-not-random-independent-listeners"
+            let unavailable = ["score-to-render-fidelity", "shared-nonlinear-mix-damage",
+                               "perceptual-masking-harm", "musical-preference", "groove-quality"]
+            let rows: [Row]
+            let summaries: [Summary]
+            let failures: [String]
+        }
+
+        static func run() -> Report {
+            var rows: [Row] = []
+            var failures: [String] = []
+            // Different construction families, not renamed frequency holdouts.
+            // No threshold fitting or parameter search is performed on either split.
+            let families = [("sine", "development", 80.0),
+                            ("triangle", "held-out-family", 73.0),
+                            ("asymmetric-pulse", "held-out-family", 91.0)]
+            let cases: [(String, Float, Bool, Double, Double)] = [
+                ("intentional-overlap", 1, true, 1, 4),
+                ("phase-cancellation", -1, true, 1, 0),
+                ("half-amplitude", 0.5, true, 0.25, 2.25),
+                ("double-amplitude", 2, true, 0.25, 9),
+                ("deleted-required-companion", 0, true, 0, 1),
+                ("intentional-absence", 0, false, 0, 1),
+            ]
+            for rate in [44_100, 48_000] {
+                for (family, split, frequency) in families {
+                    let signal: [Float] = (0..<(rate / 4)).map { frame in
+                        let cycles = frequency * Double(frame) / Double(rate)
+                        let phase = cycles - floor(cycles)
+                        let value: Double
+                        switch family {
+                        case "sine": value = sin(2 * .pi * cycles)
+                        case "triangle": value = 1 - 4 * abs(phase - 0.5)
+                        default: value = phase < 0.25 ? 1 : -1.0 / 3.0
+                        }
+                        return Float(0.125 * value)
+                    }
+                    let silence = [Float](repeating: 0, count: signal.count)
+                    for (scenario, gain, required, expectedOverlap, sumRatio) in cases {
+                        let companion = signal.map { $0 * gain }
+                        let inputs: [MaskingRole: [Float]] = [
+                            .foundation: signal, .percussion: companion, .upper: silence,
+                        ]
+                        let evidence = SpectrumMaskingAnalyzer.analyze(
+                            signals: inputs, sampleRate: Double(rate))
+                        let observed = evidence.first {
+                            $0.firstRole == .foundation && $0.secondRole == .percussion &&
+                                $0.band.name == "sub"
+                        }
+                        var sourceEnergy = 0.0
+                        var companionEnergy = 0.0
+                        var sumEnergy = 0.0
+                        for index in signal.indices {
+                            let a = Double(signal[index])
+                            let b = Double(companion[index])
+                            sourceEnergy += a * a
+                            companionEnergy += b * b
+                            sumEnergy += (a + b) * (a + b)
+                        }
+                        let measuredSumRatio = sumEnergy / sourceEnergy
+                        let cancelled = sumEnergy == 0 && sourceEnergy > 0 && companionEnergy > 0
+                        let missing = required && companionEnergy == 0
+                        let exactReplay = evidence == SpectrumMaskingAnalyzer.analyze(
+                            signals: inputs, sampleRate: Double(rate))
+                        let key = "\(family)/\(rate)/\(scenario)"
+                        if evidence.count != 12 { failures.append(key + ":evidence-shape") }
+                        // Binary-power gains preserve this linear filter's arithmetic
+                        // exactly. This is not a tolerance fitted to the cohort.
+                        if observed?.maximumOverlap != expectedOverlap {
+                            failures.append(key + ":overlap-homogeneity")
+                        }
+                        if observed?.activePairWindowCount != (gain == 0 ? 0 : 16) {
+                            failures.append(key + ":source-activity")
+                        }
+                        // Positive energy summation: a conservative gamma(8N) bound
+                        // covers products, accumulated sums and final division. It is
+                        // a numerical bound only, unrelated to musical acceptance.
+                        let nEpsilon = Double(8 * signal.count) * Double.ulpOfOne
+                        let numericalBound = nEpsilon / (1 - nEpsilon) * max(1, sumRatio)
+                        if !measuredSumRatio.isFinite || abs(measuredSumRatio - sumRatio) > numericalBound {
+                            failures.append(key + ":linear-sum-energy")
+                        }
+                        if cancelled != (scenario == "phase-cancellation") {
+                            failures.append(key + ":cancellation-witness")
+                        }
+                        if missing != (scenario == "deleted-required-companion") {
+                            failures.append(key + ":required-role-witness")
+                        }
+                        if !exactReplay { failures.append(key + ":replay") }
+                        rows.append(Row(
+                            family: family, split: split, sampleRate: rate, scenario: scenario,
+                            expectedOverlap: expectedOverlap, observedOverlap: observed?.maximumOverlap,
+                            activePairWindows: observed?.activePairWindowCount,
+                            absoluteError: observed.map { abs($0.maximumOverlap - expectedOverlap) },
+                            expectedLinearSumEnergyRatio: sumRatio,
+                            linearSumEnergyRatio: measuredSumRatio, exactCancellation: cancelled,
+                            missingRequiredCompanion: missing, replayExact: exactReplay))
+                    }
+                    var invalid = signal
+                    invalid[invalid.count / 2] = .nan
+                    if !SpectrumMaskingAnalyzer.analyze(signals: [
+                        .foundation: signal, .percussion: invalid, .upper: silence,
+                    ], sampleRate: Double(rate)).isEmpty {
+                        failures.append("\(family)/\(rate):nonfinite-not-refused")
+                    }
+                }
+            }
+            let summaries = [44_100, 48_000].flatMap { rate in
+                families.map { family, split, _ in
+                    let group = rows.filter { $0.sampleRate == rate && $0.family == family }
+                    let errors = group.compactMap { row in
+                        row.observedOverlap.map { $0 - row.expectedOverlap }
+                    }
+                    let complete = errors.count == group.count && !errors.isEmpty
+                    let count = Double(errors.count)
+                    return Summary(family: family, split: split, sampleRate: rate,
+                        rowCount: group.count,
+                        meanAbsoluteError: complete ? errors.reduce(0) { $0 + abs($1) } / count : nil,
+                        rootMeanSquareError: complete ? sqrt(errors.reduce(0) { $0 + $1 * $1 } / count) : nil,
+                        meanSignedError: complete ? errors.reduce(0, +) / count : nil)
+                }
+            }
+            return Report(rows: rows, summaries: summaries, failures: failures)
         }
     }
 }
