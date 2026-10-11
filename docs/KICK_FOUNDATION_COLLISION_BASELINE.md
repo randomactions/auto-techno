@@ -372,8 +372,10 @@ original score, never with a relabelled fault score.
 
 Each case invokes the existing `VoiceRenderer.renderBar` with its existing
 same-pass diagnostic role capture in full and protected-rhythm modes. Fresh
-zero render state and one bar bound every call. Only reduced hashes, event facts,
-first-nonzero index and energy statistics survive the helper; PCM is not saved.
+zero render state and one bar bound every call. Each test-local projection retains
+one bar of sample bit patterns for exact pass/replay comparison. Only reduced
+hashes, event facts, first-nonzero index and energy statistics enter the report;
+PCM is never saved or committed.
 Rumble uses the existing terminal-event ledger and completeness predicate;
 modal uses exact articulation identities, native start-frame support, finite
 stable event evidence and the existing protected-foundation routing flag.

@@ -1026,6 +1026,8 @@ struct FoundationRhythmicRelationTests {
     }
 
     private struct CompanionProjection: Equatable {
+        // Test-local exact PCM comparison; never encoded in the report.
+        let sampleBits: [UInt32]
         let frameCount: Int
         let sampleHash: String
         let firstNonzeroFrame: Int?
@@ -1051,7 +1053,8 @@ struct FoundationRhythmicRelationTests {
         let capture = try #require(rendered.diagnosticRoleStemCapture)
         let samples = resolved.foundationBehavior == .kickTail ? capture.foundation : capture.modalFoundation
         let energy = samples.reduce(0.0) { $0 + Double($1) * Double($1) }
-        return CompanionProjection(frameCount: samples.count, sampleHash: ExactPCMFingerprint.mono(samples),
+        return CompanionProjection(sampleBits: samples.map(\.bitPattern),
+            frameCount: samples.count, sampleHash: ExactPCMFingerprint.mono(samples),
             firstNonzeroFrame: samples.firstIndex(where: { $0 != 0 }),
             peak: samples.reduce(0.0) { max($0, abs(Double($1))) },
             rms: sqrt(energy / Double(max(1, samples.count))), finite: samples.allSatisfy(\.isFinite),
