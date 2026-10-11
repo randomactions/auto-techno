@@ -98,6 +98,45 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(localizedVerticalSlicePCM|upperTimingCascadeVerticalSlice|scoreVelocityVerticalSlice)'
 
+      - name: Run App live-feedback coordination
+        if: matrix.bank == 'foundation'
+        timeout-minutes: 20
+        run: |
+          # Capture the ordinary failure first; replay only an actual signal
+          # crash. Debugger success never replaces the original gate result.
+          set +e
+          swift test --no-parallel --skip-build \
+            --build-path "$RUNNER_TEMP/auto-techno-tests" \
+            --filter '(LiveFeedbackCoordinatorTests|TechnoEngineLiveFeedbackTests|AutonomousSessionIdentityTests|LiveRenderInspectorTests)' \
+            2>&1 | tee "$RUNNER_TEMP/auto-techno-app-feedback-gate.log"
+          test_status=${PIPESTATUS[0]}
+          set -e
+          if [ "$test_status" -ne 0 ] && grep -q 'Exited with unexpected signal code' "$RUNNER_TEMP/auto-techno-app-feedback-gate.log"; then
+            test_binary_directory="$(swift build \
+              --build-path "$RUNNER_TEMP/auto-techno-tests" --show-bin-path)"
+            test_binary="$test_binary_directory/AutoTechnoPackageTests.xctest/Contents/MacOS/AutoTechnoPackageTests"
+            swift_compiler="$(xcrun --find swift)"
+            test_helper="$(dirname "$swift_compiler")/../libexec/swift/pm/swiftpm-testing-helper"
+            sdk_platform="$(xcrun --sdk macosx --show-sdk-platform-path)"
+            diagnostic_framework_path="${DYLD_FRAMEWORK_PATH:+$DYLD_FRAMEWORK_PATH:}$sdk_platform/Developer/Library/Frameworks:$sdk_platform/Developer/Library/PrivateFrameworks"
+            diagnostic_library_path="${DYLD_LIBRARY_PATH:+$DYLD_LIBRARY_PATH:}$sdk_platform/Developer/usr/lib"
+            # The original crash followed the session-start test. Replay that
+            # complete suite to retain its asynchronous preparation context.
+            xcrun lldb --batch --no-lldbinit \
+              -o "settings set target.env-vars 'DYLD_FRAMEWORK_PATH=$diagnostic_framework_path' 'DYLD_LIBRARY_PATH=$diagnostic_library_path'" \
+              -o 'process launch --shell-expand-args false' \
+              -k 'thread backtrace --count 40 all' \
+              -k 'register read sp fp pc x9' \
+              -k 'memory region $sp' \
+              -k 'disassemble --frame --count 12' \
+              -k 'frame select 1' \
+              -k 'disassemble --frame --count 24' \
+              -- "$test_helper" --test-bundle-path "$test_binary" \
+              --no-parallel --filter AutonomousSessionIdentityTests \
+              "$test_binary" --testing-library swift-testing || true
+          fi
+          exit "$test_status"
+
       - name: Verify native foundation bass score faults
         if: matrix.bank == 'remaining'
         run: >-
@@ -358,13 +397,6 @@ jobs:
           swift test --no-parallel --skip-build \
             --build-path "$RUNNER_TEMP/auto-techno-tests" \
             --filter LiveMasterTrimFingerprintTests
-
-      - name: Run App live-feedback coordination
-        if: matrix.bank == 'foundation'
-        run: >-
-          swift test --no-parallel --skip-build
-          --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(LiveFeedbackCoordinatorTests|TechnoEngineLiveFeedbackTests|AutonomousSessionIdentityTests|LiveRenderInspectorTests)'
 
       - name: Run persistent continuous journey controls
         if: matrix.bank == 'foundation'
