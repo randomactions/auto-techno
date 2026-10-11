@@ -377,7 +377,7 @@ jobs:
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(harmonicTailPrimaryIdentityContract|primaryResourcesAreV14Only|bundledV14ArtifactsAreReady|primaryArtifacts|legacyPolicyJSONIsRejected|serializedLiveObservationProvenanceIsRejected|generateRepresentativeProfile|calibrationCacheRejectsSwappedOrUnboundedBanks|RepositorySurfaceTests)'
+          --filter '(longCycleWorldPrimaryIdentityContract|primaryResourcesAreV30FailClosed|bundledV30ArtifactsAreIneligible|pendingCurrentPairStaysUnavailable|primaryEvaluatorAndLiveControllerAreCanonical|preFloorEvidenceArtifactsAreIneligible|legacyPrimaryArtifactsAreIneligible|primaryArtifacts|legacyPolicyJSONIsRejected|serializedLiveObservationProvenanceIsRejected|generateRepresentativeProfile|calibrationCacheRejectsSwappedOrUnboundedBanks|RepositorySurfaceTests)'
 
       - name: Run primary calibration adversarial challenge
         if: matrix.bank == 'primary'
@@ -391,7 +391,7 @@ jobs:
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(modalMetricContract|noAggregateCompensation|directionalSafetyBounds|descriptiveLoudnessRange|rmsTrajectoryRateConsistency|primaryCandidatePolicy|liveMasterProvenanceHardGates|diverseCorpusIdentity|preparationEvaluatorAvailability|invalidCalibrationInputs|modalEvidencePrecedesPrimaryPolicy)'
+          --filter '(modalMetricContract|noAggregateCompensation|directionalSafetyBounds|descriptiveLoudnessRange|rmsTrajectoryRateConsistency|legacyConstructedPrimaryPolicyIsIneligible|liveMasterProvenanceHardGates|diverseCorpusIdentity|preparationEvaluatorAvailability|invalidCalibrationInputs|modalEvidencePrecedesPrimaryPolicy)'
 
       - name: Run disjoint primary holdout qualification
         if: matrix.bank == 'primary'
@@ -412,7 +412,7 @@ jobs:
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(primaryCandidatePolicy|preparationEvaluatorAvailability|closedHatEvidenceContract|failedAttemptIsRetainable)'
+          --filter '(preparationEvaluatorAvailability|closedHatEvidenceContract|failedAttemptIsRetainable)'
 
       - name: Run 8 kHz primary unavailability gate
         if: matrix.bank == 'primary'
