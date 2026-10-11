@@ -1982,6 +1982,35 @@ struct RenderBuffers {
         reset(&spatialReverbSend, frameCount: frameCount)
     }
 
+    func registerStorage(inventory: NumericStorageInventory, owner: String) {
+        inventory.register(output, owner: owner + ".output")
+        inventory.register(kick, owner: owner + ".kick")
+        inventory.register(kickDetector, owner: owner + ".kickDetector")
+        inventory.register(foundationStem, owner: owner + ".foundationStem")
+        inventory.register(modalPercussionStem, owner: owner + ".modalPercussionStem")
+        inventory.register(percussionStem, owner: owner + ".percussionStem")
+        inventory.register(percussionTextureStem, owner: owner + ".percussionTextureStem")
+        inventory.register(upperTonalStem, owner: owner + ".upperTonalStem")
+        inventory.register(atmosphereStem, owner: owner + ".atmosphereStem")
+        inventory.register(transitionStem, owner: owner + ".transitionStem")
+        inventory.register(resonantAnchorStem, owner: owner + ".resonantAnchorStem")
+        inventory.register(detunedCompanionStem, owner: owner + ".detunedCompanionStem")
+        inventory.register(shadowTimingStem, owner: owner + ".shadowTimingStem")
+        inventory.register(responseTimingStem, owner: owner + ".responseTimingStem")
+        inventory.register(resonantMonoInstrumentStem, owner: owner + ".resonantMonoInstrumentStem")
+        inventory.register(resonantMonoModulationStem, owner: owner + ".resonantMonoModulationStem")
+        inventory.register(tonalMotionInstrumentStem, owner: owner + ".tonalMotionInstrumentStem")
+        inventory.register(tonalEnvelopeExpansionStem, owner: owner + ".tonalEnvelopeExpansionStem")
+        inventory.register(spectralTextureInstrumentStem, owner: owner + ".spectralTextureInstrumentStem")
+        inventory.register(spectralTextureClusterStem, owner: owner + ".spectralTextureClusterStem")
+        inventory.register(spectralTextureHarmonicTailStem, owner: owner + ".spectralTextureHarmonicTailStem")
+        inventory.register(spectralTextureIndefinitePitchStem, owner: owner + ".spectralTextureIndefinitePitchStem")
+        inventory.register(maskingFoundation, owner: owner + ".maskingFoundation")
+        inventory.register(synth, owner: owner + ".synth")
+        inventory.register(pulseEchoSend, owner: owner + ".pulseEchoSend")
+        inventory.register(spatialReverbSend, owner: owner + ".spatialReverbSend")
+    }
+
     private func reset(_ buffer: inout [Float], frameCount: Int) {
         if buffer.count != frameCount {
             buffer = [Float](repeating: 0, count: frameCount)
@@ -2060,9 +2089,15 @@ package enum AutonomousPhraseRenderer {
         graphState: inout GeneratedDSPContinuationState,
         forceHomeUpperTimbre: Bool = false,
         diagnosticRoleStemCapture: Bool = false,
+        diagnosticRoleStemSink: (@Sendable (AutonomousBarRoleStemCapture, RenderBlock) -> Bool)? = nil,
+        workingStorageProbe: PreparationWorkingStorageProbe? = nil,
+        workingStorageObservation: PreparationStorageObservation? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> AutonomousPhraseRenderProduct? {
-        guard !cancellationRequested() else { return nil }
+        guard !cancellationRequested(),
+            !(diagnosticRoleStemCapture && diagnosticRoleStemSink != nil),
+            workingStorageProbe == nil || workingStorageObservation == nil else { return nil }
+        let captureRequested = diagnosticRoleStemCapture || diagnosticRoleStemSink != nil
         let synthPlan = SynthPerformancePlan(
             scene: plan.scene, dna: plan.dna, kind: plan.kind,
             resolvedBars: plan.resolvedBars,
@@ -2099,36 +2134,122 @@ package enum AutonomousPhraseRenderer {
                 scene: plan.scene,
                 synthPerformance: synthPerformance
             )
+            let barObservation = workingStorageObservation?.atBar(performance.bar) ??
+                workingStorageProbe.map { PreparationStorageObservation(probe: $0,
+                    prefix: "", bar: performance.bar) }
             var protectedRhythmState = state
-            let protectedRhythm = VoiceRenderer.renderBar(
-                scene: plan.scene,
-                sampleRate: sampleRate,
-                state: &protectedRhythmState,
-                dna: plan.dna,
-                resolved: resolved,
-                synthWorld: synthPlan.world,
-                synthPerformance: synthPerformance,
-                workspace: &workspace,
-                layer: .protectedRhythm,
-                phraseKind: plan.kind,
-                diagnosticRoleStemCapture: diagnosticRoleStemCapture
-            )
+            let protectedRhythm = {
+                let observation = barObservation.map { outer in
+                    let outerState = state
+                    let outerGraph = graphState
+                    let outerBlocks = blocks
+                    let outerHolds = holdEvolutionAccumulators
+                    let outerCaptures = diagnosticRoleStemCaptures
+                    return outer.extending("protected-voice") { inventory in
+                        inventory.registerBlocks(outerBlocks, owner: "outer.primary")
+                        for (ordinal, hold) in outerHolds.enumerated() {
+                            hold.registerStorage(inventory: inventory, owner: "outer.hold.\(ordinal)")
+                        }
+                        for (ordinal, capture) in outerCaptures.enumerated() {
+                            inventory.register(capture, owner: "outer.capture.\(ordinal)")
+                        }
+                        AutonomousTypedFingerprint.registerContinuationStorage(renderState: outerState,
+                            generatedDSPState: outerGraph, inventory: inventory, owner: "outer.continuation")
+                        withExtendedLifetime((outerState, outerGraph, outerBlocks, outerHolds, outerCaptures)) {}
+                    }
+                }
+                return VoiceRenderer.renderBar(
+                    scene: plan.scene,
+                    sampleRate: sampleRate,
+                    state: &protectedRhythmState,
+                    dna: plan.dna,
+                    resolved: resolved,
+                    synthWorld: synthPlan.world,
+                    synthPerformance: synthPerformance,
+                    workspace: &workspace,
+                    layer: .protectedRhythm,
+                    phraseKind: plan.kind,
+                    diagnosticRoleStemCapture: captureRequested,
+                    storageObservation: observation
+                )
+            }()
+            barObservation?.observe("protected-voice-return") { inventory in
+                workspace.buffers.registerStorage(inventory: inventory, owner: "workspace")
+                inventory.register(protectedRhythm, owner: "protected")
+                inventory.registerBlocks(blocks, owner: "primary")
+                for (ordinal, accumulator) in holdEvolutionAccumulators.enumerated() {
+                    accumulator.registerStorage(inventory: inventory, owner: "hold.\(ordinal)")
+                }
+                AutonomousTypedFingerprint.registerContinuationStorage(renderState: state,
+                    generatedDSPState: graphState, inventory: inventory, owner: "current")
+                AutonomousTypedFingerprint.registerContinuationStorage(renderState: protectedRhythmState,
+                    generatedDSPState: graphState, inventory: inventory, owner: "protected-state")
+                // All registered owners remain live for this complete snapshot.
+                // This deliberately extends diagnostic lifetimes, never playback.
+                withExtendedLifetime((
+                    workspace, protectedRhythm, blocks, holdEvolutionAccumulators,
+                    state, graphState, protectedRhythmState
+                )) {}
+            }
             guard !cancellationRequested() else { return nil }
-            let rendered = VoiceRenderer.renderBar(
-                scene: plan.scene,
-                sampleRate: sampleRate,
-                state: &state,
-                dna: plan.dna,
-                resolved: resolved,
-                synthWorld: synthPlan.world,
-                synthPerformance: synthPerformance,
-                workspace: &workspace,
-                layer: .full,
-                effectCarrierRole: plan.effectCarrier.active
-                    ? plan.effectCarrier.state.role : nil,
-                phraseKind: plan.kind,
-                diagnosticRoleStemCapture: diagnosticRoleStemCapture
-            )
+            let rendered = {
+                let observation = barObservation.map { outer in
+                    let outerState = protectedRhythmState
+                    let outerGraph = graphState
+                    let outerBlocks = blocks
+                    let outerHolds = holdEvolutionAccumulators
+                    let outerCaptures = diagnosticRoleStemCaptures
+                    let outerProtected = protectedRhythm
+                    return outer.extending("full-voice") { inventory in
+                        inventory.registerBlocks(outerBlocks, owner: "outer.primary")
+                        for (ordinal, hold) in outerHolds.enumerated() {
+                            hold.registerStorage(inventory: inventory, owner: "outer.hold.\(ordinal)")
+                        }
+                        for (ordinal, capture) in outerCaptures.enumerated() {
+                            inventory.register(capture, owner: "outer.capture.\(ordinal)")
+                        }
+                        AutonomousTypedFingerprint.registerContinuationStorage(renderState: outerState,
+                            generatedDSPState: outerGraph, inventory: inventory, owner: "outer.continuation")
+                        inventory.register(outerProtected, owner: "outer.protected")
+                        withExtendedLifetime((outerState, outerGraph, outerBlocks, outerHolds, outerCaptures, outerProtected)) {}
+                    }
+                }
+                return VoiceRenderer.renderBar(
+                    scene: plan.scene,
+                    sampleRate: sampleRate,
+                    state: &state,
+                    dna: plan.dna,
+                    resolved: resolved,
+                    synthWorld: synthPlan.world,
+                    synthPerformance: synthPerformance,
+                    workspace: &workspace,
+                    layer: .full,
+                    effectCarrierRole: plan.effectCarrier.active
+                        ? plan.effectCarrier.state.role : nil,
+                    phraseKind: plan.kind,
+                    diagnosticRoleStemCapture: captureRequested,
+                    storageObservation: observation
+                )
+            }()
+            barObservation?.observe("full-voice-return") { inventory in
+                workspace.buffers.registerStorage(inventory: inventory, owner: "workspace")
+                inventory.register(protectedRhythm, owner: "protected")
+                inventory.register(rendered, owner: "full")
+                inventory.registerBlocks(blocks, owner: "primary")
+                for (ordinal, accumulator) in holdEvolutionAccumulators.enumerated() {
+                    accumulator.registerStorage(inventory: inventory, owner: "hold.\(ordinal)")
+                }
+                AutonomousTypedFingerprint.registerContinuationStorage(renderState: state,
+                    generatedDSPState: graphState, inventory: inventory, owner: "current")
+                AutonomousTypedFingerprint.registerContinuationStorage(renderState: protectedRhythmState,
+                    generatedDSPState: graphState, inventory: inventory, owner: "protected-state")
+                // All registered owners remain live for this complete snapshot.
+                // This deliberately extends diagnostic lifetimes, never playback.
+                withExtendedLifetime((
+                    workspace, protectedRhythm, blocks, holdEvolutionAccumulators,
+                    state, graphState, protectedRhythmState, rendered
+                )) {}
+            }
             guard !cancellationRequested() else { return nil }
             let events = resolved.ensemble.events.map { event in
                 let pulse = event.voice == .groovePulse
@@ -2243,10 +2364,51 @@ package enum AutonomousPhraseRenderer {
                 graphDoseInputLeft = graphInputLeft
                 graphDoseInputRight = graphInputRight
             }
-            let generated = GeneratedDSPGraphRenderer.process(
-                left: graphDoseInputLeft, right: graphDoseInputRight,
-                sampleRate: sampleRate, plan: graph, state: &graphState
-            )
+            let generated = {
+                let observation = barObservation.map { outer in
+                    let outerWorkspace = workspace
+                    let outerState = state
+                    let outerProtectedState = protectedRhythmState
+                    let outerBlocks = blocks
+                    let outerHolds = holdEvolutionAccumulators
+                    let outerCaptures = diagnosticRoleStemCaptures
+                    return outer.extending("generated-graph") { inventory in
+                        outerWorkspace.buffers.registerStorage(inventory: inventory, owner: "outer.workspace")
+                        inventory.register(protectedRhythm, owner: "outer.protected")
+                        inventory.register(rendered, owner: "outer.full")
+                        inventory.registerBlocks(outerBlocks, owner: "outer.primary")
+                        for (ordinal, hold) in outerHolds.enumerated() {
+                            hold.registerStorage(inventory: inventory, owner: "outer.hold.\(ordinal)")
+                        }
+                        for (ordinal, capture) in outerCaptures.enumerated() {
+                            inventory.register(capture, owner: "outer.capture.\(ordinal)")
+                        }
+                        inventory.register(graphInputLeft, owner: "outer.graphInputLeft")
+                        inventory.register(graphInputRight, owner: "outer.graphInputRight")
+                        inventory.register(requestedCarrier, owner: "outer.requestedCarrier")
+                        inventory.register(carrierLeft, owner: "outer.carrierLeft")
+                        inventory.register(carrierRight, owner: "outer.carrierRight")
+                        inventory.register(residualLeft, owner: "outer.residualLeft")
+                        inventory.register(residualRight, owner: "outer.residualRight")
+                        inventory.register(graphDoseInputLeft, owner: "outer.graphDoseInputLeft")
+                        inventory.register(graphDoseInputRight, owner: "outer.graphDoseInputRight")
+                        AutonomousTypedFingerprint.registerRenderStorage(outerState,
+                            inventory: inventory, owner: "outer.state")
+                        AutonomousTypedFingerprint.registerRenderStorage(outerProtectedState,
+                            inventory: inventory, owner: "outer.protected-state")
+                        withExtendedLifetime((outerWorkspace, outerState, outerProtectedState,
+                            outerBlocks, outerHolds, outerCaptures, protectedRhythm, rendered,
+                            graphInputLeft, graphInputRight, requestedCarrier, carrierLeft,
+                            carrierRight, residualLeft, residualRight, graphDoseInputLeft,
+                            graphDoseInputRight)) {}
+                    }
+                }
+                return GeneratedDSPGraphRenderer.process(
+                    left: graphDoseInputLeft, right: graphDoseInputRight,
+                    sampleRate: sampleRate, plan: graph, state: &graphState,
+                    storageObservation: observation
+                )
+            }()
             let postCarrierLeft: [Float]
             let postCarrierRight: [Float]
             if plan.effectCarrier.active {
@@ -2290,6 +2452,44 @@ package enum AutonomousPhraseRenderer {
                     generated.1.count == graphFrameCount
             )
             guard !cancellationRequested() else { return nil }
+            barObservation?.observe("graph-pump-return") { inventory in
+                workspace.buffers.registerStorage(inventory: inventory, owner: "workspace")
+                inventory.register(protectedRhythm, owner: "protected")
+                inventory.register(rendered, owner: "full")
+                inventory.registerBlocks(blocks, owner: "primary")
+                for (ordinal, accumulator) in holdEvolutionAccumulators.enumerated() {
+                    accumulator.registerStorage(inventory: inventory, owner: "hold.\(ordinal)")
+                }
+                inventory.register(graphInputLeft, owner: "graph.graphInputLeft")
+                inventory.register(graphInputRight, owner: "graph.graphInputRight")
+                inventory.register(requestedCarrier, owner: "graph.requestedCarrier")
+                inventory.register(carrierLeft, owner: "graph.carrierLeft")
+                inventory.register(carrierRight, owner: "graph.carrierRight")
+                inventory.register(residualLeft, owner: "graph.residualLeft")
+                inventory.register(residualRight, owner: "graph.residualRight")
+                inventory.register(graphDoseInputLeft, owner: "graph.graphDoseInputLeft")
+                inventory.register(graphDoseInputRight, owner: "graph.graphDoseInputRight")
+                inventory.register(postCarrierLeft, owner: "graph.postCarrierLeft")
+                inventory.register(postCarrierRight, owner: "graph.postCarrierRight")
+                inventory.register(generated.0, owner: "graph.generatedLeft")
+                inventory.register(generated.1, owner: "graph.generatedRight")
+                inventory.register(pumpedUpper.left, owner: "graph.pumpedLeft")
+                inventory.register(pumpedUpper.right, owner: "graph.pumpedRight")
+                AutonomousTypedFingerprint.registerContinuationStorage(renderState: state,
+                    generatedDSPState: graphState, inventory: inventory, owner: "current")
+                AutonomousTypedFingerprint.registerContinuationStorage(renderState: protectedRhythmState,
+                    generatedDSPState: graphState, inventory: inventory, owner: "protected-state")
+                // All registered owners remain live for this complete snapshot.
+                // This deliberately extends diagnostic lifetimes, never playback.
+                withExtendedLifetime((
+                    workspace, protectedRhythm, blocks, holdEvolutionAccumulators,
+                    state, graphState, protectedRhythmState, rendered,
+                    graphInputLeft, graphInputRight, requestedCarrier, carrierLeft,
+                    carrierRight, residualLeft, residualRight, graphDoseInputLeft,
+                    graphDoseInputRight, postCarrierLeft, postCarrierRight, generated,
+                    pumpedUpper
+                )) {}
+            }
             let stepFrames = Double(
                 max(1, min(graphInputLeft.count, graphInputRight.count))
             ) / 16
@@ -2444,7 +2644,8 @@ package enum AutonomousPhraseRenderer {
             )
             let outputLeft = terminalOutput.left
             let outputRight = terminalOutput.right
-            if diagnosticRoleStemCapture {
+            var streamedCapture: AutonomousBarRoleStemCapture?
+            if captureRequested {
                 guard let fullCapture = rendered.diagnosticRoleStemCapture,
                       let protectedCapture =
                         protectedRhythm.diagnosticRoleStemCapture,
@@ -2486,8 +2687,7 @@ package enum AutonomousPhraseRenderer {
                     terminalProcessingResidualRight[frame] =
                         outputRight[frame] - preLiveFeedbackRight[frame]
                 }
-                diagnosticRoleStemCaptures.append(
-                    AutonomousBarRoleStemCapture(
+                let capture = AutonomousBarRoleStemCapture(
                         bar: performance.bar,
                         sampleRate: sampleRate,
                         full: fullCapture,
@@ -2505,7 +2705,8 @@ package enum AutonomousPhraseRenderer {
                         terminalProcessingResidualRight:
                             terminalProcessingResidualRight
                     )
-                )
+                if diagnosticRoleStemSink != nil { streamedCapture = capture }
+                else { diagnosticRoleStemCaptures.append(capture) }
             }
             let protectedRhythmSampleHash = ExactPCMFingerprint.stereo(
                 left: protectedRhythm.leftSamples,
@@ -2715,6 +2916,58 @@ package enum AutonomousPhraseRenderer {
                         rendered.spatialFDNRenderEvidence.terminalWetRMS,
                     authoredTerminalSilence: climaxOutput.evidence.active
                 )
+            }
+            barObservation?.observe("bar-delivery") { inventory in
+                workspace.buffers.registerStorage(inventory: inventory, owner: "workspace")
+                inventory.register(protectedRhythm, owner: "protected")
+                inventory.register(rendered, owner: "full")
+                inventory.registerBlocks(blocks, owner: "primary")
+                for (ordinal, accumulator) in holdEvolutionAccumulators.enumerated() {
+                    accumulator.registerStorage(inventory: inventory, owner: "hold.\(ordinal)")
+                }
+                inventory.register(graphInputLeft, owner: "graph.graphInputLeft")
+                inventory.register(graphInputRight, owner: "graph.graphInputRight")
+                inventory.register(requestedCarrier, owner: "graph.requestedCarrier")
+                inventory.register(carrierLeft, owner: "graph.carrierLeft")
+                inventory.register(carrierRight, owner: "graph.carrierRight")
+                inventory.register(residualLeft, owner: "graph.residualLeft")
+                inventory.register(residualRight, owner: "graph.residualRight")
+                inventory.register(graphDoseInputLeft, owner: "graph.graphDoseInputLeft")
+                inventory.register(graphDoseInputRight, owner: "graph.graphDoseInputRight")
+                inventory.register(postCarrierLeft, owner: "graph.postCarrierLeft")
+                inventory.register(postCarrierRight, owner: "graph.postCarrierRight")
+                inventory.register(generated.0, owner: "graph.generatedLeft")
+                inventory.register(generated.1, owner: "graph.generatedRight")
+                inventory.register(pumpedUpper.left, owner: "graph.pumpedLeft")
+                inventory.register(pumpedUpper.right, owner: "graph.pumpedRight")
+                inventory.register(preLiveFeedbackLeft, owner: "mix.preClimaxLeft")
+                inventory.register(preLiveFeedbackRight, owner: "mix.preClimaxRight")
+                inventory.register(climaxOutput.left, owner: "mix.climaxLeft")
+                inventory.register(climaxOutput.right, owner: "mix.climaxRight")
+                if let streamedCapture { inventory.register(streamedCapture, owner: "capture") }
+                for (ordinal, capture) in diagnosticRoleStemCaptures.enumerated() {
+                    inventory.register(capture, owner: "retained-capture.\(ordinal)")
+                }
+                AutonomousTypedFingerprint.registerContinuationStorage(renderState: state,
+                    generatedDSPState: graphState, inventory: inventory, owner: "current")
+                AutonomousTypedFingerprint.registerContinuationStorage(renderState: protectedRhythmState,
+                    generatedDSPState: graphState, inventory: inventory, owner: "protected-state")
+                // All registered owners remain live for this complete snapshot.
+                // This deliberately extends diagnostic lifetimes, never playback.
+                withExtendedLifetime((
+                    workspace, protectedRhythm, blocks, holdEvolutionAccumulators,
+                    state, graphState, protectedRhythmState, rendered,
+                    graphInputLeft, graphInputRight, requestedCarrier, carrierLeft,
+                    carrierRight, residualLeft, residualRight, graphDoseInputLeft,
+                    graphDoseInputRight, postCarrierLeft, postCarrierRight, generated,
+                    pumpedUpper, preLiveFeedbackLeft, preLiveFeedbackRight, climaxOutput,
+                    streamedCapture, diagnosticRoleStemCaptures
+                )) {}
+            }
+            if let streamedCapture, let diagnosticRoleStemSink {
+                guard let block = blocks.last, !cancellationRequested(),
+                    diagnosticRoleStemSink(streamedCapture, block),
+                    !cancellationRequested() else { return nil }
             }
             state.barIndex = performance.bar + 1
         }

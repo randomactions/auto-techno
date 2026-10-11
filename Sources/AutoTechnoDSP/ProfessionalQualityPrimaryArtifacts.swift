@@ -1,20 +1,22 @@
 import Foundation
 
-/// Immutable qualification artifacts for the last calibrated canonical
-/// engine. Loading validates their identities and then rejects them when their
-/// engine no longer matches `QualityQualificationContract.engineVersion`.
+/// Sole current continuous qualification identity. The declared v33 bundle is
+/// intentionally unavailable until the complete matched artifact set is installed.
+/// Explicit offline construction validates the same profile/adversarial/holdout
+/// contract without activating transport or importing calibration banks.
 package struct ProfessionalQualityPrimaryArtifacts: Sendable {
     package static let profileResource =
-        "professional-quality-primary-profile-v30"
+        "professional-quality-primary-profile-v33"
     package static let adversarialResource =
-        "professional-quality-primary-adversarial-suite-v30"
+        "professional-quality-primary-adversarial-suite-v33"
     package static let holdoutResource =
-        "professional-quality-primary-holdout-v30"
-    package static let expectedProfileFingerprint = "45d94400c298892e"
-    package static let expectedAdversarialSuiteFingerprint =
-        "a5070b55dd992655"
-    package static let expectedHoldoutQualificationFingerprint =
-        "7169407cd746c0b6"
+        "professional-quality-primary-holdout-v33"
+    // Engine v49 changes canonical post-relocation wash ownership. The retained
+    // d1259f3 engine-v48 study remains historical evidence, never a current seal.
+    // Fresh complete native development/adversarial/holdout qualification is required.
+    package static let expectedProfileFingerprint: String? = nil
+    package static let expectedAdversarialSuiteFingerprint: String? = nil
+    package static let expectedHoldoutQualificationFingerprint: String? = nil
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport
@@ -48,7 +50,10 @@ package struct ProfessionalQualityPrimaryArtifacts: Sendable {
     }
 
     package static func load() throws -> Self {
-        guard let profileURL = PackagedResourceBundle.current.url(
+        guard let expectedProfileFingerprint,
+              let expectedAdversarialSuiteFingerprint,
+              let expectedHoldoutQualificationFingerprint,
+              let profileURL = PackagedResourceBundle.current.url(
             forResource: profileResource,
             withExtension: "json"
         ), let adversarialURL = PackagedResourceBundle.current.url(

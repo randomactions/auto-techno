@@ -1,5 +1,6 @@
 import AutoTechnoCore
 @testable import AutoTechnoDSP
+@testable import AutoTechnoTransport
 import Testing
 
 @Suite("Single primary evaluator readiness", .serialized)
@@ -9,15 +10,15 @@ struct PrimaryEvaluatorReadinessTests {
         #expect(AutonomousCandidateEvaluationVector.schemaVersion == 43)
         #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 14)
         #expect(AutonomousPreparedCommitProvenance.schemaVersion == 3)
-        #expect(ProfessionalEvidenceReportBank.schemaVersion == 29)
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 30)
         #expect(ProfessionalQualityObservation.schemaVersion == 21)
         #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 22)
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 22)
         #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 20)
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v30")
+                "autotechno-quality.primary-calibrated.v32")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v30")
+                "autotechno-candidate-evaluator.primary-calibrated.v32")
         #expect(AutonomousCandidateCompletenessFailure.upperPercussionTailEvidence
             .rawValue == "upper-percussion-tail-evidence")
         #expect(AutonomousCandidateCompletenessFailure.modalPercussionEvidence
@@ -41,38 +42,30 @@ struct PrimaryEvaluatorReadinessTests {
         }
     }
 
-    @Test("Bundled v30 artifacts activate only the exact schema-49 engine")
-    func bundledV30ArtifactsAreReady() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-        #expect(artifacts.profile.engineVersion ==
-                QualityQualificationContract.engineVersion)
-        #expect(artifacts.profile.schemaVersion == 22)
-        #expect(artifacts.adversarialSuite.schemaVersion == 22)
-        #expect(artifacts.holdoutQualification.schemaVersion == 20)
-        for sampleRate in [44_100.0, 48_000.0] {
+    @Test("Historical bundled artifacts cannot activate any route under the current continuous policy")
+    func bundledV30ArtifactsAreIneligible() {
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try historicalV30PrimaryArtifacts()
+        }
+        for sampleRate in [8_000.0, 12_000.0, 44_100.0, 48_000.0] {
             #expect(ProfessionalQualityPreparationEvaluator(
-                sampleRate: sampleRate,
-                artifacts: artifacts
-            ).availability == .available)
+                sampleRate: sampleRate, artifacts: nil).availability == .artifactsUnavailable)
         }
     }
 
-    @Test("An 8 kHz route with exact v30 artifacts is unsupported")
-    func unsupported8KRouteStaysUnavailable() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-        #expect(ProfessionalQualityPreparationEvaluator(
-            sampleRate: 8_000,
-            artifacts: artifacts
-        ).availability == .unsupportedSampleRate)
-    }
-
-    @Test("A 12 kHz route with exact v30 artifacts is unsupported")
-    func unsupported12KRouteStaysUnavailable() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-        #expect(ProfessionalQualityPreparationEvaluator(
-            sampleRate: 12_000,
-            artifacts: artifacts
-        ).availability == .unsupportedSampleRate)
+    @Test("Pending matching current resources cannot leave a partially ready production host")
+    func pendingCurrentPairStaysUnavailable() {
+        #expect(ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint == nil)
+        #expect(ProfessionalQualityPrimaryArtifacts.expectedAdversarialSuiteFingerprint == nil)
+        #expect(ProfessionalQualityPrimaryArtifacts.expectedHoldoutQualificationFingerprint == nil)
+        #expect(LongHorizonProfessionalPolicySchema.requiredPrimaryPolicyVersion ==
+            "autotechno-quality.primary-calibrated.v32.unqualified")
+        #expect(!ProfessionalQualityPrimaryArtifacts.containsBundledResource(
+            named: ProfessionalQualityPrimaryArtifacts.profileResource))
+        #expect(LongHorizonProfessionalPolicyArtifacts.expectedProfileFingerprint == nil)
+        #expect(throws: ProfessionalQualityCalibrationError.invalidIdentity) {
+            try AutonomousPerformanceArtifactSet.load()
+        }
     }
 
     @Test("Missing artifacts cannot activate the calibrated primary evaluator")

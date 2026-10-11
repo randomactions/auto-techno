@@ -14,6 +14,24 @@ import Testing
  */
 @Suite("Professional quality calibration")
 struct ProfessionalQualityCalibrationTests {
+    @Test("Pre-floor calibration evidence cannot activate the corrected analyzer")
+    func preFloorEvidenceArtifactsAreIneligible() throws {
+        let repository = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let profileURL = repository.appendingPathComponent(
+            "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json")
+        let object = try #require(JSONSerialization.jsonObject(
+            with: Data(contentsOf: profileURL)) as? [String: Any])
+        #expect(object["evidenceVersion"] as? String ==
+                "autotechno-professional-evidence.v29")
+        #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
+                "autotechno-professional-evidence.v30")
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            _ = try historicalV30PrimaryArtifacts()
+        }
+    }
+
     @Test("Window-supported profiles bind the new observation contract without activating v30")
     func windowSupportedContractIdentity() throws {
         let observations = try representativeObservations().map { try windowObservation($0) }
@@ -1796,15 +1814,15 @@ struct ProfessionalQualityCalibrationTests {
         #expect(ProfessionalQualityObservation.schemaVersion == 21)
         #expect(ProfessionalQualityObservation.observationVersion ==
                 "autotechno-professional-quality-observation.v21")
-        #expect(ProfessionalEvidenceReportBank.schemaVersion == 29)
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 30)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
-                "autotechno-professional-evidence.v29")
+                "autotechno-professional-evidence.v30")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v30")
+                "autotechno-quality.primary-calibrated.v32")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v30")
+                "autotechno-candidate-evaluator.primary-calibrated.v32")
         #expect(ProfessionalQualityPrimaryEvaluator.requiredProfileVersion ==
-                "autotechno-professional-quality-profile.v30")
+                "autotechno-professional-quality-profile.v33")
         #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 22)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
                 "autotechno-professional-quality-profile.v30")
@@ -2339,6 +2357,66 @@ struct ProfessionalQualityCalibrationTests {
         #expect(!activeBounds.contains(0))
     }
 
+    @Test("Tail applicability distinguishes absent score events from measured natural-body zero")
+    func upperPercussionTailScoreApplicability() throws {
+        let director = AutonomousSessionDirector(rootSeed: 91_773)
+        var state = director.initialState()
+        var seen = Set<String>()
+        for _ in 0..<128 {
+            let plan = director.plan(from: state)
+            let scoreEvents = plan.resolvedBars.flatMap(\.upperPercussionTailArticulations)
+            let clearanceCount = scoreEvents.filter { $0.role == .foregroundClearance }.count
+            let kind = scoreEvents.isEmpty ? "absent" :
+                (clearanceCount == 0 ? "natural" : "clearance")
+            if seen.insert(kind).inserted {
+                var renderState = RenderState()
+                renderState.barIndex = plan.startBar
+                let preparation = AutonomousPhrasePreparer.prepareIfNotCancelled(
+                    plan: plan, sessionSeed: state.rootSeed, memory: state.memory,
+                    sampleRate: 8_000, incomingRenderState: renderState,
+                    incomingGraphState: GeneratedDSPContinuationState(), previousGraph: nil,
+                    incomingQualityState: state.quality,
+                    evaluator: AcceptingPrimaryTestEvaluator(), cancellationRequested: { false })
+                let prepared = try #require(preparation)
+                let vector = prepared.selectedCandidateEvidence
+                #expect(vector.isComplete)
+                let checkpoint = CanonicalJourneyCheckpoint.primaryQualification(
+                    phraseIndex: plan.phraseIndex, phraseKind: plan.kind,
+                    chapterChanged: vector.symbolic.chapterChanged) ?? .longContinuation
+                let observation = try ProfessionalQualityObservation(candidate: vector,
+                    engineVersion: QualityQualificationContract.engineVersion,
+                    checkpoint: checkpoint)
+                let eventCount = vector.upperPercussionTail.flatMap(\.events).count
+                let support = try #require(observation.upperPercussionTailSupport)
+                #expect(support.isComplete && support.sourceEventCount == eventCount)
+                #expect(support.foregroundClearanceEventCount == clearanceCount)
+                let changed = try observation.replacing(.maximumBoundaryDelta, with: 100)
+                #expect(changed.upperPercussionTailSupport == support)
+                #expect(observation.foreignRateChallenge().upperPercussionTailSupport == support)
+                #expect(eventCount == scoreEvents.count)
+                #expect(observation[.upperPercussionTailClearanceEventRatio] ==
+                    Double(clearanceCount) / Double(max(1, eventCount)))
+                #expect(observation.measurementApplicability(
+                    .upperPercussionTailClearanceEventRatio) ==
+                    (eventCount == 0 ? .notRequired : .measured))
+                #expect(observation.measurementApplicability(
+                    .upperPercussionTailRenderedTailToAttackDBMean) ==
+                    (clearanceCount == 0 ? .notRequired : .measured))
+            }
+            if seen.count == 3 { break }
+            state.advancePlanning(using: plan)
+        }
+        #expect(seen == Set(["absent", "natural", "clearance"]))
+        #expect(!ProfessionalQualityUpperPercussionTailSupport(
+            sourceEventCount: -1, foregroundClearanceEventCount: 0).isComplete)
+        #expect(!ProfessionalQualityUpperPercussionTailSupport(
+            sourceEventCount: 0, foregroundClearanceEventCount: 1).isComplete)
+        #expect(!ProfessionalQualityUpperPercussionTailSupport(
+            sourceEventCount: AutonomousCandidateEvaluationVector.maximumBarCount *
+                AutonomousCandidateEvaluationVector.maximumUpperPercussionTailEventsPerBar + 1,
+            foregroundClearanceEventCount: 0).isComplete)
+    }
+
     @Test("Kick-foundation balance requires an active comparison")
     func conditionalKickFoundationBalance() throws {
         let observations = try representativeObservations()
@@ -2412,6 +2490,93 @@ struct ProfessionalQualityCalibrationTests {
             observedValue: 100
         ))
         #expect(!extreme.contains(100))
+    }
+
+    @Test("Dotted-rhythm activation reuses measured checkpoint bounds only in the new continuous contract")
+    func conditionalDottedRhythmBounds() throws {
+        let metrics: [(ProfessionalQualityMetric, Double)] = [
+            (.foundationDottedRhythmActiveBarRatio, 0.4),
+            (.foundationDottedRhythmCrestFactorDBMean, 18.199913326947108),
+        ]
+        func fitted(active: Bool, localRatio: Double = 0) throws -> ProfessionalQualityCalibrationProfile {
+            let observations = try representativeObservations().map { observation in
+                let measured = active && [.establishment, .chapterChange].contains(observation.checkpoint)
+                return try observation
+                    .replacing(.foundationDottedRhythmActiveBarRatio,
+                        with: measured ? 0.4 : (observation.checkpoint == .longContinuation ? localRatio : 0))
+                    .replacing(.foundationDottedRhythmCrestFactorDBMean,
+                        with: measured ? 18.199913326947108 : 0)
+            }
+            return try ProfessionalQualityCalibrationProfile(
+                engineVersion: QualityQualificationContract.engineVersion,
+                sourceBankFingerprint: "synthetic-dotted-bounds-control",
+                sampleRates: ProfessionalQualityCalibrationProfile.requiredSampleRates,
+                observations: observations)
+        }
+        // A diagnostic scope fixture exercises the bounds owner; it is neither
+        // a typed continuous corpus nor a diverse/qualified primary artifact.
+        func scoped(_ profile: ProfessionalQualityCalibrationProfile,
+                    scope: ProfessionalQualityMeasurementScope) throws -> ProfessionalQualityCalibrationProfile {
+            var wire = try #require(JSONSerialization.jsonObject(
+                with: profile.deterministicJSON()) as? [String: Any])
+            wire["schemaVersion"] = scope.profileSchema
+            wire["profileVersion"] = scope.profileVersion
+            wire["observationVersion"] = scope.observationVersion
+            return try JSONDecoder().decode(ProfessionalQualityCalibrationProfile.self,
+                from: JSONSerialization.data(withJSONObject: wire))
+        }
+        let legacy = try fitted(active: true)
+        let profile = try scoped(legacy, scope: .continuousModalWindow)
+        #expect(profile.isComplete && !profile.usesDiverseCalibration)
+        #expect(profile.profileVersion == "autotechno-professional-quality-profile.v33")
+        #expect(profile.schemaVersion == 25)
+        for (metric, value) in metrics {
+            let local = try #require(profile[.longContinuation]?[metric])
+            let envelope = try #require(metric.conditionalNeutralCalibrationEnvelope(for: .continuousModalWindow))
+            #expect(local.lower == envelope.lowerBound && local.upper == envelope.upperBound)
+            #expect(!local.contains(value))
+            let active = profile.checkpoints.compactMap { checkpoint -> ProfessionalQualityMetricBounds? in
+                guard let bounds = checkpoint[metric], bounds != local else { return nil }
+                return bounds
+            }
+            let effective = try #require(profile.effectiveBounds(for: metric,
+                at: .longContinuation, observedValue: value))
+            #expect(effective.lower == active.map(\.lower).min())
+            #expect(effective.upper == active.map(\.upper).max())
+            #expect(effective.contains(value))
+            #expect(profile.effectiveBounds(for: metric, at: .longContinuation, observedValue: 0) == local)
+            for extreme in [-1.0, effective.upper + 1] {
+                #expect(profile.effectiveBounds(for: metric, at: .longContinuation,
+                    observedValue: extreme)?.contains(extreme) == false)
+            }
+            #expect(profile.effectiveBounds(for: metric, at: .establishment,
+                observedValue: value) == profile[.establishment]?[metric])
+            for scope in [ProfessionalQualityMeasurementScope.legacy, .barLocalModalWindow] {
+                let historical = try scoped(legacy, scope: scope)
+                #expect(historical.effectiveBounds(for: metric, at: .longContinuation,
+                    observedValue: value) == historical[.longContinuation]?[metric])
+            }
+            let unseen = try scoped(fitted(active: false), scope: .continuousModalWindow)
+            #expect(unseen.effectiveBounds(for: metric, at: .longContinuation,
+                observedValue: value) == unseen[.longContinuation]?[metric])
+            #expect(unseen.effectiveBounds(for: metric, at: .longContinuation,
+                observedValue: value)?.contains(value) == false)
+        }
+        let locallyMeasured = try scoped(fitted(active: true, localRatio: 0.01), scope: .continuousModalWindow)
+        #expect(locallyMeasured.effectiveBounds(for: .foundationDottedRhythmActiveBarRatio,
+            at: .longContinuation, observedValue: 0.4) ==
+            locallyMeasured[.longContinuation]?[.foundationDottedRhythmActiveBarRatio])
+        var retired = try #require(JSONSerialization.jsonObject(
+            with: profile.deterministicJSON()) as? [String: Any])
+        retired["schemaVersion"] = 24
+        retired["profileVersion"] = "autotechno-professional-quality-profile.v32"
+        let retiredData = try JSONSerialization.data(withJSONObject: retired,
+            options: [.sortedKeys, .withoutEscapingSlashes])
+        let diagnostic = try JSONDecoder().decode(ProfessionalQualityCalibrationProfile.self, from: retiredData)
+        #expect(diagnostic.measurementScope == nil && !diagnostic.isComplete)
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityCalibrationProfile.decodeDeterministicJSON(retiredData)
+        }
     }
 
     @Test("One failed dimension cannot be compensated by centered peers")
@@ -2662,19 +2827,12 @@ struct ProfessionalQualityCalibrationTests {
         #expect(qualified.confidence == .notEstimated)
         #expect(qualified.accepted)
         #expect(qualified.observationCount == qualified.requiredObservationCount)
-        let primaryEvaluator = try ProfessionalQualityPrimaryEvaluator(
-            profile: artifacts.profile,
-            adversarialSuite: artifacts.adversarial,
-            holdoutQualification: artifacts.holdout
-        )
-        let candidateAssessment = primaryEvaluator.assessment(
-            of: [observations[0]]
-        )
-        #expect(candidateAssessment.availability == .available)
-        #expect(candidateAssessment.calibrationTrajectoryCount == 24)
-        #expect(candidateAssessment.support == .sufficient)
-        #expect(candidateAssessment.confidence == .notEstimated)
-        #expect(candidateAssessment.accepted)
+        // The shared legacy relationship reducer retains support semantics,
+        // but cannot authorize the sole continuous prepared policy.
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPrimaryEvaluator(profile: artifacts.profile,
+                adversarialSuite: artifacts.adversarial, holdoutQualification: artifacts.holdout)
+        }
 
         let trajectoryOnly = ProfessionalQualityRelationshipEvaluator.evaluate(
             observations: observations.filter { $0.sampleRate == 48_000 },
@@ -2738,14 +2896,6 @@ struct ProfessionalQualityCalibrationTests {
         #expect(unsupported.availability == .unsupportedSampleRate)
         #expect(unsupported.confidence == .unavailable)
         #expect(!unsupported.accepted)
-        let unsupportedCandidate = primaryEvaluator.assessment(
-            of: [unsupportedRate[0]]
-        )
-        #expect(unsupportedCandidate.availability == .unsupportedSampleRate)
-        #expect(unsupportedCandidate.support == .sufficient)
-        #expect(unsupportedCandidate.confidence == .unavailable)
-        #expect(!unsupportedCandidate.accepted)
-
         let lowSupportProfile = try ProfessionalQualityCalibrationProfile(
             engineVersion: QualityQualificationContract.engineVersion,
             sourceBankFingerprint: "low-support-relationship-test",
@@ -2918,22 +3068,15 @@ struct ProfessionalQualityCalibrationTests {
                 0.000_000_001)
     }
 
-    @Test("Constructed current artifacts activate only the single primary policy")
+    @Test("Constructed legacy artifacts cannot activate the sole continuous prepared policy")
     @MainActor
-    func primaryCandidatePolicy() throws {
+    func legacyConstructedPrimaryPolicyIsIneligible() throws {
         let artifacts = try diverseArtifacts()
-        #expect(artifacts.profile.profileVersion ==
-                ProfessionalQualityCalibrationProfile.profileVersion)
-        #expect(artifacts.profile.profileVersion ==
-                ProfessionalQualityPrimaryEvaluator.requiredProfileVersion)
-        let evaluator = try ProfessionalQualityPrimaryEvaluator(
-            profile: artifacts.profile,
-            adversarialSuite: artifacts.adversarial,
-            holdoutQualification: artifacts.holdout
-        )
-        #expect(evaluator.policyVersion.hasPrefix(
-            ProfessionalQualityPrimaryEvaluator.policyFamilyVersion
-        ))
+        #expect(artifacts.profile.isComplete && artifacts.adversarial.passed && artifacts.holdout.qualified)
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPrimaryEvaluator(profile: artifacts.profile,
+                adversarialSuite: artifacts.adversarial, holdoutQualification: artifacts.holdout)
+        }
     }
 
     @Test("Live master provenance is non-compensable and missing evidence is a hold")
@@ -3096,25 +3239,10 @@ struct ProfessionalQualityCalibrationTests {
         }
     }
 
-    @Test("Legacy profile identity cannot activate the qualified v30 evaluator")
-    func legacyPrimaryArtifactsAreIneligible() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-        var object = try #require(JSONSerialization.jsonObject(
-            with: artifacts.profile.deterministicJSON()
-        ) as? [String: Any])
-        object["profileVersion"] = "autotechno-professional-quality-profile.v29"
-        object["schemaVersion"] = 21
-        let legacy = try JSONSerialization.data(
-            withJSONObject: object,
-            options: [.sortedKeys, .withoutEscapingSlashes]
-        )
+    @Test("Historical bundled primary artifacts are ineligible under the continuous policy")
+    func legacyPrimaryArtifactsAreIneligible() {
         #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
-            try ProfessionalQualityPrimaryArtifacts(
-                profileData: legacy,
-                adversarialSuiteData: artifacts.adversarialSuite.deterministicJSON(),
-                holdoutQualificationData: artifacts.holdoutQualification
-                    .deterministicJSON()
-            )
+            try historicalV30PrimaryArtifacts()
         }
     }
 

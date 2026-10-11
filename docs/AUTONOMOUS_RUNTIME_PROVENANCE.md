@@ -64,9 +64,9 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   primary-evaluation transaction under quality-contract schema 49, candidate-
+   primary-evaluation transaction under quality-contract schema 50, candidate-
    vector schema 43, candidate-transaction schema 14, and canonical engine
-   identity `autotechno-canonical-engine.v48`. Each
+   identity `autotechno-canonical-engine.v49`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
@@ -495,7 +495,7 @@ mistaken for a completed feedback system.
    the captured source. Core rotates through only
    the qualified families and exact accepted PCM remains the fallback when none
    qualify. The selected primary plan, blocks, candidate
-   evidence, render/graph continuation, quality decision, and engine-v48
+   evidence, render/graph continuation, quality decision, and engine-v49
    artifacts remain unchanged. App and Windows transports merely choose the
    immutable family at a phrase boundary, and a ready successor always advances. The
    macOS scheduler does not register sidecar occurrences as canonical live-
@@ -582,7 +582,8 @@ development profile.
 ## Implemented tonal-envelope expansion slice
 
 `SynthPerformancePlan` owns one durable `sustainedWash` relation on the final
-eligible Tonal Motion anchor at a canonical energy-release marker. Eligibility
+eligible Tonal Motion anchor after composition, timing, and held polymetric
+relocation at a canonical energy-release marker. Eligibility
 requires a nonconservative release plan, the existing displaced-kick recovery
 signature at macro bar 15, a retriggered motif onset no later than step 12, and
 the existing Tonal Motion architecture. The relation changes no onset, pitch,
@@ -1363,7 +1364,7 @@ artifacts. Raw PCM remains outside the artifacts and runtime observation.
 
 ## Implemented bounded long-horizon future adaptation
 
-`AutoTechnoDSP` owns `autotechno-long-horizon-runtime-observation.v2` and a
+`AutoTechnoDSP` owns `autotechno-long-horizon-runtime-observation.v3` and a
 fixed-capacity `LongHorizonFutureAdaptationState`. Detached preparation reduces
 only an accepted prepared phrase into semantic, operator/signal, and effect
 evidence. The runtime state validates exact root, phrase/bar continuity, route
@@ -1403,7 +1404,7 @@ fingerprints are `836ac66b68470cd4`, `5950762cf2dc2635`, and
 `0e00df369ce54e50`. The primary profile, adversarial suite, and holdout are
 independently pinned as `06cb04bfbef71c28`, `16820b6274dd26d4`, and
 `2037dec24ac1e45c`. All six artifacts in that prior assessment replayed byte for byte.
-The current v30 primary set has separately qualified matching long-horizon-v16
+The historical v30 primary set had separately qualified matching long-horizon-v16
 artifacts, pinned as `5110688cc8620d7a`, `fded455207d0919c`, and
 `768388d21859dfdc`. The physical
 percussion promotion stays inside the existing score/voice/evidence owners;
@@ -1534,7 +1535,7 @@ re-enter the product architecture.
 
 ## Explicit continuous modal observation provenance
 
-Detached continuous observation v23/profile v32 extends the existing report,
+Detached continuous observation v23/profile v33 extends the existing report,
 observation, trajectory/corpus and fitting owners. Construction derives the two
 modal ratios from the canonical original report and its optional validated
 actual prepared-successor receipt through the existing ledger/support owner.
@@ -1550,6 +1551,1101 @@ receipt coverage cannot manufacture another independent source. Corpus and
 relationship validation retain complete native-rate/checkpoint coverage,
 version consistency, duplicate rejection and required-unavailable measurements.
 A reduced one-bank analysis uses the same corpus fitter and remains below the
-minimum diverse source count. The existing evaluator and activation authority are retained. Installed v21/v30/v16 remains the runtime contract; bar-local
-v22/v31 and continuous v23/v32 remain unqualified and unactivated. No renderer,
+minimum diverse source count. The existing evaluator and activation authority are retained. Historical v21/v30/v16 artifacts retain their original contract and are ineligible
+under current evidence. The sole primary v32 requires continuous v23/v33 prepared
+validation; fresh native current primary offline qualification is complete,
+while paired artifact installation and full runtime activation remain pending. No renderer,
 Core continuation, callback operation, future decision or PCM algorithm changes.
+
+## Prepared-product continuous observation seam
+
+The detached continuous observation owner can also bind one immutable prepared
+phrase and its actual immediate prepared successor, without creating fixture
+reports. The shared successor validator checks the same render/DSP, quality,
+graph, live-master, route and physical-window continuation as the report path.
+Prepared identity includes the selected plan, transaction, commit and incoming/
+outgoing quality states; report identity retains its separate checkpoint/fixture
+binding. Receipts cannot cross these source identities. The existing Core
+primary checkpoint mapping chooses the runtime population, including the broad
+continuation population for an ordinary lock phrase.
+
+Both paths use the same modal ledger, applicability and observation extraction.
+Absent successors leave unfinished source windows required-unavailable; new
+successor score events never contribute to the source phrase's means. The
+three-rate actual-product regression covers equality of measurements, distinct
+source identity, exact replay, self/wrong-rate successor rejection and rejection
+of cross-bound receipts. No persistent state, PCM, renderer, callback, schedule,
+commit outcome or policy activation changes. Continuous native offline
+qualification is separate from runtime eligibility; delayed future-boundary
+integration and matching installed primary/long-horizon qualification remain
+required before promotion.
+
+The reduced one-bank construction test preserves its original score selection
+as a negative control: it has no foreground-clearance population for the
+upper-percussion tail-to-attack metric and must refuse fitting with
+`invalidMetricSet`. Its full-report digest is engine-version dependent. The
+historical engine-v48 digest `11743474e0cedea5` is retained as provenance; the
+engine-v49 construction emitted `05d18c479efe25a3` in native run38143331435,
+job114481483602 at sourcee640dac6e441ee887998d0b752202dd6929f44b8.
+That run completed33 tests with the old digest comparison as its sole issue;
+all other construction assertions, including missing-population refusal, passed.
+The fixture now pins engine v49 and its observed digest together. This updates
+mechanical source identity after the versioned timing-policy change, not any
+quality bound, frozen qualification corpus or installed authority. Native
+validation of the refreshed assertion remains required. A positive construction counterpart selects
+the first eligible score-declared foreground-clearance phrase before any PCM,
+using the same public seed and a 128-phrase bound. It replaces only that actual
+checkpoint's native-rate source pair in the counterpart bank; the original
+bank, phrase-21 modal suffix and frozen 40/6 qualification study are preserved.
+Both banks retain typed original and actual successor provenance. The positive
+bank has one trajectory, so it cannot provide diverse calibration or activate
+the installed primary evaluator. Foreign-rate wire controls preserve the actual
+score-support metadata rather than reconstructing it as absent. Installed
+evidence-v29 artifacts remain ineligible under corrected evidence-v30 source;
+this observation seam does not waive that boundary.
+
+
+### Actual-prepared continuous reconstruction
+
+The existing `ProfessionalQualityObservation.decodeValidated` and
+`ProfessionalQualityModalSuccessorEvidence.decodeValidated` now also reconstruct
+saved evidence against actual immutable `PreparedAutonomousPhrase` products.
+They rerun the same source/successor construction and require exact canonical
+bytes within their existing encoded-size bounds. Journey-report identities,
+changed measurements, substituted products, omitted required successor coverage,
+and noncanonical encodings cannot reconstruct an actual-prepared observation.
+A source-only observation may reconstruct only with its original unavailable
+suffix support; reconstruction never supplies missing physical frames.
+
+This stateless detached evidence seam preserves the original canonical owner,
+ledger, observation versions, quality state and fallback. It avoids unchecked
+numeric decoding or an independent runtime evidence extractor. It adds no Core
+parameter, PCM change, callback work, transport admission, installed policy,
+persistent state or future-decision authority. Causal runtime integration and
+matching qualified primary/long-horizon artifacts remain required separately.
+
+
+## Private detached prepared-validation foundation
+
+`AutonomousPhrasePreparer` remains the only immutable prepared-product
+constructor. The sole `AutonomousCandidateEvaluating` seam may now require a
+prepared validation phase. Its initial accepting verdict is prospective in that
+case: the private source product carries `preparedValidationRequired` and has
+no validation proof, so it is commit-ineligible. Only a read-only
+`AutonomousCandidatePreparedPreview` escapes to the detached evaluator; it
+exposes the existing score and prospective quality/render/graph/live continuation
+needed to render evidence, but cannot return or schedule its private source PCM.
+The finalizer calls that evaluator once and checks cancellation before and after.
+
+The preview constructs one typed `AutonomousCandidatePreparedValidation` from
+actual continuous prepared-product observation. There is no arbitrary-fingerprint
+or decoded proof constructor. Missing physical windows preserve unavailable
+support and prevent assessor invocation. Actual successor receipt validation,
+source-event ownership and applicability reuse the existing ledger and extractor.
+When the source-only projection has physically missing or partial attack/body or
+tail/body support, admission additionally requires the actual successor to be
+commit-eligible. The proof retains that exact immutable qualified successor and
+caches its admission result off the callback. Complete measurements from an
+unaccepted successor preserve unavailable qualification and never invoke the
+assessor. A source with complete local windows requires no retained successor;
+undefined body energy remains unavailable rather than creating a suffix need.
+The final source rechecks both cached measurement and continuation admission.
+A missing or foreign proof yields unavailable qualification; a foreign proof is
+not attached to the source. Rejection never advances accepted state.
+
+The final source reuses its selected render, transaction and qualified hold
+sidecars. A successful final admission must have the exact prospective source
+identity used by the physical evidence, including final quality and live state.
+Changing acceptance metadata after measuring cannot rebind that proof. The
+required-validation marker is part of prepared identity; it is omitted from
+legacy prepared identities, preserving their exact bytes. The proof itself is
+excluded from its source identity to avoid recursion, and the private constructor
+caches the identity and support checks before bounded commit admission. The
+existing transaction fingerprint still precedes outgoing quality; no successor
+receipt is placed inside that transaction. Existing source correction/render
+budgets and the callback remain unchanged.
+
+This implements an unactivated admission foundation, not a production successor
+probe or calibrated policy. The historical primary v30 requested no prepared validation; the current sole
+primary v32 requires it and the route-local wrapper delegates the same seam. Test-only controls
+use the canonical Core director and renderer to prepare one qualified successor
+under the exact prospective continuation. That successor uses the same sealed
+validation seam and must complete its own windows locally; it cannot recursively
+manufacture a suffix. Controls exercise accepted and adjusted source admission,
+retained-successor reconstruction and repeatability, unaccepted-successor refusal,
+unavailable windows, missing/foreign proof, acceptance rebinding and cancellation
+at the fixed rates. Replaying the accepted source's first bar cannot complete its
+last-bar observation ledger: it carries a different incoming state and lacks the
+original pending event identities. No historical record is relabeled. These are
+mechanical controls, not quality labels or artifact qualification.
+
+Production activation still requires one bounded successor producer under the
+existing detached transport owner, matching long-horizon and future live/route
+context, proof that measured source windows retain their consequence when that
+successor is committed or replaced, a protected transport handoff that consumes
+the retained continuation before choosing repeat fallback, a qualified bounded
+lookahead memory/time envelope, matching primary and long-horizon artifacts, and full source/PCM/lifecycle gates.
+No alternative evaluator, renderer, Core parameter, UI control or persistent
+adaptation state is installed by this foundation.
+
+
+## Source-bound prospective long-horizon projection
+
+The private prepared-validation preview can now project the source's existing
+signal and effect-dose evidence through `LongHorizonFutureAdaptationState` before
+planning a qualified successor. This uses the same private signal extractor and
+semantic/effect/signal reducer as accepted observation. No second adaptation loop,
+new musical parameter, renderer, PCM pass or persistent accumulator is added.
+The preview must be an otherwise fully bound prospective acceptance missing only
+its required prepared-validation proof. It exposes immutable signal facts without
+exposing its source PCM. Missing evidence, wrong source position/root, unsupported
+rate and mismatched profile retain the prior adaptation state.
+
+`LongHorizonProspectiveAdaptation` is a transient seal, constructed only by that
+reducer. It binds the exact prospective prepared-source identity, canonical incoming
+session fingerprint, incoming adaptation fingerprint and full long-horizon policy
+identity. Its projected state and bounded decision are available for private future
+planning. `admittedUpdate` releases an update only when the final source is
+commit-eligible and all four bindings match; rejection, unavailable qualification,
+source rebinding, a foreign route, foreign session/adaptation or policy cannot
+promote tentative state. Neither the seal nor the projection is a primary quality
+verdict or a reason to advance the actual session early.
+
+Mechanical controls at 8k, 44.1k and 48k compare projected and accepted signal
+facts, adaptation fingerprints and decisions, and verify the successor plan against
+the canonical accepted-state advance including that decision. They use synthetic
+long-horizon policy fixtures solely to exercise reducer mechanics, not a new
+calibration population. Incoming state remains unchanged and unsuccessful sources
+cannot admit their projections. The existing minimum evidence, future-boundary,
+recovery/reframe eligibility, decision interval and conservative fallback remain.
+
+The production detached successor producer and protected transport consumption
+remain unactivated. They must retain this exact incoming context, match the admitted
+projection against ordinary accepted reduction, carry future live/route boundaries,
+and qualify a bounded lookahead resource envelope before matching primary and
+long-horizon artifact qualification and full source/PCM/lifecycle publication gates.
+
+
+## Sole primary continuous prepared admission
+
+The existing ProfessionalQualityPrimaryEvaluator owns the v31 policy/evaluator
+contract. Its required profile is continuous v32 with observation v23; adversarial
+and disjoint holdout artifacts must have the same scope, observation identity,
+profile, corpus and engine/evidence binding. A vector alone or a legacy observation
+cannot supply actual prepared-source ownership and is refused. There is no
+alternative legacy evaluator or runtime selector. Historical bundled v30 primary
+and v16 long-horizon artifacts remain ineligible under the corrected evidence and
+current policy; they are not retagged or replaced by retained test artifacts.
+
+The terminal verdict supplies prospective acceptance only after transaction,
+hard-gate and rate checks. Required sealed prepared validation judges the actual
+continuous source observation and any physically necessary qualified successor.
+Only that calibrated verdict can admit the source; missing physical support
+preserves unavailable qualification and rejected evidence leaves accepted state
+unchanged. Diagnostics and bounded recovery intentions use that same observation,
+rather than reconstructing legacy metrics. The preview shares one physical suffix
+demand classifier with its proof constructor. Undefined body energy cannot be
+turned into a fabricated successor request. All work stays detached; source
+correction budgets, callback behavior and musical state ownership remain stable.
+
+Explicit opt-in controls use the retained 7ef30ff native model only to test
+admission mechanics at 44.1k and 48k. They also refuse mixed-scope artifact
+envelopes, vector-only and legacy assessment, altered metrics, missing proofs,
+unsupported rates and unfinished physical windows. They do not recertify that
+historical model, install resources, qualify the current source or activate
+playback. Production bounded successor preparation, protected retained-continuation
+consumption, future live/route context, resource qualification, matching current
+primary/long-horizon artifacts and full source/PCM/lifecycle gates remain pending.
+
+
+## Canonical prospective successor request and replay origin
+
+AutonomousPerformancePreparer owns one detached prospective continuation builder
+under the existing PhrasePreparationRequest and replay identity. It accepts only
+an otherwise bound private source preview and the exact request that produced it.
+The shared route evaluator passes that request's complete replay fingerprint into
+the canonical finalizer. The immutable prepared identity records this origin under
+actual-prepared-modal-successor.v2; callers without a shared origin retain exact
+v1 bytes. The optional origin is operational provenance, not a score parameter,
+quality verdict or source of musical variation. It is captured once before
+prospective/final assembly and cannot change after measurement.
+
+The builder requires the source origin, canonical recovery-aware plan, raw input
+continuation, route/rate/generation, proposal and live target boundary to match.
+A present long-horizon policy must bind the exact primary policy and produce a
+projection through the existing reducer. A missing policy with incoming adaptation
+is unavailable, never a silent context reset. The canonical Core advance applies
+that projected decision, prospective quality and live state exactly once. The
+resulting successor request retains source ending render/graph and long-horizon
+state, uses the same route generation, clears source-only recovery/retry and live
+proposal ownership, and leaves accepted state unchanged. Known live target end
+samples use the actual analyzed frame count with checked integer arithmetic; an
+ordinary source with no app-owned absolute boundary makes no position claim.
+
+ProspectivePerformanceContinuation is constructed only by this builder and holds
+no source PCM. It seals source identity and the complete originating request. Its
+admittedRequest releases future request ownership only for the exact accepted
+source and original context, with the same admitted long-horizon projection. A
+request alone never authorizes scheduling, successor acceptance or early state
+advancement. Cancellation, altered input, missing replay origin or unmatched
+policy preserves refusal and discards tentative work.
+
+Controls use the inherited fixed public root/phrase at 8k, 44.1k and 48k, actual
+source and successor PCM through the canonical renderer, synthetic long-horizon
+policy mechanics, and an actual applied live proposal. They compare the sealed
+request and rendered successor against ordinary accepted Core advance and
+long-horizon reduction, require child qualification and original-window closure,
+refuse foreign inputs before successor PCM, and prevent a proposal from being
+applied twice. They remain mechanical controls, not current artifact qualification
+or runtime activation. Production chain preparation, protected transport
+consumption and the full lookahead memory/time envelope remain pending; the
+existing single-source resource bound is not a bound for multiple retained sources.
+
+
+## Iterative detached successor preparation
+
+The shared AutonomousPerformancePreparer uses one iterative chain transaction
+under the same canonical director, request, route evaluator and DSP finalizer.
+The finalizer may privately suspend an otherwise bound prospective source as
+AutonomousPendingPreparedValidation. That pending value exposes only its sealed
+preview and a canonical resolution operation; preparedPhrase remains absent,
+no accepted state changes, and no pending product can enter playback. Normal
+synchronous DSP callers retain their existing terminal protocol.
+
+Before suspension, the immutable source owns qualified repeat sidecars and
+optional diagnostic captures. Render-only candidate references are released;
+resolution reuses the same source presentation and exact selected PCM, transaction,
+quality/live input and replay origin through the original finalizer. No second
+render or admission policy is introduced. A missing, foreign or cancelled proof
+preserves refusal. Cancellation is checked before reassembly and before the
+shared owner releases any complete result.
+
+The owner prepares actual children only when the existing physical-window
+classifier requires them. Each child uses the sealed canonical successor request
+and must pass its own hard gates, measurement completeness and calibrated policy.
+Rendering calls unwind before another phrase is prepared, rather than nesting
+phrase preparation on the cooperative worker stack. A naturally locally complete
+last source is resolved first; parents then resolve in reverse order using their
+exact accepted immediate children. The source seal must release that exact child's
+request, and the parent's proof must retain that exact immutable child. A rejected,
+unavailable or mismatched descendant discards every tentative parent. A root
+rejection, including one measured with a child, keeps the existing reason-coded
+recovery result but releases no retained child transport ownership.
+
+AutonomousPreparationChainResourceBudget reserves aggregate numeric storage under
+the existing 128 MiB ceiling before every render pass, including a requested
+corrective pass. Each active source uses the unchanged full per-pass workspace
+bound; suspended parents retain selected immutable PCM, ending continuation and
+reduced evidence. The existing complete typed continuation inventory counts actual
+retained numeric storage, including Float array capacity rather than merely
+occupied frames, with checked arithmetic and cancellation. Counting adds typed
+field/scalar metadata and uses no whole-state byte buffer; default replay hashes
+remain exact. Unknown/overflowing storage or values beyond the original conservative
+continuation ceiling refuse admission. Scratch, analyzer and looper workspaces are
+released before suspension. Source/preview/resolved PCM and ending arrays are immutable aliases;
+none is mutated after publication. A parent requiring a measured child drops its
+repeat variants, since protected transport must consume that exact child instead.
+Only a naturally closed leaf retains ordinary qualified repeat fallback variants.
+Optional diagnostic capture separately reserves two eleven-channel role captures
+plus ten stage/residual channels for each active pass and selected retained source.
+Exhaustion refuses before another source's or corrective pass's PCM; no larger
+ceiling, relaxed physical window or easier fixture is substituted. This
+numeric reservation is not process-high-water, deadline, sustained playback or
+physical-output qualification; those remain required evidence.
+
+PreparedPerformancePhrase retains a flat ordered list of admitted child products
+with exact requests, quality/live/render/graph and long-horizon continuation and
+read-only waveforms. The DSP proof independently retains the same immediate child
+by identity. Child list entries do not recursively duplicate that presentation
+list. Neither this detached ownership nor a commitEligible source proves that a
+host scheduled the measured continuation. Protected macOS/Windows consumption,
+replacement and coherent-repeat consequences, future live/route sample-boundary
+admission, full resource/deadline qualification and matching current primary and
+long-horizon artifacts remain required before installation or activation. Historical
+bundled resources remain ineligible. Mechanical controls cannot promote policy.
+
+
+## Protected measured-child scheduling
+
+The same PreparedPerformancePhrase now supplies the transport boundary contract
+for both hosts. Its flat continuation list is an admission dependency, even
+before a child is placed in an output queue. continuationOwnershipIsValid checks
+commit eligibility, exact proof/child object ownership, canonical accepted Core
+advance including the long-horizon decision, outgoing/incoming long-horizon
+identity, request replay origin, route and neutral successor recovery context
+through every bounded link. No live proposal is applied again to a retained child.
+The naturally complete leaf has no required child or retained continuation list.
+
+continuationAtBoundary checks the actual host Core/long-horizon state and route
+rate, channels and generation. A source with an applied live target additionally
+requires the original known end sample with checked arithmetic. Success promotes
+the exact child, carrying the remaining flat list and original reservation; it
+never rerenders or selects a replacement. Failure returns a reason-coded refusal
+and the host stops/rebuilds through its existing route recovery owner. Missing
+ownership cannot turn into accepted-source repeats. An unbound ordinary source
+retains relative phrase continuity; it does not invent an absolute player sample.
+
+macOS preserves root and child inspector projections in one flat detached
+presentation product. Promotion drops the consumed root projection and uses the
+exact precomputed child snapshots and shared PCM/waveforms. Windows uses that
+same shared boundary product directly. Each host performs its existing canonical
+accepted state advance through one boundary helper, suppresses fresh preparation
+and cache replacement while a child is required, and selects protected promotion
+before ordinary caches or repeat policy. Once the naturally closed leaf is current,
+ordinary calibrated preparation, coherent repeat variants, recovery waves and
+future live-feedback eligibility resume unchanged.
+
+A required measured child is already owned future audio. macOS excludes it from
+live correction target contexts and checks that protection again before proposal
+authorization, including results delivered after the analysis context changed.
+The existing feedback owner completes source advancement normally; a proposal
+cannot invalidate the witness or force an incomplete source into a hold. Pause
+preserves immutable ownership. Route rebuilding, stale preparation epochs and
+New Set discard old ownership and require fresh qualification on the new route
+or root; an old occurrence is never counted as a new completed measurement.
+
+All inventory checks, Core reduction, inspector work, cache operations, buffer
+creation and boundary decisions run on detached preparation, the macOS main
+actor, or the Windows state queue. The AVAudioEngine PCM handoff and waveOut
+completion callback are unchanged. Mechanical three-rate consumption, exact
+presentation, missing/foreign ownership, stale Core/long-horizon/route and applied
+live-boundary controls do not prove physical output or sustained deadline/resource
+qualification. Those gates, matching current calibrated artifacts and full source,
+PCM and lifecycle qualification remain required before activation or publication.
+
+
+## Current Long Horizon calibration provenance
+
+The existing test-only LongHorizonPolicyCalibrationIntegrationTests now obtains
+its full evidence through AutonomousPerformancePreparer. It retains the actual
+accepted product until the protected continuation boundary consumes its exact
+measured child at the cumulative sample index. Fresh preparation occurs only at
+a closed leaf; a missing, stale or refused child cannot be replaced. Core,
+render, graph, quality and live-master state advance once per accepted phrase.
+The semantic, signal and effect-dose accumulators commit together only after
+source eligibility, replay identity, ownership, numeric reservation and all
+three observations pass. No musical state is reconstructed from diagnostic files.
+
+This offline bootstrap uses the qualified corrected-source primary model and
+nil Long Horizon state/policy in the existing shared owner. It is not a production
+artifact pair or an adaptation decision. Exact clean execution source and model
+identities are checked before and after each full native route. Every accepted
+phrase contributes signal and effect-dose evidence; observation v4 binds those
+counts and rejects sparse or incompatible routes. The seven development and two
+disjoint holdout roots remain separate and fixed. A naturally closed child chain
+and complete operator coverage are required before fitting; refusal diagnostics
+and the default-off four-phrase probe retain no qualification or activation
+claim. Historical v16 resources remain historical fixtures. Current v18 seals
+are absent until qualified resources are installed together.
+
+The same native producer now retains the accepted closed leaf across fresh
+preparation refusals and uses Core's AutonomousQualityRetryContinuation and
+AutonomousQualityRecoverySchedulingPolicy for serial future requests. Only an
+actual retryable measured rejection advances that ephemeral context. The first
+successor retry waits for an offline coherent repeat selection; an exhausted
+wave requires another repeat boundary. Startup has no accepted source and uses
+the host's finite-wave/yield rule. A protected measured child is consumed through
+the existing boundary API and never supplies repeat material or a replacement
+proposal. Accepted advancement resets ephemeral recovery.
+
+Offline repeat selection reads the retained accepted blocks or the exact
+qualified variant selected by RepeatHoldEvolutionBoundaryPolicy. It validates
+source/Core/render/graph/route origin, checks complete native frame/bar geometry,
+and fingerprints the selected PCM without generating a substitute render.
+Presentation frames and repeat bars are accounted separately. Rejected and
+repeated products never enter accepted semantic/signal/effect accumulators;
+accepted state advances once per newly admitted phrase. Each serial request
+checks the frozen incoming Core/render/graph origin while its recovery context
+and presentation sample index may progress. Cancellation, missing variants,
+foreign origin, non-retryable rejection or overflow refuses the study.
+
+Shared-journey receipt v2 records actual rejected preparation identities,
+repeat selections and boundaries, accepted frame count and the exact accepted
+traversal before the first refusal. The study remains bounded to10416 combined
+accepted/recovery steps,10400 repeat bars and the existing10400 canonical-bar
+coverage refusal. Each preparation retains the unchanged two-pass/128MiB
+preparation-chain reservation. The held playback source is additional live
+storage; combined process memory, deadlines and physical device scheduling are
+unqualified until separately measured. Offline selected PCM is not a device
+presentation receipt. A36-phrase two-native recovery probe is diagnostic
+traversal proof only; the full7/2 corpus still requires7800 canonical bars,
+dense accepted evidence, complete operator transitions and a closed leaf.
+Windows currently uses neutral retry defaults and retains accepted repeats;
+shared runtime recovery convergence remains a separate required validation.
+
+The fresh e3c3741 two-native recovery probe accepted the debt-safe release after
+one six-bar exact retained repeat and two measured rejected proposals. Both
+routes then refused signal evidence for phrase34 as episode-reentry after34
+accepted phrases/368 canonical bars. The accepted phrase33 coordination was
+neutral conservative fallback. The bounded Core/DSP control independently
+reproduces that Core retains payoff episode3243899275292625950 while the prior
+signal accumulator incorrectly closed it on that neutral record. These local
+failed reports are diagnostics, not full native Long Horizon qualification.
+
+Signal trajectory report interpretation v2 now treats a complete neutral
+conservative fallback as globally observed signal without inventing episode or
+operator attribution. The pending episode and its counters remain unchanged;
+only a different bound episode identity completes it. A subsequent observation
+with the same pending identity must preserve the operator and all existing rate,
+order, evidence, overflow and cancellation contracts. A completed identity
+still cannot re-enter, including through an intervening neutral fallback. No
+Core score, musical state, renderer, PCM, primary calibration or callback changes.
+The report retains the existing32 phrase/transition and16 episode capacities.
+
+Report v2 has a separate schema owner and hashes its interpretation identifier.
+Same-pass phrase evidence stays signal-trajectory v1. Current runtime reduction
+requires report v2; observation/adaptation v3, Long observation/corpus v4 and
+profile/adversarial/holdout/policy v18 refuse prior interpretation authority.
+Historical reports/resources keep their bytes and meaning; new version names
+cannot qualify them. No v18 seals or paired resources are installed. The neutral
+fallback/resume and completed-ID/operator controls are structural synthetic
+fixtures; actual two-native recovered traversal and the complete7/2 native
+corpus, capacity, deadlines and physical-output gates remain required.
+
+The fresh full native v18 study on f5dfce0 passed153 accepted phrases and1652
+canonical bars, then stopped on the first44.1k route with candidate-incomplete,
+evidence-missing and hard-gate refusal. Score interest was valid with no overdue
+debt; the actual Core decision was non-retryable/failClosed. No complete native
+route, full corpus, v18 model or activation resulted. Source and model bytes and
+the failed route output remain exact in the terminal receipt.
+The native journey now reports the existing typed candidate completeness failure
+count and at most eight named codes inside the existing24-detail limit. This
+adds no completeness rule, retry eligibility, state, render, PCM or authority.
+A fresh replay at e05312e reproduced every accepted journey field and original
+refusal detail exactly, identifying one instrument-evidence completeness failure.
+The exact selected refused instrument vector is retained as local-only canonical
+JSON, without overwriting an existing witness. A missing output binding or failed
+write carries a fixed failure detail and cannot be reported as a successful
+witness. The vector is diagnostic evidence only and cannot supply accepted PCM,
+imported continuation or qualification. The required evidence must be repaired
+and freshly qualified.
+
+Malformed request identity validation now precedes the large generic shared
+preparation frame, preserving the same cancellation priority and request failure
+codes. The identical helper validates each prospective child as well. This keeps
+invalid inputs out of the Debug frame that previously exceeded a test-worker
+stack guard; valid request preparation still uses the canonical detached owner.
+No validation, planning, analysis or new work is moved onto an audio callback.
+
+The test-only full-journey driver awaits a separate detached preparation task at
+each fresh leaf, matching the host's shared preparation scheduling boundary.
+Its route/controller temporaries survive suspension in the async context rather
+than remaining underneath the large preparation stack. Cancellation forwards to
+the awaited job. Exact owned-child consumption, source/model checks, evidence
+accumulation and quality gates remain unchanged; no enlarged worker stack or
+main-thread preparation supplies qualification evidence.
+
+Full-journey refusal metadata distinguishes a rejected or unavailable prepared
+source from ownership, replay, numeric reservation and semantic/signal/effect
+accumulator refusal. It retains the existing bounded prepared quality and commit
+diagnostics. Rejected products never enter the three committed accumulators or
+advance canonical state, and diagnostic detail does not authorize a retry,
+repeat, changed threshold or qualification artifact.
+The same refusal records its actual request/Core identity and score-interest
+components, the existing Core retry continuation after that single observed
+rejection, the zero-repeat scheduling decision, and one score-only next proposal.
+This bounded inspection supplies no preparation, accepted PCM, presented repeat,
+new recovery wave or state advance. A symbolically valid hypothetical score is
+not evidence that a recovered product would pass calibrated preparation.
+
+
+## Conditional dotted-foundation calibration contract
+
+Primary v32/profile v33 extends the existing detached effectiveBounds owner,
+with observation v23 and original/successor ownership unchanged. The measured
+full-journey rejection after 37 bars identifies two optional score-owned metrics:
+dotted foundation activity ratio and its rendered crest mean. When their local
+checkpoint is exactly the all-zero calibration guard envelope and an observed
+value is nonzero, use the union of this same profile's other active checkpoint
+bounds. Preserve local zero, local measured populations, absent active calibration,
+finite-domain and non-compensable rejection. Legacy/bar-local scopes retain
+previous interpretation; retired continuous profile v32 is not current authority.
+No parameter, score, PCM, callback or automatic retry changes.
+
+Profile schema 25/version v33 and primary policy/evaluator v32 invalidate prior
+qualification. The completed d1259f3 engine-v48 native study supplied historical primary
+seals: profile eb1eba16cde88415, adversarial b76d744054bfa22f and
+holdout 19742f5c60933b29. Engine v49 changes canonical final-anchor ownership, so those seals
+are no longer current authority. Current primary seals are unset and the
+long-horizon dependency remains unqualified pending fresh complete native primary
+qualification. Qualified Long Horizon v18 seals and paired production resources
+remain absent.
+Synthetic reduction/replay controls have no activation authority. The live-target
+artifact gate uses the same continuous observation/profile scope owner and exact
+qualified seals, rather than legacy schema defaults. Target/occurrence controller
+binding, future-boundary eligibility and fail-closed fallback remain unchanged.
+
+The existing cold native cohort executor freezes a separate dotted-rule protocol
+before PCM and authenticates its exact blob, unchanged cohort and score geometry,
+source ancestry, clean accepted source/test/script objects and normative snapshot.
+The same freshly completed typed 40/6 corpora derive the output identities; fit
+ownership, full development relationship, independent adversarial/live-baseline
+and complete disjoint holdout gates remain required. Retained archives and old
+output identities cannot supply qualification. Refused outputs stay reason-coded
+local diagnostics; installing matching seals requires actual completed evidence.
+
+
+## Post-relocation tonal boundary ownership
+
+The engine-v49/quality-schema50 repair extends `SynthPerformancePlan`, not the
+renderer. Exact score-only reconstruction of root 48291, phase 153/start 1652,
+recovery contexts at phases 33 and 87, and the native plan fingerprint
+b35405a7d3f63299 identifies canonical bar 1663. Source motif step 4 relocates to
+11 while source step 8 stays at 8. The old pre-relocation selection placed a wash
+at 8; the later home retrigger cut off its active tail. Cold actual rendering at
+both native rates provides a regression without importing accepted runtime state,
+PCM, a corpus, or model authority.
+
+Final-anchor selection now runs after composition and timing relocation. The
+source and applied arrays retain the same indices, and only the selected existing
+envelope relation changes. The final anchor must retain the existing structural
+marker, energy-release, displaced-kick, macro-15, Tonal Motion, retrigger, and
+step-at-most-12 conditions. Failure falls back home rather than selecting an
+earlier anchor. Attempt-local home correction computes eligibility from fully
+relocated authored notes and applies no wash. All planning stays in Core and off
+the callback; no new continuation state, retry, renderer branch or DSP window is
+introduced. Candidate-vector schema43, transaction14, primary mathematical family
+v32/profilev33 and all signal bounds remain unchanged. Engine-v48 artifacts are
+retained as historical evidence; current seals are nil until fresh complete
+native development/adversarial/holdout qualification. The bounded regression is
+not continuing-journey, full-corpus, resource or physical-output qualification.
+
+
+The primary evaluator retains one canonical transaction/candidate rejection
+boundary in `preparationBoundaryRejection`. `terminalVerdict` invokes it before
+route or prospective acceptance checks. This pure boundary preserves the same
+ordered identity diagnostics and hard-gate reasons independently of installed
+artifacts, so tests can exercise rejection while current resources are
+unavailable. A nil rejection proves only passage through these checks; it never
+establishes quality acceptance, calibration or prepared-source admission. The
+actual evaluator still requires current fully qualified artifacts and exact
+prepared validation. No numeric policy or artifact-loading condition is relaxed.
+
+
+## Bounded same-pass diagnostic bar streaming
+
+`AutonomousPhraseRenderer` retains its one canonical rendering path. An optional
+synchronous detached sink receives one exact `AutonomousBarRoleStemCapture` and
+its final immutable `RenderBlock` before the next bar is rendered. The existing
+small-fixture retained-array capture remains supported; requesting both delivery
+forms refuses before rendering. Normal rendering leaves both absent. Sink failure
+or cancellation returns no render product, and the preparer must discard its
+private attempted state rather than advancing accepted continuation.
+
+`DiagnosticRoleStemCaptureSpool` writes all 32 existing taps: full11, protected11
+and stage/residual10, including silent channels. Each local bar file contains
+aligned little-endian Float32 channels in a fixed versioned enum order. The spool
+checks authored bar order, native geometry, sample rate, finite PCM and bounded
+actual unique captured array capacity. It writes at most one 64KiB byte chunk at
+a time, retaining only fixed per-bar fingerprints and geometry after synchronous
+delivery. Incomplete, malformed, cancelled and failed attempts remove their owned
+files; a finished draft owns its files until released. Readers load at most one
+channel of one bar and verify payload size and the original exact fingerprint.
+
+An opt-in `DiagnosticRoleStemCaptureSession` now belongs to one detached shared
+preparation transaction. It has single-writer fresh, collecting, sealed and
+discarded states; every normal host leaves this owner absent. Each actual render
+attempt creates its private spool only after the existing render reservation.
+Its draft stays on the private `CandidateRenderProduct`; a superseded initial
+draft is removed before a corrective render, and cleanup failure refuses that
+correction. The selected draft survives pending validation privately. Only the
+canonical finalizer can stage its actual proof-bound, commit-eligible prepared
+source object. No file handle or mutable capture owner enters playback products.
+
+The shared iterative owner captures every required source and child, then seals
+only after leaf-to-root proof validation, exact child-object checks, and complete
+long-horizon/presentation packaging. Sealing requires the exact staged objects in
+admitted order and the actual `qualifiedSuccessor` object at every protected
+boundary; a closed leaf terminates the chain. Reduced bindings retain the selected
+attempt/home-correction, canonical plan, candidate, transaction, request replay,
+graph, route, ending-state and exact child identities alongside all 32 channel
+files. Rejected, cancelled, unavailable or partially packaged chains publish no
+bindings and discard all private files. Reusing a sealed session refuses without
+changing its earlier export. Finished drafts own their files independently of the
+session so an existing diagnostic reader can outlive its metadata owner.
+
+These associations identify actual detached prepared products; they are not
+live scheduled/callback PCM, independently calibrated policy authority, or a
+quality promotion. Core intent, PCM, DSP math, signal bounds, quality schema50,
+canonical engine49 and primary mathematical family32/profile33 are unchanged.
+Current production artifact seals remain unavailable. The legacy retained-array
+capture flag still has its existing small-fixture/root-only form; it is mutually
+exclusive with the streamed session. Every streamed source/attempt conservatively
+retains the existing full-capture resource charge until actual complete working
+storage is proved. Native 16-bar captures therefore still refuse before rendering
+under that unchanged charge. The existing128MiB/two-pass gates remain unchanged;
+no zero-cost stream or larger ceiling is inferred from file storage. Captured-array
+and byte-chunk measurements do not cover total workspace/COW/state/analyzer/source/
+child allocations, combined process RSS, deadlines, full native capture capacity
+or physical output. Those gates and fresh current-engine qualification remain
+required before completion or promotion.
+
+
+## Detached renderer storage boundary observations
+
+A default-off `PreparationWorkingStorageProbe` observes the existing canonical
+`AutonomousPhraseRenderer` at protected-voice return, full-voice return, graph/pump
+return and bar delivery, plus synchronous inner voice and graph observations.
+`NumericStorageInventory` registers the allocated
+capacity of primitive numeric arrays through synchronous nonescaping borrows.
+Within one snapshot it counts shared backing storage once and independent COW
+storage separately, including reserved unused capacity. Backing identities are
+private and discarded after that snapshot; addresses can be reused across
+lifetimes, so each observation starts a fresh inventory. Owners must remain alive
+for the complete observation. Instrumentation may extend the observed temporary
+lifetimes and therefore does not claim an uninstrumented peak measurement.
+
+The inventory includes the current render workspace, both returned voice
+products, previously retained primary and repeat-hold blocks, repeat deck buffers,
+visible outer graph/mix products and all32 delivered capture channels. Continuation
+buffers come from the existing canonical typed replay/retention visitor rather
+than a second state-field inventory. Its existing encoded scalar/field headroom
+is reported separately from actual array capacity; that headroom is not a measure
+of dictionary, object, serialization or allocator heap overhead. Repeated typed
+views conservatively retain their own scalar headroom while shared numeric buffers
+are deduplicated. Int/Double collection capacities are registered at their existing
+typed field visits; their encoded scalar values remain in conservative headroom. This observation does not change the existing reservation's
+retained-continuation accounting.
+
+The single-writer detached probe keeps only the largest numeric-plus-headroom
+snapshot for each of at most32 named phases, with at most4096 bounded owner records
+per snapshot. Invalid names, owner/phase exhaustion or arithmetic overflow mark
+the diagnostic invalid. It retains no PCM or raw pointers, makes no admission
+or quality decision, and is absent from host/callback paths. The normal nil path
+performs no inventory work. Both-native16-bar controls compare full output,
+repeat-hold variants and ending typed state with ordinary rendering before
+reporting the observations.
+
+The outer boundaries and implemented inner observations still leave nested voice
+helper/internal processing transients, analyzer storage, encoding and actual heap
+metadata, incoming and parent/child ownership,
+initial/corrected overlap, writer chunks, whole-process RSS and deadlines
+unmeasured. They do not establish complete preparation storage, native admitted
+root/child capture capacity, resource qualification or quality promotion. Every
+existing full-capture charge,128MiB ceiling, two-pass limit and unavailable
+production seal remains in force until complete evidence establishes a bound.
+
+
+## Synchronous inner renderer storage scopes
+
+`PreparationStorageObservation` extends the diagnostic probe through one
+synchronous inner render call. Its closure holds only immutable outer owners that
+remain live during that call. The callee registers its own mutable state and
+workspace; no closure captures the inout owner currently being modified. Complete
+observation lifetimes include every outer scope. Neither inventory nor probe
+retains the scope, PCM or addresses; the call scope ends before later mutations,
+so diagnostic aliases do not force COW storage in a following stage. The normal
+nil path creates no observation scopes.
+
+The existing voice renderer observes its returned product while all swapped
+workspace buses are still local, before recycling them. It includes visible
+spatial-dust, audio-slice and polyphonic-pad buffers, FDN Double scratch, bass and
+kick/tonal onset Int buffers, current render continuation, and outer original or
+protected state, graph continuation, primary/hold blocks and prior diagnostic
+captures. This product observation deliberately extends diagnostic local lifetimes;
+it does not implicitly observe allocations inside earlier voice helpers.
+
+The generated graph observes split channels, both current and retiring graph
+branches, node return after the canonical dictionary-slot borrow, completed
+branches, mixed channels and output. The existing GeneratedDSPContinuationState
+node dictionary is the mutable owner: processUpper borrows its slot directly,
+avoiding the temporary node copy that retained the old delay buffers and forced
+COW on every bar. The readonly node-return projection aliases that same updated
+entry and expires before subsequent mutation. An actually retained incoming
+continuation or retiring graph still preserves its independent state through COW.
+
+At44100 and48000, nil-observer controls require both delay buffers to keep their
+backing identities through three same-topology calls after one initialization;
+retaining an incoming continuation must then detach both buffers while preserving
+its typed fingerprint. Existing four-call topology/retirement controls also hold
+actual incoming state, require two real delay detachments and exact PCM/ending
+state against ordinary rendering, and retain all68 physical observations/eight
+phases. Pointer comparisons are private, transient test facts; no address is
+emitted or used after an owning lifetime. Frozen pre-change native PCM, hold and
+continuation controls provide a separate exact source comparison.
+
+This consolidates mutation into the existing current and retiring node slots,
+without a second renderer, new state, musical parameter, decision or callback work.
+Topology limits, two-bar retirement, fallback and future-boundary application
+remain unchanged. Buffer reuse removes an actual allocation cause; it does not
+establish complete peak storage, justify a smaller reservation, or qualify native
+selected-root/child capture, RSS, deadlines or quality promotion.
+Canonical typed component visitors supply render, graph, node dictionaries and
+individual nodes rather than duplicated state-field inventories. Outer phrase
+workspace, both voice products, graph input/carrier/residual/dose arrays,
+primary/hold/capture owners and non-mutating continuation are joined in the same
+inventory. Inner graph scopes expire before the retiring mix or later bar work.
+Component metadata headroom remains separately labelled and conservative.
+
+Both-native direct graph controls traverse real topology replacement and both
+retirement bars, require exact ordinary PCM/ending state, register both active and
+retiring state, and expose independent old/new delay storage. A weak-owner control
+proves nested scopes release their outer owners at return. Native16-bar controls
+require all eleven applicable phase maxima and every actual node observation,
+while preserving ordinary PCM, hold variants and ending fingerprints. All owners
+remain bounded by the existing32-phase/4096-record diagnostic limits.
+
+These observations still establish neither complete allocation/RSS/deadline bounds
+nor native admitted selected-root/exact-child capture capacity. Nested helper and
+internal processing transients, analysis, encoded/heap storage, incoming/parent/
+child ownership, initial/corrected overlap and writer chunks remain separate
+obligations. Fullcapture charges,128MiB/two-pass limits, current production
+unavailability and every original qualification/promotion gate remain unchanged.
+
+
+## Shared preparation ownership observations
+
+The default-off numeric probe now traverses the same diagnosed canonical
+preparer and iterative shared chain. A synchronous scope joins the original root
+request, active request and suspended parents with the renderer's actual current
+owners. Both primitive capacity and conservative typed continuation headroom use
+the existing canonical visitor. Prepared previews register their private source
+through this inventory without exposing PCM or creating playable authority.
+Finalized primary and hold blocks use the same registration helper. Shared
+request/preview/child buffers are deduplicated only while all actual owners live
+in that snapshot.
+
+Before a corrective render, the existing preparer releases superseded hold
+variants and diagnostic captures. Observation records the remaining initial
+primary blocks and ending state, then retains those actual initial owners beside
+the new render for its synchronous duration. The selected snapshot includes
+initial and selected products together. Initial and corrective renders share
+phase names, so maxima remain bounded across the transaction rather than
+retaining an unbounded per-attempt history. Existing selected-attempt and
+transaction identities continue to identify which pass was accepted.
+
+After rendering, analysis-input observation includes the actual render product
+and ending continuation. It measures that input ownership, not analyzer internals.
+The iterative owner observes suspended requests/previews and then every retained
+preview alongside the actual leaf-to-root reduced products. Reduction still
+requires exact qualified-child object identity and the existing admission proof;
+observation never substitutes for it. Scopes are not retained by pending
+finalizers, prepared playback products or the probe. The normal absent observer
+runs the existing path without inventory work. Numeric observer exhaustion or
+invalid input makes diagnostics unavailable without changing a musical verdict.
+
+Native initial-chain controls compare ordinary and observed whole blocks, hold
+variants, quality, transaction/source identities, ending render/graph state and
+resource reservations, with ordinary arrays leaving scope first. The same native
+forced-correction chain fixture reaches the existing aggregate resource refusal;
+controls require identical ordinary/observed failure details and render trace,
+unchanged incoming state and no admitted product. Its actual partial initial/
+corrective overlap is observed, but a fully admitted native corrective chain
+remains a separate unsatisfied resource obligation. Streamed and capture-off
+reservations intentionally differ under the unchanged fullcapture charge; their
+PCM/state parity comparison does not assert equal resource charges.
+The existing 8kHz streamed selected-root/child controls also observe actual chain
+owners while exporting all32 same-pass channels. These remain mechanical fixture
+checks under an independently declared test evaluator; they do not install policy
+resources, prove native capture admission or confer promotion.
+
+Coverage is still partial: nested voice and node internal transients, analyzer
+windows, encoding and actual heap/Core metadata, waveform envelopes, byte writer
+chunks, combined RSS and deadlines remain separately unqualified. Observed
+lifetimes may be extended by instrumentation. The fullcapture resource charge,
+128MiB ceiling, two-pass bound, current production unavailability and all original
+primary/Long18/Phase1/lifecycle/physical-output requirements remain unchanged.
+
+The shared-chain observation scope holds immutable root/active requests and
+suspended frames behind one detached reference owner. Registration borrows those
+requests through a non-inlined helper. This avoids copying large request tuples
+onto the already-deep cooperative render stack while keeping every numeric owner
+in the same snapshot. It does not increase worker stack size, move rendering to a
+different worker or weaken any observation or test. The first direct native
+observer attempt hit a stack guard in that nested registration closure; its
+negative result remains local until the repaired exact-source controls pass.
+
+A render carrying an actual retained initial candidate also contributes the same
+physical snapshot to one conditional corrective-overlap maximum. The recorded
+observedPhase identifies its original inner phase. This preserves that overlap
+when a larger later child replaces the ordinary phase maximum. It creates no
+second inventory or observation-count increment and shares only immutable owner
+metadata. Both names reserve their slots before registration under the unchanged
+32-phase ceiling; exhausted diagnostics fail closed. Initial and corrective phase
+histories remain bounded and no additional PCM is retained.
+
+
+## Canonical preflight analyzer storage observations
+
+The existing default-off synchronous preparation observer now follows the real
+PhraseAudioPreflight, AudioQualityReport and MusicalQualityMetrics calls. The
+canonical private preparer holds its actual render product and ending typed
+continuation behind one synchronous reference owner during preflight; every
+analyzer snapshot joins those owners with the already-live incoming request,
+suspended parents and remaining initial candidate during correction. This owner
+expires after preflight and never enters a pending finalizer, prepared playback
+product, callback or accepted continuation. No parallel analyzer, evidence cache,
+quality state, musical parameter or additional render is introduced.
+
+BS.1770 observations register the actual momentary and short-term Double rings,
+fixed emitted-energy capacities, returned energy collections, gate populations,
+loudness arrays, and separate filtered/sorted range owners. The sorted operation
+and all numeric arithmetic remain the existing implementation. FIR true-peak
+observations register the two actual fixed histories after consuming the same
+immutable chunks. Perceptual observations register the actual ring, FFT real and
+imaginary arrays, previous normalized magnitudes, and finite-check evidence
+values. FFT mutation stays in place. Per-bar metrics reuse the same phase names
+with the actual source bar, and preflight registers its four movement arrays.
+These actual primitive capacities use the existing per-snapshot live alias
+inventory, including unused capacity and independently stored COW arrays.
+
+The same scope and conditional corrective maximum retain all incoming/parent/
+initial owners during each physical analyzer observation. Native controls require
+exact ordinary/observed preflight reports, original PCM/hold products, typed
+ending state, source/transaction identity, child ownership and reservation or
+refusal outcome. Diagnostic phase exhaustion leaves the ordinary report exact,
+performs no outer registration and confers no quality or admission authority.
+Cancellation remains the original boundary. Nil observers perform no inventory
+work. All scope captures are synchronous; the observer retains only bounded
+metadata maxima and may extend observed owner lifetimes while measuring them.
+
+This is partial allocation evidence. Standard-library sorting/filtering internal
+scratch, other nested analyzer/voice/node transients, immutable coefficient and
+heap/Core metadata, waveform envelopes, encoding and writer temporary storage,
+whole-process RSS and deadlines remain unqualified. Named-owner observations are
+not a complete peak bound. No smaller capture or scratch charge, larger128MiB
+ceiling, extra corrective pass, production seal, activation or completed native
+selected-root/exact-child32-tap capacity follows. Every existing primary, actual
+Long18, Phase1, lifecycle, shared-envelope, deadline/RAM and physical-output gate
+continues to apply before roadmap completion and publication.
+
+
+## Synchronous echo, dust and memory helper storage
+
+The existing detached VoiceRenderer observer joins the actual caller's local
+buses, checked-out workspace, rendered bass starts and canonical typed RenderState
+with live PercussionEchoTextureVoice owners. Gated echo registers its delay;
+anticipation swell registers that delay and its full-frame reverse source;
+spatial dust registers both independent delay arrays. Regenerated memory-source
+PCM is observed after the existing canonical kick render and before AudioSlice
+consumption. AudioSliceRenderer also observes its actual copied source window
+alongside the live source and borrowed destination before processing triggers.
+It joins the same caller inventory, excluding the mutable AudioSlice destination
+before borrowing it. Invalid or absent slice plans allocate no source window and
+make no slice observation. These are existing helpers and actual arrays, with
+unchanged PCM arithmetic and evidence. No musical parameter or alternate renderer
+is added.
+
+One private synchronous owner uses the same caller inventory for helper and
+product boundaries. It excludes mutable helper return buffers before their inout
+borrow; the callee registers those actual buffers. Owner scopes expire before the
+next mutable stage. The default nil path builds no inventory or owner sidecar.
+The canonical typed visitor remains the only continuation-field inventory.
+
+Helper lifetimes share one named helper-working maximum in each protected/full
+voice namespace. Bounded per-phase physical observation counts retain coverage
+when a larger helper snapshot replaces a smaller one; a conditional corrective
+maximum reuses the same physical snapshot and does not double-count it. The
+existing32-phase and4096-owner bounds remain unchanged. Exhaustion invalidates
+the diagnostic before any owner registration and preserves exact PCM/evidence.
+Native direct controls independently cover neutral, gated echo, anticipation
+swell and spatial dust, including delay/reverse geometry, caller/source aliases
+and exhausted fallback. Native whole-render controls retain exact original phase
+counts and compare ordinary PCM, hold products and typed ending continuation.
+
+The existing canonical cross-phrase memory fixture now covers cut and granular
+recall at8k,44100 and48000. It compares the entire RenderedBar and typed ending
+RenderState for ordinary, replay, observed and exhausted paths. Its actual
+regenerated source, independent copied window and borrowed output capacities,
+caller workspace/state, and physical helper counts are required evidence.
+Original whole-render per-phase counts remain exact with added active slice
+visits. A retained maximum is a phase sample, not every helper allocation.
+
+These observations remain partial: GroovePulse dry-event Float scratch, kick
+accumulator arrays, further AudioSlice metadata/trigger work, other
+helper/analyzer/node and standard-library transients, reference-owner
+metadata, heap/allocator overhead, waveform envelopes, encoding/writer buffers,
+whole-process RSS and deadlines are not a complete bound. Instrumentation may
+extend observed lifetimes. No capture charge,128MiB ceiling, two-pass limit,
+native selected-root/exact-child admission, runtime activation or quality
+promotion is changed or proved by these observations. AT-0039's full native
+primary, actual Long18, all lifecycle/Phase1/aggregate, capacity/deadline and
+physical-output requirements remain incomplete until independently qualified.
+
+The shared detached chain reservation v2 charges the root request's complete
+typed numeric continuation inventory before creating its evaluator or rendering
+PCM. Float buffers contribute allocated capacity, including unused elements;
+bounded structural validation reuses the canonical DSP input guard first. The
+root remains charged once across all actual passes and suspended sources.
+Child incoming state is already retained by its completed parent and does not
+create a second root charge. Invalid, cancelled or over-ceiling input refuses
+without a render, selected capture, state advance or playable result.
+
+This closes an incoming-owner omission while retaining every existing active
+render, full-capture, completed-source, analyzer and evidence charge. The 128MiB
+ceiling and two-pass limit remain unchanged. Admission with different unused
+capacity may differ because physical storage differs, while identical admitted
+semantic inputs preserve PCM, replay, evidence and exact child ownership.
+Complete allocation/metadata/chunk lifetime bounds, native corrected selected
+root/child capture, RSS/deadlines and full qualification remain outstanding.
+
+Native detached controls record whole-test-process RSS and the sum of high-water
+statistics across currently registered malloc zones directly in the validator
+process. These diagnostics include runtime/instrumentation overhead, retain no
+PCM or addresses, never run in the callback, and do not feed admission or musical
+decisions. Zone peaks may be noncoincident; destroyed zones and non-malloc VM are
+excluded from that allocator measure. They supplement the named-buffer inventory
+without claiming complete numeric attribution or a qualified capacity bound.
+
+## Superseded corrective-render storage lifetime
+
+The existing detached `AutonomousPhrasePreparer` retains the exact initial
+attempt vector in the canonical transaction. Once the evaluator requests the
+same-plan home correction, it releases the initial hold/capture sidecars and
+initial PCM/ending DSP storage before the corrective render. The original
+incoming continuation remains immutable and supplies that render. Released
+storage cannot supply finalization or fallback: internal access fails, and a
+failed or cancelled correction refuses the transaction through the existing
+path. Only the selected product retains audio for pending proof and ownership.
+
+The reusable capability is explicit `CandidateSynthesisStorage` ownership in
+the existing private candidate, avoiding duplicated initial/corrective audio
+lifetimes. Actual source/owned-child controls verify the release boundary and
+unchanged PCM, hold families, attempts, replay/proof and continuation. This is a
+physical overlap reduction, not a complete working-set proof. Existing numeric
+reservations, 128 MiB ceiling, two-pass bound and all final qualification gates
+remain unchanged until complete active-path allocation bounds are established.
+No score, musical parameter, callback, host, policy or renderer is added.
+
+## Shared desktop recovery transition
+
+Both desktop hosts now use the existing Core retry continuation through one
+`recoveringAfterRejection` transition. It retains calibrated rejection reasons,
+fixed ordinals, directional intent, finite waves and presented-repeat bars.
+Initial preparation opens another finite wave through the next detached task;
+successors wait for their first coherent repeat and yield at an exhausted wave.
+Accepted session state and PCM never advance from rejected evidence.
+
+Windows consumes diagnosed prepared rejection decisions and binds the resulting
+context into its exact preparation/replay key. It retains accepted immutable PCM
+while recovering, commits only an eligible exact product, and preserves required
+measured-child priority. Stale results do not change recovery. Unsafe, missing,
+unavailable or route-recovery failures remain fail-closed. Route recovery resets
+ephemeral retries and uses neutral route semantics; accepted phrase commit resets
+the retry target. The macOS orchestration reuses the same Core transition without
+changing its existing recovery sequence. No callback work, alternate renderer,
+new musical parameter, extra pass or relaxed admission is introduced.
+
+Rejected Windows PCM is released on the serial preparation queue before its
+next render; the asynchronous host handoff carries only a bounded rejection
+decision or an eligible immutable accepted product. This removes rejected-audio
+ownership from host retry scheduling without lowering any resource reservation.
+
+The shared policy and request/score binding have deterministic controls. Building
+the Windows host against macOS platform stubs is source validation only; native
+Windows execution, physical-device recovery, fresh engine-v49 qualification,
+complete working storage/deadlines and final runtime gates remain separate.
+
+
+Upper-timbre analysis retains its existing canonical evidence owner, schema3,
+frame/metadata/FFT bounds and exact arithmetic. Single-channel, mono and side
+samples are read through bounded immutable views of the existing Float PCM;
+five full-bar Double arrays and copied onset windows are no longer allocated.
+Only reduced evidence leaves the call, with no change to score, continuation,
+quality thresholds, accepted PCM or future decisions. A private test-only frozen
+actual-source array analyzer verifies every field, fingerprint and encoded report
+on native bars, bounded/invalid inputs and metadata controls. Capacity removal is
+component evidence: the original64-channel scratch charge,128MiB ceiling and
+two-pass admission remain unchanged. Complete allocation/metadata/lifetime,
+parent/child capture, RSS/deadline and runtime qualification remain separate.
+
+
+## Matched ordinary native process control
+
+The existing test-only iterative chain validator shares its detached ordinary
+reference construction with a separate four-case control at 44.1 and 48 kHz,
+covering admitted initial chains and the original forced-correction aggregate
+refusal. Only reduced PCM, hold, replay, continuation and quality identities,
+public reservation fields, terminal ordinals and refusal details survive each
+worker. The observed validator retains its full exact product/reservation
+comparison and storage assertions, then emits the same compact reference for
+external cold comparison. This avoids a second preparation implementation.
+
+The separate process control has no numeric storage probe or full snapshot
+serialization. External whole-process kernel footprint can therefore distinguish
+ordinary execution from observer/reporting overhead on identical source and
+outcomes. Frameworks, allocator caches and compact reporting still belong to
+that process; physical footprint is not complete allocated-storage attribution.
+Neither process is production activation, musical qualification, a per-phase
+peak, a deadline proof or selected native root/child capture admission. Existing
+reservations, 128 MiB ceiling, two-pass bound and all full gates are unchanged.
+
+
+## Current-source score-only coverage preparation
+
+The existing offline calibration test owner requires a private v2 score-selection
+protocol before freezing a new cohort. Exact clean Git head, the six existing
+Package/Sources/Tests/scripts/corpus/contract objects, coherent contract fingerprint,
+current engine, original outcome-blind ordinal domains, fixed 36+4 development and
+4+2 holdout quotas, all seven checkpoints and both native rates must match.
+Unknown fields, historical engine identities, altered quotas or positive quality/
+activation claims refuse before planning. Protocol file and destination must be
+private real paths; protocol and cohort blobs authenticate their actual parsed
+Data through test-owned Git stdin hashing, so path changes/restoration cannot
+substitute other parsed bytes. Protocol paths and source bindings are rechecked before the
+absent destination is written. The resulting immutable v2 cohort binds that actual
+protocol blob and current score/modal geometry. A separate opt-in current-cohort
+replay reauthenticates source/protocol/cohort identities, all322 quality-r0
+checkpoints and complete native modal geometry, retaining room for the actual
+final successor. Historical cohorts and seals remain
+unchanged. This is score-only preparation: no PCM, measured quality, independent
+labels, resource qualification, profile installation or runtime activation follows.
+The existing continuous executor consumes this authenticated v2 cohort through
+the same complete score replay. A separate private v2 execution protocol binds
+current engine, source objects, contract, selection/cohort blobs and the exact
+externally fresh-fetched published runtime ref before new-root PCM. It fixes the
+40/6 matrix at both native rates, all322 checkpoints,644 original reports and
+actual successor receipts, complete continuous observation/profile scope, and
+requested full adversarial/holdout qualification. Unknown fields, partial counts,
+stale source/publication, archive import or activation/installation claims refuse.
+An opt-in launch control authenticates those inputs without creating output or
+rendering. The one existing executeJourney producer still advances actual accepted
+Core/quality/live/render/DSP/graph state and closes each original with its immediate
+actual successor; no alternate renderer, cache import or cold checkpoint substitute
+is introduced. Source, contract and private file identities are rechecked around
+each native route. Fresh typed corpora alone derive profile/output fingerprints;
+historical artifacts and expected seals cannot supply current qualification.
+Full development relationships, all34 adversarial cases, two distinct accepted
+live baselines and all84 disjoint holdout observations remain required. Offline
+results do not install resources, activate playback or replace full runtime,
+allocation/capture/deadline/Windows/physical-output gates.
+
+The current offline executor claims its absent private output leaf with one
+exclusive OS directory-creation operation after input validation. A competing
+writer causes a pre-PCM refusal; its directory and manifest are preserved.
+The no-PCM filesystem control covers competing creation and repeated claims.
+This test-owned output claim performs no callback work or runtime activation.
+
+The same offline executor constructs each trajectory's temporary Foundation JSON
+objects inside one detached serialization scope and returns only the unchanged
+canonical Data before writing. Objective-C platforms drain a local autorelease
+pool; other platforms use the same synchronous serializer directly. Original typed
+report, successor and corpus ownership stays outside that scope. Actual-product
+controls preserve exact diagnostic bytes and source-bound observation construction;
+typed construction and JSON parsing errors propagate unchanged. This
+changes neither PCM nor native study inputs, output identity, file-claim semantics,
+quality/profile authority, callback work or preparation resource reservations.
+A diagnostic lifetime control is not native preparation allocation, RSS/deadline,
+Windows execution or physical-output qualification.
+
+
+## Immutable preparation request storage
+
+The existing `PhrasePreparationRequest` is an immutable `Sendable` reference
+whose fields retain the same typed Core/DSP input snapshot and replay identity.
+Detached tasks, pending chain frames, prospective continuations and admitted
+transport products share that input instead of embedding large value copies in
+worker frames. This addresses a native Debug cooperative-stack overflow at the
+entry to the existing iterative preparer. It adds no mutable continuation,
+preparation path, callback work, scheduling rule, musical parameter or evaluator.
+
+Independent request construction still reproduces semantic identity; pointer
+identity has no admission authority. Local render mutation cannot alter the
+immutable incoming value fields. Detached installed-evaluator controls compare
+PCM, hold products, quality/replay and outgoing continuation with a synchronous
+reference and require the original request to remain fingerprint-identical.
+Cancellation, resource reservation, diagnostic ownership, refusal, exact-child
+and future-boundary contracts remain unchanged. The existing 128 MiB charge and
+two-pass limit are not lowered; reference allocation overhead remains part of
+outstanding complete physical-storage qualification. A worker-stack repair does
+not establish native deadlines, physical output or current runtime promotion.

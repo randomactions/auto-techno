@@ -9,6 +9,25 @@ package enum ProfessionalQualityMeasurementApplicability: String, Codable, Hasha
     case unavailable
 }
 
+/// Bounded score/render event population for the existing upper-tail projection.
+/// A natural-body zero remains a measured clearance ratio; an empty score does not.
+package struct ProfessionalQualityUpperPercussionTailSupport: Codable, Equatable, Sendable {
+    package let sourceEventCount: Int
+    package let foregroundClearanceEventCount: Int
+
+    package init(sourceEventCount: Int, foregroundClearanceEventCount: Int) {
+        self.sourceEventCount = sourceEventCount
+        self.foregroundClearanceEventCount = foregroundClearanceEventCount
+    }
+
+    package var isComplete: Bool {
+        let maximum = AutonomousCandidateEvaluationVector.maximumBarCount *
+            AutonomousCandidateEvaluationVector.maximumUpperPercussionTailEventsPerBar
+        return (0...maximum).contains(sourceEventCount) &&
+            (0...sourceEventCount).contains(foregroundClearanceEventCount)
+    }
+}
+
 package struct ProfessionalQualityModalRatioSupport: Codable, Equatable, Sendable {
     package let sourceEventCount: Int
     package let measuredEventCount: Int
@@ -71,14 +90,14 @@ package enum ProfessionalQualityMeasurementScope: String, Sendable {
         switch self {
         case .legacy: 22
         case .barLocalModalWindow: 23
-        case .continuousModalWindow: 24
+        case .continuousModalWindow: 25
         }
     }
     package var profileVersion: String {
         switch self {
         case .legacy: "autotechno-professional-quality-profile.v30"
         case .barLocalModalWindow: "autotechno-professional-quality-profile.v31"
-        case .continuousModalWindow: "autotechno-professional-quality-profile.v32"
+        case .continuousModalWindow: "autotechno-professional-quality-profile.v33"
         }
     }
 
