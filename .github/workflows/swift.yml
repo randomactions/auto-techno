@@ -105,6 +105,13 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter 'FoundationRhythmicRelationTests/algorithmicFoundationBassFaults'
 
+      - name: Verify native rumble and modal companion faults
+        if: matrix.bank == 'remaining'
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter 'FoundationRhythmicRelationTests/algorithmicFoundationCompanionFaults'
+
       - name: Verify closed-form collision source energy
         if: matrix.bank == 'remaining'
         run: >-
@@ -612,7 +619,7 @@ jobs:
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --skip 'FoundationRhythmicRelationTests/algorithmicFoundationBassFaults'
+          --skip 'FoundationRhythmicRelationTests/algorithmicFoundation(Bass|Companion)Faults'
           --filter '(ClimaxHangTests|FoundationRhythmicRelationTests|GeneratedDSPTopologyTests|FeedbackDelayNetworkTests|IdentityReturnContinuationTests|KickSyntaxTests|PercussionEchoTextureTests|PhraseCompositionTests|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|TPTAntialiasedNonlinearCoreTests|fixedSessionIdentity|currentPlanningIsDeterministic)'
 
       - name: Run upper-percussion tail DSP tests

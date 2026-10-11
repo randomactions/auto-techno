@@ -351,3 +351,55 @@ component benchmark. Existing dotted/pocket tests and all quality promotion
 gates remain required. This adds fault coverage without another renderer,
 metric, parameter, policy or quality threshold. Native execution is required
 before recording a passing matrix.
+
+## Native rumble and modal companion fault benchmark
+
+`FoundationRhythmicRelationTests.algorithmicFoundationCompanionFaults` extends
+that same test owner to the two foundation behaviors that the bass-event ledger
+cannot assess. Roots1 (development) and6011 (held-out-root), both native rates,
+and five recipes are frozen before PCM inspection. For each behavior, select
+the first score bar within128 planned phrases with positive corresponding
+rumble or tuned-tom events, no other bass/rumble/tuned-tom voice, and all companion
+steps in0...14. Modal articulations must match the original event indexes,
+steps and intensities. Missing coverage fails without replacement roots.
+
+Forty rows cover unaltered, deleted-companion, one-step onset shift, wrong-voice
+and zero-intensity controls:8 positive bindings and32 required rejections. The
+modal zero-intensity fault changes both the ensemble event and its authoritative
+modal articulation. The shift changes both records coherently without wrapping;
+all other articulation fields remain unchanged. Evidence is compared with the
+original score, never with a relabelled fault score.
+
+Each case invokes the existing `VoiceRenderer.renderBar` with its existing
+same-pass diagnostic role capture in full and protected-rhythm modes. Fresh
+zero render state and one bar bound every call. Each test-local projection retains
+one bar of sample bit patterns for exact pass/replay comparison. Only reduced
+hashes, event facts, first-nonzero index and energy statistics enter the report;
+PCM is never saved or committed.
+Rumble uses the existing terminal-event ledger and completeness predicate;
+modal uses exact articulation identities, native start-frame support, finite
+stable event evidence and the existing protected-foundation routing flag.
+Actual captured PCM must match across passes; positive cases replay exactly.
+Silencing faults must produce exact zero peak/RMS and no nonzero sample, while
+all faults must change the source PCM hash.
+
+Rumble and tuned-tom onsets are unswung. The relative first-nonzero displacement
+under the one-step fault must equal the difference between independently rounded
+score starts, using `round(step * round(rate * 240 / 130) / 16)`. This is an exact
+relative onset relation, not a fitted audio-onset tolerance. Absolute per-event
+rumble starts are unavailable because its terminal ledger has no such field;
+modal starts retain their existing explicit sample support. Native-rate variants,
+recipes and repeats are paired observations of two fixed roots, not independent
+population samples or a newly fitted classifier.
+
+The emitted `autotechno-foundation-companion-fault-component.v1` report keeps
+continuing modal-tail support, unauthorized truncation, dotted authorized release,
+full prepared-transaction binding, nonlinear full-mix quality, perceptual quality
+and population intervals unavailable. It complements the established-bass
+benchmark; it does not turn its historical unavailable cells into retrospective
+passes. All required runtime, resource and physical-output gates remain separate.
+
+This test-only extension adds no runtime parameter, renderer, continuation,
+future decision, fallback or production threshold. It reuses the canonical
+voice/evidence owners and existing capture path. Native execution must verify
+the frozen matrix before any passing component result is recorded.
