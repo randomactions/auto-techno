@@ -1,17 +1,27 @@
-name: Windows Source Validation
+name: Native Source Validation
 
 on:
   workflow_dispatch:
+    inputs:
+      validation:
+        description: Validation scope (component runs do not replace full CI)
+        type: choice
+        required: true
+        default: windows
+        options:
+          - windows
+          - modal-continuation
 
 permissions:
   contents: read
 
 concurrency:
-  group: windows-source-validation-${{ github.ref }}
+  group: native-source-validation-${{ github.ref }}-${{ inputs.validation }}
   cancel-in-progress: false
 
 jobs:
   validate-windows-source:
+    if: inputs.validation == 'windows' || inputs.validation == ''
     name: Windows x64 source validation
     runs-on: windows-2025
     timeout-minutes: 60
@@ -59,3 +69,25 @@ jobs:
       - name: Build and test without distribution
         shell: pwsh
         run: .\scripts\build-windows.ps1
+
+  modal-continuation:
+    if: inputs.validation == 'modal-continuation'
+    name: Native modal continuation component
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Record candidate and toolchain
+        run: |
+          git rev-parse HEAD
+          swift --version
+      # Focused research evidence only. This manual workflow neither supplies
+      # the required swift-test check nor replaces the complete Swift CI banks.
+      - name: Verify canonical continuation and fault controls
+        run: >-
+          swift test --no-parallel
+          --build-path "$RUNNER_TEMP/auto-techno-component"
+          --filter '(algorithmicModalContinuationFaults|continuousModalWindowMatrix|continuousModalInterruptionAndBounds)'
