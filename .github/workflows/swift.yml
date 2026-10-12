@@ -661,19 +661,19 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter PercussionEchoTexturePreparedEvidenceTests.testPreparedProductEvidence
 
-      - name: Run full-phrase bass behavior fault matrix
+      - name: Run full-phrase bass behavior and output frame fault matrices
         if: matrix.bank == 'remaining'
         run: >-
           swift test -c release --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter 'FoundationRhythmicRelationTests/algorithmicFullPhraseBassBehaviorFaults'
+          --filter 'FoundationRhythmicRelationTests/algorithmicFullPhrase(BassBehavior|OutputFrame)Faults'
 
       - name: Run core and evidence tests
         if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --skip 'FoundationRhythmicRelationTests/(algorithmicFoundation(Bass|Companion|Release)Faults|algorithmicFullPhraseBassBehaviorFaults)'
+          --skip 'FoundationRhythmicRelationTests/(algorithmicFoundation(Bass|Companion|Release)Faults|algorithmicFullPhrase(BassBehavior|OutputFrame)Faults)'
           --filter '(ClimaxHangTests|FoundationRhythmicRelationTests|GeneratedDSPTopologyTests|FeedbackDelayNetworkTests|IdentityReturnContinuationTests|KickSyntaxTests|PercussionEchoTextureTests|PhraseCompositionTests|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|TPTAntialiasedNonlinearCoreTests|fixedSessionIdentity|currentPlanningIsDeterministic)'
 
       - name: Run upper-percussion tail DSP tests

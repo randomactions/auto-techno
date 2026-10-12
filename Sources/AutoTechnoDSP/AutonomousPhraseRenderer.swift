@@ -1786,6 +1786,8 @@ package struct RenderBlock: Equatable, Sendable {
                 percussionEchoTextureRenderEvidence,
             percussionEchoTextureRenderPassesMatch:
                 percussionEchoTextureRenderPassesMatch,
+            spatialDustRenderEvidence: spatialDustRenderEvidence,
+            spatialDustRenderPassesMatch: spatialDustRenderPassesMatch,
             audioSliceRenderEvidence: audioSliceRenderEvidence,
             audioSliceRenderPassesMatch: audioSliceRenderPassesMatch,
             polyphonicPadRenderEvidence: polyphonicPadRenderEvidence,

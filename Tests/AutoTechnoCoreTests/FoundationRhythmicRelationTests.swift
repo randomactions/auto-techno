@@ -850,38 +850,15 @@ struct FoundationRhythmicRelationTests {
                 try #require(reference.isComplete)
                 try #require(prepared.candidateEvaluation.correctionCount == 0)
                 try #require(reference.crossPhraseTransition == .initial)
-                let route = reference.routeContinuation
                 for (scenario, renderPlan) in variants {
                     var outgoing = incoming
                     var graphOutgoing = graphIncoming
                     let blocks = try #require(AutonomousPhraseRenderer.renderIfNotCancelled(
                         plan: renderPlan, graph: prepared.graph, sampleRate: rate,
                         state: &outgoing, graphState: &graphOutgoing, cancellationRequested: { false }))
-                    let preflightResult = PhraseAudioPreflight(blocks: blocks, sampleRate: rate,
-                        cancellationRequested: { false })
-                    let preflight = try #require(preflightResult)
-                    let vectorResult = AutonomousCandidateEvaluationVector.make(
-                        plan: original, graph: prepared.graph, planFingerprint: reference.planFingerprint,
-                        graphFingerprint: reference.graphFingerprint, blocks: blocks, audioPreflight: preflight,
-                        crossPhraseTransition: .initial,
-                        upperTimbreEvidence: UpperTimbreEvidence.aggregating(blocks.map(\.postGraphRemainderTimbreEvidence)),
-                        sampleRate: rate, routeChannelCount: route.channelCount, routeGeneration: route.routeGeneration,
-                        routeFingerprint: route.routeFingerprint,
-                        incomingContinuationFingerprint: route.incomingContinuationFingerprint,
-                        incomingRenderDSPFingerprint: route.incomingRenderDSPFingerprint,
-                        incomingQualityStateFingerprint: route.incomingQualityStateFingerprint,
-                        incomingKickCorrectionDB: route.incomingKickCorrectionDB,
-                        incomingTopologyRevision: route.incomingTopologyRevision,
-                        previousGraphFingerprint: route.previousGraphFingerprint, routeRecovery: route.routeRecovery,
-                        outgoingRenderDSPFingerprint: AutonomousCandidateFingerprint.renderDSPContinuation(
-                            renderState: outgoing, generatedDSPState: graphOutgoing),
-                        controllerStateFingerprint: AutonomousCandidateFingerprint.combinedController(
-                            kickCorrectionDB: outgoing.automaticMixState.kickCorrectionDB,
-                            liveMasterHeadroom: prepared.liveMasterHeadroomContinuationState, proposalFingerprint: nil),
-                        incomingLiveMasterState: prepared.incomingLiveMasterHeadroomState,
-                        outgoingLiveMasterState: prepared.liveMasterHeadroomContinuationState,
-                        liveProposal: nil, liveProposalOutcome: .hold, liveTargetStartSample: nil,
-                        incomingDramaticDebts: session.memory.openDebts, cancellationRequested: { false })
+                    let vectorResult = try originalScoreVector(plan: original, prepared: prepared,
+                        blocks: blocks, rate: rate, incomingDebts: session.memory.openDebts,
+                        outgoing: outgoing, graphOutgoing: graphOutgoing)
                     let vector = try #require(vectorResult)
                     let transaction = AutonomousCandidateEvaluationTransaction(
                         engineVersion: prepared.candidateEvaluation.engineVersion,
@@ -978,6 +955,157 @@ struct FoundationRhythmicRelationTests {
             schema: behavior != nil ? "autotechno-full-phrase-bass-behavior-faults.v1" :
                 (voice == .bass ? "autotechno-full-phrase-bass-faults.v2" : "autotechno-full-phrase-companion-faults.v1"),
             unavailable: unavailable, rows: rows)))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
+    @MainActor
+    private func originalScoreVector(plan original: AutonomousPhrasePlan,
+        prepared: PreparedAutonomousPhrase, blocks: [RenderBlock], rate: Double,
+        incomingDebts: [SessionDramaticDebt], outgoing: RenderState,
+        graphOutgoing: GeneratedDSPContinuationState) throws -> AutonomousCandidateEvaluationVector? {
+        let reference = prepared.selectedCandidateEvidence
+        let route = reference.routeContinuation
+        let preflightResult = PhraseAudioPreflight(blocks: blocks, sampleRate: rate,
+            cancellationRequested: { false })
+        let preflight = try #require(preflightResult)
+        let vectorResult = AutonomousCandidateEvaluationVector.make(
+            plan: original, graph: prepared.graph, planFingerprint: reference.planFingerprint,
+            graphFingerprint: reference.graphFingerprint, blocks: blocks, audioPreflight: preflight,
+            crossPhraseTransition: .initial,
+            upperTimbreEvidence: UpperTimbreEvidence.aggregating(blocks.map(\.postGraphRemainderTimbreEvidence)),
+            sampleRate: rate, routeChannelCount: route.channelCount, routeGeneration: route.routeGeneration,
+            routeFingerprint: route.routeFingerprint,
+            incomingContinuationFingerprint: route.incomingContinuationFingerprint,
+            incomingRenderDSPFingerprint: route.incomingRenderDSPFingerprint,
+            incomingQualityStateFingerprint: route.incomingQualityStateFingerprint,
+            incomingKickCorrectionDB: route.incomingKickCorrectionDB,
+            incomingTopologyRevision: route.incomingTopologyRevision,
+            previousGraphFingerprint: route.previousGraphFingerprint, routeRecovery: route.routeRecovery,
+            outgoingRenderDSPFingerprint: AutonomousCandidateFingerprint.renderDSPContinuation(
+                renderState: outgoing, generatedDSPState: graphOutgoing),
+            controllerStateFingerprint: AutonomousCandidateFingerprint.combinedController(
+                kickCorrectionDB: outgoing.automaticMixState.kickCorrectionDB,
+                liveMasterHeadroom: prepared.liveMasterHeadroomContinuationState, proposalFingerprint: nil),
+            incomingLiveMasterState: prepared.incomingLiveMasterHeadroomState,
+            outgoingLiveMasterState: prepared.liveMasterHeadroomContinuationState,
+            liveProposal: nil, liveProposalOutcome: .hold, liveTargetStartSample: nil,
+            incomingDramaticDebts: incomingDebts, cancellationRequested: { false })
+        return vectorResult
+    }
+
+    @MainActor
+    @Test("Full-phrase output frame loss cannot bind to the original transaction")
+    func algorithmicFullPhraseOutputFrameFaults() throws {
+        struct Row: Encodable {
+            let rootSeed: UInt64
+            let sampleRate: Int
+            let scenario: String
+            let planFingerprint: String
+            let originalSampleHash: String
+            let observedSampleHash: String
+            let originalFrames: Int
+            let observedFrames: Int
+            let removedFrames: Int
+            let retainedPrefixExact: Bool
+            let vectorProduced: Bool
+            let vectorComplete: Bool
+            let transactionComplete: Bool
+            let exactReplay: Bool
+        }
+        var rows: [Row] = []
+        // Same frozen roots and first score-only positive bass phrase as the
+        // foundation matrix. Tail loss occurs AFTER the complete nonlinear
+        // renderer; no dry stem is subtracted or alternative render introduced.
+        for seed: UInt64 in [1, 6011] {
+            let director = AutonomousSessionDirector(rootSeed: seed)
+            var session = director.initialState()
+            var selected: AutonomousPhrasePlan?
+            for _ in 0..<128 {
+                let plan = director.plan(from: session)
+                if plan.resolvedBars.contains(where: { $0.foundationRhythmicRelation == .established &&
+                    $0.ensemble.events.contains { $0.voice == .bass && $0.intensity > 0 } }) {
+                    selected = plan; break
+                }
+                session.advancePlanning(using: plan)
+            }
+            let plan = try #require(selected)
+            for rate in [44_100.0, 48_000.0] {
+                var incoming = RenderState(); incoming.barIndex = plan.startBar
+                let graphIncoming = GeneratedDSPContinuationState()
+                let preparedResult = AutonomousPhrasePreparer.prepareIfNotCancelled(
+                    plan: plan, sessionSeed: seed, memory: session.memory, sampleRate: rate,
+                    incomingRenderState: incoming, incomingGraphState: graphIncoming,
+                    previousGraph: nil, incomingQualityState: session.quality,
+                    evaluator: AcceptingPrimaryTestEvaluator(), cancellationRequested: { false })
+                let prepared = try #require(preparedResult)
+                let reference = prepared.selectedCandidateEvidence
+                try #require(reference.isComplete && prepared.correctionRenderCount == 0)
+                let first = try #require(prepared.blocks.first)
+                let noOpProjectionIsExact = first.replacingPCM(left: first.left, right: first.right) == first
+                try #require(noOpProjectionIsExact)
+                var replayState = incoming; var replayGraph = graphIncoming
+                let replay = try #require(AutonomousPhraseRenderer.renderIfNotCancelled(plan: plan,
+                    graph: prepared.graph, sampleRate: rate, state: &replayState,
+                    graphState: &replayGraph, cancellationRequested: { false }))
+                let canonicalReplayIsExact = replay == prepared.blocks
+                try #require(canonicalReplayIsExact)
+                let originalFrames = prepared.blocks.reduce(0) { $0 + $1.left.count }
+                for (scenario, removed) in [("unaltered", 0), ("one-frame-loss", 1),
+                    ("half-bar-loss", first.left.count / 2)] {
+                    func projecting(_ source: [RenderBlock]) -> [RenderBlock] {
+                        source.enumerated().map { index, block in
+                            guard index == 0 else { return block }
+                            return block.replacingPCM(left: Array(block.left.dropLast(removed)),
+                                right: Array(block.right.dropLast(removed)))
+                        }
+                    }
+                    let blocks = projecting(prepared.blocks)
+                    let vector = try originalScoreVector(plan: plan, prepared: prepared,
+                        blocks: blocks, rate: rate, incomingDebts: session.memory.openDebts,
+                        outgoing: prepared.endingRenderState, graphOutgoing: prepared.endingGraphState)
+                    let transaction = vector.map { vector in AutonomousCandidateEvaluationTransaction(
+                        engineVersion: prepared.candidateEvaluation.engineVersion,
+                        policyVersion: prepared.candidateEvaluation.policyVersion,
+                        evaluatorVersion: prepared.candidateEvaluation.evaluatorVersion,
+                        planFingerprint: reference.planFingerprint,
+                        attempts: [AutonomousCandidateAttempt(kind: .initialRender, vector: vector)],
+                        selectedAttemptIndex: 0, correctionCount: 0) }
+                    let observedPreflightResult = PhraseAudioPreflight(blocks: blocks, sampleRate: rate,
+                        cancellationRequested: { false })
+                    let observedPreflight = try #require(observedPreflightResult)
+                    let observedHash = observedPreflight.quality.sampleHash
+                    let vectorComplete = vector?.isComplete ?? false
+                    let transactionComplete = transaction?.isComplete ?? false
+                    let valid = removed == 0
+                    let retainedPrefix = blocks[0].left == Array(first.left.prefix(first.left.count - removed)) &&
+                        blocks[0].right == Array(first.right.prefix(first.right.count - removed))
+                    let exactReplay = projecting(replay) == blocks
+                    #expect(retainedPrefix && exactReplay)
+                    #expect(blocks.dropFirst() == prepared.blocks.dropFirst())
+                    #expect(vectorComplete == valid && transactionComplete == valid)
+                    #expect((observedHash == reference.fullMix.sampleHash) == valid)
+                    if valid { let vectorMatchesReference = vector == reference; #expect(vectorMatchesReference) }
+                    let observedFrames = blocks.reduce(0) { $0 + $1.left.count }
+                    #expect(observedFrames == originalFrames - removed)
+                    rows.append(Row(rootSeed: seed, sampleRate: Int(rate), scenario: scenario,
+                        planFingerprint: reference.planFingerprint, originalSampleHash: reference.fullMix.sampleHash,
+                        observedSampleHash: observedHash, originalFrames: originalFrames,
+                        observedFrames: observedFrames, removedFrames: removed,
+                        retainedPrefixExact: retainedPrefix, vectorProduced: vector != nil, vectorComplete: vectorComplete,
+                        transactionComplete: transactionComplete, exactReplay: exactReplay))
+                }
+            }
+        }
+        #expect(rows.count == 12)
+        struct Report: Encodable {
+            let schema = "autotechno-full-phrase-output-frame-faults.v1"
+            let scope = "post-render-output-loss-and-candidate-transaction-binding"
+            let rows: [Row]
+            let unavailable = ["source-local-truncation-counterfactual", "full-prepared-commit-fault-matrix",
+                "production-calibration", "perceptual-quality", "runtime-resource-lifecycle-physical-qualification"]
+        }
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        FileHandle.standardOutput.write(try encoder.encode(Report(rows: rows)))
         FileHandle.standardOutput.write(Data([0x0A]))
     }
 
