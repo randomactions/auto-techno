@@ -4308,8 +4308,10 @@ struct AutonomousCandidateEvaluationTests {
             "e4e7937cef42580e")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "9191ba1b316d1c03")
+        // v5 domain separation intentionally invalidates the old v4 golden
+        // identities; ordinary/cancellable parity is checked independently.
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
-                "056bf118d50b79fb")
+                "50304391ec440494")
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
@@ -4321,7 +4323,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.renderDSPContinuation(
             renderState: positiveZeroRenderState,
             generatedDSPState: orderedGraphState
-        ) == "68feb06a44033e18")
+        ) == "c71237a012717285")
     }
 
     private func realPreparedCandidate() -> PreparedAutonomousPhrase? {
