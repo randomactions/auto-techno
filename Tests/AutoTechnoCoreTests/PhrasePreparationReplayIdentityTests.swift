@@ -545,7 +545,7 @@ struct IterativeSuccessorPreparationTests {
             var expectedPeak = 0
             var expectedRetained = 0
             let single = try #require(AutonomousPreparationResourceBudget(sampleRate: rate,
-                barCount: 4, renderPassCount: 2))
+                barCount: 4, renderPassCount: 1))
             let selected = try #require(AutonomousPreparationResourceBudget(sampleRate: rate,
                 barCount: 4, renderPassCount: 1))
             while let next = budget.reserving(sampleRate: rate, barCount: 4) {
@@ -581,6 +581,32 @@ struct IterativeSuccessorPreparationTests {
             single.phraseFrameCount * 32 * MemoryLayout<Float>.stride * 2)
     }
 
+    @Test("Sequential correction reuses released synthesis capacity without a third render or capture discount")
+    func sequentialCorrectionReservation() throws {
+        for rate in [8_000.0, 44_100.0, 48_000.0] {
+            let incoming = try #require(AutonomousPreparationChainResourceBudget(
+                incomingContinuationNumericByteCount: 1_024 * 1_024))
+            for bars in [4, 16] {
+                let first = try #require(incoming.reserving(sampleRate: rate, barCount: bars, renderPassCount: 1))
+                let correction = try #require(incoming.reserving(sampleRate: rate, barCount: bars, renderPassCount: 2))
+                #expect(first.reservedPeakWorkingByteCount == correction.reservedPeakWorkingByteCount)
+                #expect(first.retainedNumericByteCount == correction.retainedNumericByteCount)
+                #expect(first.maximumRenderPassCount == 1 && correction.maximumRenderPassCount == 2)
+                #expect(incoming.reserving(sampleRate: rate, barCount: bars, renderPassCount: 0) == nil)
+                #expect(incoming.reserving(sampleRate: rate, barCount: bars, renderPassCount: 3) == nil)
+            }
+        }
+        // The full-capture reservation still grows for the second attempt.
+        let empty = AutonomousPreparationChainResourceBudget()
+        let first = try #require(empty.reserving(sampleRate: 8_000, barCount: 4,
+            renderPassCount: 1, diagnosticRoleStemCapture: true))
+        let second = try #require(empty.reserving(sampleRate: 8_000, barCount: 4,
+            renderPassCount: 2, diagnosticRoleStemCapture: true))
+        let frames = Int((240.0 / AutonomousSessionDirector.bpm * 8_000).rounded()) * 4
+        #expect(second.reservedPeakWorkingByteCount - first.reservedPeakWorkingByteCount == frames * 32 * 4)
+        #expect(second.maximumRenderPassCount == 2)
+    }
+
     @Test("Root allocated continuation remains reserved exactly once across passes and suspended sources")
     func incomingCapacityReservation() throws {
         let incoming = 3 * 1_024 * 1_024
@@ -605,7 +631,7 @@ struct IterativeSuccessorPreparationTests {
         let occupied = try #require(AutonomousPreparationChainResourceBudget(
             incomingContinuationNumericByteCount: ceiling))
         #expect(occupied.reserving(sampleRate: 8_000, barCount: 4, renderPassCount: 1) == nil)
-        #expect(AutonomousPreparationChainResourceBudget.version == "autotechno-preparation-chain-resource.v2")
+        #expect(AutonomousPreparationChainResourceBudget.version == "autotechno-preparation-chain-resource.v3")
     }
 
     @Test("Unused incoming capacity refuses before PCM, observation or evaluator creation")
@@ -1159,21 +1185,19 @@ struct IterativeSuccessorPreparationTests {
                 let reference = await Self.nativeChainReference(request: request,
                     director: AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed), mode: mode)
                 #expect(AutonomousCandidateFingerprint.sessionState(request.sourceState) == original)
-                if mode == .accept {
-                    let products = try #require(reference.products)
-                    let reservation = try #require(reference.reservation)
-                    #expect(products.sampleHashes.count == 2 && products.sourceIdentities.allSatisfy { $0 != nil })
-                    #expect(reservation.sourceCount == 2 && reference.stage == nil && reference.code == nil)
-                } else {
-                    #expect(reference.products == nil && reference.reservation == nil)
-                    #expect(reference.stage == "successor-chain" && reference.code == "resource-bound")
-                }
+                let products = try #require(reference.products)
+                let reservation = try #require(reference.reservation)
+                #expect(products.sampleHashes.count == 2 && products.sourceIdentities.allSatisfy { $0 != nil })
+                #expect(reservation.sourceCount == 2 && reference.stage == nil && reference.code == nil)
+                #expect(reservation.maximumRenderPassCount == (mode == .forceCorrection ? 4 : 2))
+                #expect(reservation.reservedPeakWorkingByteCount <=
+                    AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount)
                 try Self.printNativeReference(reference, rate: rate, correction: mode == .forceCorrection)
             }
         }
     }
 
-    @Test("Native chain observations preserve exact admission and bounded corrective refusal")
+    @Test("Native chain observations preserve exact initial and corrective admission")
     func nativeChainStorageObservations() async throws {
         for rate in [44_100.0, 48_000.0] {
             for mode in [Control.Mode.accept, .forceCorrection] {
@@ -1205,16 +1229,14 @@ struct IterativeSuccessorPreparationTests {
                     $0.ownerRecords.contains { $0.owner.hasPrefix("attempt.analysis-product.primary") && $0.capacityBytes > 0 }
                 })
                 var sourceIdentities: [String] = []
-                if mode == .accept {
-                    let result = try #require(outcome.preparedPhrase)
-                    try Self.checkChainStorage(probe, correction: false)
-                    let sources = [result] + result.retainedContinuations
-                    #expect(sources.count == 2 && result.prepared.preparedValidation?.qualifiedSuccessor === sources[1].prepared)
-                    #expect(sources.allSatisfy { $0.prepared.commitEligible && $0.prepared.diagnosticRoleStemCaptures.isEmpty })
-                    sourceIdentities = sources.map { $0.prepared.preparedValidationSourceIdentityFingerprint ?? "none" }
-                } else {
-                    #expect(outcome.preparedPhrase == nil)
-                    #expect(outcome.failure?.stage == "successor-chain" && outcome.failure?.code == "resource-bound")
+                let result = try #require(outcome.preparedPhrase)
+                try Self.checkChainStorage(probe, correction: mode == .forceCorrection)
+                let sources = [result] + result.retainedContinuations
+                #expect(sources.count == 2 && result.prepared.preparedValidation?.qualifiedSuccessor === sources[1].prepared)
+                #expect(sources.allSatisfy { $0.prepared.commitEligible && $0.prepared.diagnosticRoleStemCaptures.isEmpty })
+                sourceIdentities = sources.map { $0.prepared.preparedValidationSourceIdentityFingerprint ?? "none" }
+                if mode == .forceCorrection {
+                    #expect(outcome.failure == nil)
                     #expect(probe.snapshots.contains { $0.phase == "chain.before-correction" })
                     #expect(probe.snapshots.contains { $0.phase == "chain.corrective-overlap" &&
                         $0.observedPhase?.hasPrefix("chain.render.") == true && $0.ownerRecords.contains {
@@ -1225,7 +1247,7 @@ struct IterativeSuccessorPreparationTests {
                     } })
                     let released = try #require(probe.snapshots.first { $0.phase == "chain.superseded-release" })
                     #expect(!released.ownerRecords.contains { $0.owner.hasPrefix("attempt.retained-initial") })
-                    #expect(!probe.snapshots.contains { $0.phase == "chain.reduced" })
+                    #expect(probe.snapshots.contains { $0.phase == "chain.reduced" })
                 }
                 let report: [String: Any] = ["schema": "autotechno-chain-storage-control.v2",
                     "sampleRate": rate, "sources": sourceIdentities.count, "admitted": outcome.preparedPhrase != nil,

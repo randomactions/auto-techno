@@ -1720,3 +1720,17 @@ oracles at both native rates and retain authorized end-of-bar clipping. These
 known construction controls do not supply population or perceptual qualification;
 current full integration, calibration, resource, lifecycle and output requirements
 remain separate.
+
+
+The existing chain reservation v3 distinguishes cumulative render work from
+simultaneous synthesis ownership. The sole preparer releases the initial PCM
+and ending continuation before its one corrective render claims storage. Each
+active source therefore reserves one synthesis product plus its unchanged hold,
+scratch, analysis and reduced-evidence allowances; completed parents and the
+original incoming continuation remain separately charged. The cumulative two-
+render limit and 128 MiB ceiling are unchanged. Full-phrase diagnostic capture
+continues to reserve every attempted capture, including streamed capture.
+Native initial/corrected root-child controls must preserve exact products and
+ordinary/observed outcomes, released-owner absence, overflow refusal and bounded
+pass counts. This corrects one lifetime term; it does not establish complete
+heap/RSS/deadline or selected native capture qualification.

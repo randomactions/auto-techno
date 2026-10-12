@@ -2737,3 +2737,18 @@ oracles at both native rates and retain authorized end-of-bar clipping. These
 known construction controls do not supply population or perceptual qualification;
 current full integration, calibration, resource, lifecycle and output requirements
 remain separate.
+
+
+`AutonomousPreparationChainResourceBudget` v3 extends the existing detached
+`RenderReservation` contract without another preparation path or renderer. The
+second `product` call occurs only after
+`CandidateRenderProduct.releaseSupersededSynthesisStorage` has removed the initial
+PCM and ending continuation; failure/cancellation cannot reuse that released
+candidate. The reservation charges one active synthesis product while retaining
+cumulative pass accounting, original incoming capacity, suspended-source
+ownership, and all existing scratch/analyzer/evidence/full-capture charges.
+The existing native observer checks the released boundary and exact corrected
+root/owned-child output. Overfull incoming state and aggregate reservations still
+refuse before rendering; a third pass remains invalid. No callback, persistent
+state, quality threshold or numeric ceiling changes. Complete allocation,
+streamed selected-capture, RSS/deadline and full qualification gates remain open.

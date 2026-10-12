@@ -106,12 +106,14 @@ package struct AutonomousPreparationResourceBudget: Equatable, Sendable {
 }
 
 /// Phase-aware numeric reservation for one detached chain under the existing
-/// 128 MiB ceiling. A rendering phrase reserves its entire active pass budget;
-/// suspended parents retain only immutable selected PCM/state/evidence. Scratch,
+/// 128 MiB ceiling. A rendering phrase reserves one active synthesis product;
+/// the initial synthesis payload is released before its correction reserves.
+/// Cumulative pass counts still enforce the two-render work limit. Suspended
+/// parents retain only immutable selected PCM/state/evidence. Scratch,
 /// analyzer and looper workspaces die when each render call unwinds. No qualified
 /// child or physical support requirement is removed to fit this bound.
 package struct AutonomousPreparationChainResourceBudget: Equatable, Sendable {
-    package static let version = "autotechno-preparation-chain-resource.v2"
+    package static let version = "autotechno-preparation-chain-resource.v3"
     package let reservedPeakWorkingByteCount: Int
     package let retainedNumericByteCount: Int
     /// The root request stays alive across the entire chain, even after each
@@ -156,10 +158,19 @@ package struct AutonomousPreparationChainResourceBudget: Equatable, Sendable {
         diagnosticRoleStemCapture: Bool = false
     ) -> Self? {
         guard let source = AutonomousPreparationResourceBudget(sampleRate: sampleRate,
-            barCount: barCount, renderPassCount: renderPassCount) else { return nil }
+            barCount: barCount, renderPassCount: renderPassCount),
+            let activeSynthesis = AutonomousPreparationResourceBudget(sampleRate: sampleRate,
+                barCount: barCount, renderPassCount: 1) else { return nil }
+        // GeneratedDSPGraph's sole preparer releases the initial synthesis
+        // payload before calling the second reservation. Its attempt/vector
+        // remain under the unchanged reduced-evidence charge; PCM and ending
+        // continuation do not overlap the corrected product. Incoming/root and
+        // suspended-parent storage remain charged separately below.
+        // Keep the existing whole-phrase capture charge for every attempt until
+        // the distinct streamed-capture capacity contract is qualified.
         let captureBytes = diagnosticRoleStemCapture
             ? source.phraseFrameCount * 32 * MemoryLayout<Float>.stride * source.renderPassCount : 0
-        let active = source.peakWorkingByteCount.addingReportingOverflow(captureBytes)
+        let active = activeSynthesis.peakWorkingByteCount.addingReportingOverflow(captureBytes)
         let total = retainedNumericByteCount.addingReportingOverflow(active.partialValue)
         let count = completedSourceCount.addingReportingOverflow(1)
         let passes = completedRenderPassCount.addingReportingOverflow(renderPassCount)

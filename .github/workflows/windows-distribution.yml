@@ -17,6 +17,7 @@ on:
           - windows-full-banks
           - modal-continuation
           - prepared-admission
+          - corrective-reservation
           - rumble-duration
           - rumble-support
           - foundation-timing
@@ -372,6 +373,45 @@ jobs:
           --filter '(RenderFingerprintParityTests|RepeatHoldEvolutionTests|algorithmicFullPhrase${{ inputs.validation == 'full-phrase-bass-behaviors' && 'BassBehavior' || inputs.validation == 'full-phrase-foundation' && '(Bass|Companion|OutputFrame)' || 'Bass' }}Faults)'
       - name: Verify semantic codebase map
         run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/auto-techno-component"
+
+  corrective-reservation:
+    if: inputs.validation == 'corrective-reservation'
+    name: Native corrective phase reservation
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Record candidate and toolchain
+        run: |
+          git rev-parse HEAD
+          swift --version
+      - name: Verify native corrective reservation and refusal controls
+        run: >-
+          swift test -c release --no-parallel
+          --build-path "$RUNNER_TEMP/auto-techno-component"
+          --filter 'IterativeSuccessorPreparationTests/(aggregateResourceReservations|sequentialCorrectionReservation|incomingCapacityReservation|oversizedIncomingCapacityRefuses|chargedIncomingCapacityPreservesNativeProducts|correctionReservationPrecedesPCM|nativeChainOrdinaryProcessControl|nativeChainStorageObservations|nativeStreamResourceRefusal)'
+      - name: Generate and validate semantic codebase map
+        run: |
+          python3 scripts/codebase_map.py generate --build-path "$RUNNER_TEMP/auto-techno-component"
+          python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/auto-techno-component"
+      # Transport the exact generated text when the local command-line SDK
+      # lacks XCTest. No source or generated document is edited by this step.
+      - name: Emit source-bound generated map
+        run: |
+          python3 - <<'PYMAP'
+          import base64, hashlib, json, pathlib, subprocess
+          raw = pathlib.Path('docs/CODEBASE_MAP.md').read_bytes()
+          source = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          encoded = base64.b64encode(raw).decode('ascii')
+          chunks = [encoded[i:i+8192] for i in range(0, len(encoded), 8192)]
+          for index, chunk in enumerate(chunks):
+              print(json.dumps(dict(schema='autotechno-generated-map-chunk.v1', source=source,
+                  sha256=hashlib.sha256(raw).hexdigest(), bytes=len(raw), index=index,
+                  chunks=len(chunks), payload=chunk), sort_keys=True))
+          PYMAP
 
   prepared-admission:
     if: inputs.validation == 'prepared-admission'
