@@ -8,7 +8,10 @@ struct LongHorizonTrajectoryBaselineTests {
     func frozenFourHourPlanningBaseline() throws {
         let first = LongHorizonPlanningBaselineProbe.snapshot(
             rootSeed: 48_291,
-            hours: 4
+            hours: 4,
+            traceBarFields: ProcessInfo.processInfo.environment[
+                "AUTOTECHNO_TRACE_PLANNING_BASELINE"
+            ] == "1"
         )
         let replay = LongHorizonPlanningBaselineProbe.snapshot(
             rootSeed: 48_291,

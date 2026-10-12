@@ -12,6 +12,7 @@ on:
           - windows
           - windows-diagnostics
           - windows-recovery-build
+          - windows-planning-probe
           - windows-full-banks
           - modal-continuation
           - rumble-duration
@@ -27,7 +28,7 @@ concurrency:
 
 jobs:
   validate-windows-source:
-    if: inputs.validation == 'windows' || inputs.validation == 'windows-diagnostics' || inputs.validation == 'windows-recovery-build' || inputs.validation == 'windows-full-banks' || inputs.validation == ''
+    if: inputs.validation == 'windows' || inputs.validation == 'windows-diagnostics' || inputs.validation == 'windows-recovery-build' || inputs.validation == 'windows-full-banks' || inputs.validation == 'windows-planning-probe' || inputs.validation == ''
     name: Windows x64 source validation (${{ matrix.test-library }})
     runs-on: windows-2025
     timeout-minutes: ${{ inputs.validation == 'windows-full-banks' && 360 || inputs.validation == 'windows-recovery-build' && 90 || 60 }}
@@ -35,7 +36,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        test-library: ${{ fromJSON(inputs.validation == 'windows-diagnostics' && '["xctest","swift-testing"]' || inputs.validation == 'windows-recovery-build' && '["recovery"]' || inputs.validation == 'windows-full-banks' && '["bank-0","bank-1","bank-2","bank-3","bank-4","bank-5","bank-6","bank-7"]' || '["all"]') }}
+        test-library: ${{ fromJSON(inputs.validation == 'windows-diagnostics' && '["xctest","swift-testing"]' || inputs.validation == 'windows-planning-probe' && '["planning"]' || inputs.validation == 'windows-recovery-build' && '["recovery"]' || inputs.validation == 'windows-full-banks' && '["bank-0","bank-1","bank-2","bank-3","bank-4","bank-5","bank-6","bank-7"]' || '["all"]') }}
 
     steps:
       - name: Check out source
@@ -171,6 +172,21 @@ jobs:
           $discovered | Where-Object { $_ -match '(AutonomousQualityRecoveryHostPolicyTests|RenderFingerprintParityTests)/' } | Write-Output
           swift test --build-path .build-windows --skip-build --no-parallel --disable-xctest --enable-swift-testing --filter '(AutonomousQualityRecoveryHostPolicyTests|RenderFingerprintParityTests)'
           if ($LASTEXITCODE -ne 0) { throw "Windows recovery/fingerprint contracts failed." }
+
+      - name: Diagnose native planning baseline fields
+        if: matrix.test-library == 'planning'
+        timeout-minutes: 10
+        shell: pwsh
+        env:
+          AUTOTECHNO_TRACE_PLANNING_BASELINE: '1'
+        run: |
+          $discovered = @(swift test --build-path .build-windows list --skip-build --disable-xctest --enable-swift-testing)
+          if ($LASTEXITCODE -ne 0) { throw "Native planning discovery failed." }
+          if (-not ($discovered | Select-String -Pattern 'LongHorizonTrajectoryBaselineTests/frozenFourHourPlanningBaseline' -Quiet)) {
+            throw "The native planning regression was not discovered."
+          }
+          swift test --build-path .build-windows --skip-build --no-parallel --disable-xctest --enable-swift-testing --filter '(LongHorizonTrajectoryBaselineTests|AutonomousCandidateEvaluationTests/exactStateFingerprints)'
+          if ($LASTEXITCODE -ne 0) { throw "Native planning/fingerprint regression failed; original assertions remain required." }
 
       - name: Verify Windows live-master fingerprint parity
         if: matrix.test-library == 'recovery'
