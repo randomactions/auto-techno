@@ -20,6 +20,7 @@ on:
           - foundation-timing
           - full-phrase-bass
           - full-phrase-foundation
+          - full-phrase-bass-behaviors
 
 permissions:
   contents: read
@@ -322,7 +323,7 @@ jobs:
         run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/auto-techno-component"
 
   full-phrase-bass:
-    if: inputs.validation == 'full-phrase-bass' || inputs.validation == 'full-phrase-foundation'
+    if: inputs.validation == 'full-phrase-bass' || inputs.validation == 'full-phrase-foundation' || inputs.validation == 'full-phrase-bass-behaviors'
     name: Native full-phrase foundation transaction faults
     runs-on: macos-15
     timeout-minutes: 120
@@ -341,6 +342,6 @@ jobs:
         run: >-
           swift test -c release --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-component"
-          --filter '(RenderFingerprintParityTests|algorithmicFullPhrase${{ inputs.validation == 'full-phrase-foundation' && '(Bass|Companion)' || 'Bass' }}Faults)'
+          --filter '(RenderFingerprintParityTests|algorithmicFullPhrase${{ inputs.validation == 'full-phrase-bass-behaviors' && 'BassBehavior' || inputs.validation == 'full-phrase-foundation' && '(Bass|Companion)' || 'Bass' }}Faults)'
       - name: Verify semantic codebase map
         run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/auto-techno-component"

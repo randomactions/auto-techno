@@ -682,7 +682,16 @@ struct FoundationRhythmicRelationTests {
     }
 
     @MainActor
-    private func fullPhraseFoundationFaults(voice: EnsembleVoice) throws {
+    @Test("Full-phrase faults bind each declared bass behavior", arguments:
+        [FoundationBehavior.absent, .monotone, .point, .pump, .subPulse])
+    func algorithmicFullPhraseBassBehaviorFaults(behavior: FoundationBehavior) throws {
+        try fullPhraseFoundationFaults(voice: .bass, behavior: behavior)
+    }
+
+    @MainActor
+    private func fullPhraseFoundationFaults(
+        voice: EnsembleVoice, behavior: FoundationBehavior? = nil
+    ) throws {
         struct Row: Encodable {
             let rootSeed: UInt64
             let split: String
@@ -698,6 +707,9 @@ struct FoundationRhythmicRelationTests {
             let originalCompanionEvents: Int?
             let renderedCompanionEvents: Int?
             let companionMatchesOriginal: Bool?
+            let selectedFoundationBehavior: String?
+            let targetedScoreBars: [Int]?
+            let targetedBassEvents: Int?
             let frameCount: Int
             let differenceRMS: Double
             let foundationComplete: Bool
@@ -727,8 +739,12 @@ struct FoundationRhythmicRelationTests {
             for _ in 0..<128 {
                 let plan = director.plan(from: session)
                 if plan.resolvedBars.contains(where: { bar in
-                    (voice != .bass || bar.foundationRhythmicRelation == .established) &&
-                    bar.ensemble.events.contains(where: { $0.voice == voice && $0.intensity > 0 })
+                    guard behavior == nil || bar.foundationBehavior == behavior,
+                        voice != .bass || bar.foundationRhythmicRelation == .established else { return false }
+                    if behavior == .absent {
+                        return !bar.ensemble.events.contains { [.bass, .rumble, .tunedTom].contains($0.voice) }
+                    }
+                    return bar.ensemble.events.contains { $0.voice == voice && $0.intensity > 0 }
                 }) {
                     chosen = plan; break
                 }
@@ -736,7 +752,11 @@ struct FoundationRhythmicRelationTests {
             }
             let original = try #require(chosen)
             let originalEvents = original.resolvedBars.flatMap(\.ensemble.events).filter { $0.voice == voice }.count
-            #expect(originalEvents > 0)
+            let targetedBars = original.resolvedBars.filter { behavior == nil || $0.foundationBehavior == behavior }
+            let targetedEvents = targetedBars.flatMap(\.ensemble.events).filter { $0.voice == voice }.count
+            #expect(!targetedBars.isEmpty)
+            if behavior == .absent { #expect(targetedEvents == 0) }
+            else { #expect(targetedEvents > 0) }
             func copyingPlan(_ bars: [ResolvedPerformanceBar]) -> AutonomousPhrasePlan {
                 AutonomousPhrasePlan(phraseIndex: original.phraseIndex, startBar: original.startBar,
                     barCount: original.barCount, kind: original.kind, scene: original.scene, dna: original.dna,
@@ -762,10 +782,15 @@ struct FoundationRhythmicRelationTests {
             // not new independent families or held-out population evidence.
             let deleted = voice == .bass ? "deleted-bass" : "deleted-companion"
             let shifted = voice == .bass ? "shifted-bass" : "shifted-companion"
-            let scenarios = ["unaltered", deleted, shifted, "wrong-voice", "zero-intensity"]
+            // For declared absence, deletion is not a meaningful fault. Inject
+            // one bounded bass event at step8 and its monotone voice assignment
+            // in each absent bar; the original score remains the binding oracle.
+            let scenarios = behavior == .absent ? ["unaltered", "undeclared-bass"] :
+                ["unaltered", deleted, shifted, "wrong-voice", "zero-intensity"]
             let variants = try scenarios.map { scenario -> (String, AutonomousPhrasePlan) in
                 let bars = original.resolvedBars.map { bar in
-                    let events = bar.ensemble.events.compactMap { event -> EnsembleResolvedEvent? in
+                    guard behavior == nil || bar.foundationBehavior == behavior else { return bar }
+                    var events = bar.ensemble.events.compactMap { event -> EnsembleResolvedEvent? in
                         guard event.voice == voice else { return event }
                         switch scenario {
                         case deleted: return nil
@@ -780,6 +805,9 @@ struct FoundationRhythmicRelationTests {
                                 intensity: 0, relocated: event.relocated)
                         default: return event
                         }
+                    }
+                    if scenario == "undeclared-bass" {
+                        events.append(EnsembleResolvedEvent(voice: .bass, step: 8, intensity: 1, relocated: false))
                     }
                     // Modal intent owns event intensity and onset as well as
                     // the ensemble. Apply the fault to both source declarations.
@@ -800,7 +828,8 @@ struct FoundationRhythmicRelationTests {
                         ensemble: EnsembleContext(focusRole: bar.ensemble.focusRole, events: events,
                             kickAnchors: bar.ensemble.kickAnchors,
                             intentionalPileup: bar.ensemble.intentionalPileup),
-                        modalArticulations: articulations)
+                        modalArticulations: articulations,
+                        foundationBehavior: scenario == "undeclared-bass" ? .monotone : nil)
                 }
                 let variant = copyingPlan(bars)
                 try #require(variant.resolvedBars == bars)
@@ -874,7 +903,9 @@ struct FoundationRhythmicRelationTests {
                     // PCM/binding fault, not deletion of the scheduled event.
                     let retainsBassEvents = valid || scenario == shifted || scenario == "zero-intensity"
                     if voice == .bass {
-                        #expect(renderedEventCount == (retainsBassEvents ? originalEvents : 0))
+                        let expectedCount = scenario == "undeclared-bass" ? originalEvents + targetedBars.count :
+                            (retainsBassEvents ? originalEvents : originalEvents - targetedEvents)
+                        #expect(renderedEventCount == expectedCount)
                     } else if valid {
                         #expect(renderedEventCount == originalEvents)
                     } else if scenario == deleted || scenario == "wrong-voice" {
@@ -932,16 +963,20 @@ struct FoundationRhythmicRelationTests {
                         originalCompanionEvents: voice == .bass ? nil : originalEvents,
                         renderedCompanionEvents: voice == .bass ? nil : renderedEventCount,
                         companionMatchesOriginal: companionMatchesOriginal,
+                        selectedFoundationBehavior: behavior?.rawValue,
+                        targetedScoreBars: behavior == nil ? nil : targetedBars.map { $0.performance.bar },
+                        targetedBassEvents: behavior == nil ? nil : targetedEvents,
                         frameCount: sampleCount / 2, differenceRMS: difference,
                         foundationComplete: foundationComplete, vectorComplete: vector.isComplete,
                         transactionComplete: transaction.isComplete, exactReplay: exactReplay))
                 }
             }
         }
-        #expect(rows.count == 20)
+        #expect(rows.count == (behavior == .absent ? 8 : 20))
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
         FileHandle.standardOutput.write(try encoder.encode(Report(
-            schema: voice == .bass ? "autotechno-full-phrase-bass-faults.v2" : "autotechno-full-phrase-companion-faults.v1",
+            schema: behavior != nil ? "autotechno-full-phrase-bass-behavior-faults.v1" :
+                (voice == .bass ? "autotechno-full-phrase-bass-faults.v2" : "autotechno-full-phrase-companion-faults.v1"),
             unavailable: unavailable, rows: rows)))
         FileHandle.standardOutput.write(Data([0x0A]))
     }
@@ -1643,7 +1678,8 @@ struct FoundationRhythmicRelationTests {
         in resolved: ResolvedPerformanceBar,
         with relation: FoundationRhythmicRelation,
         ensemble: EnsembleContext? = nil,
-        modalArticulations: [ModalPercussionArticulation]? = nil
+        modalArticulations: [ModalPercussionArticulation]? = nil,
+        foundationBehavior: FoundationBehavior? = nil
     ) -> ResolvedPerformanceBar {
         ResolvedPerformanceBar(
             performance: resolved.performance,
@@ -1651,7 +1687,7 @@ struct FoundationRhythmicRelationTests {
             arrangementGesture: resolved.arrangementGesture,
             percussionGear: resolved.percussionGear,
             performanceCharacter: resolved.performanceCharacter,
-            foundationBehavior: resolved.foundationBehavior,
+            foundationBehavior: foundationBehavior ?? resolved.foundationBehavior,
             foundationRhythmicRelation: relation,
             foundationCompanion: resolved.foundationCompanion,
             pulseEchoEnabled: resolved.pulseEchoEnabled,
