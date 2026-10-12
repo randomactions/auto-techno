@@ -231,6 +231,59 @@ struct LongHorizonProfessionalPolicyTests {
     #expect(try LongHorizonPolicyObservation.decodeDeterministicJSON(merged.deterministicJSON()) == merged)
   }
 
+  @Test("Native tail boundaries retain each worst exposure and reject different score eligibility")
+  func nativeEffectActivityEnvelope() throws {
+    let base = makeObservation(rootSeed: 99, sampleRates: [44_100, 48_000])
+    func route(_ rate: Double, active: Int, tail: Int, recovery: Int, run: Int,
+      returnDB: Double?, eligibleOffset: Int = 0
+    ) throws -> LongHorizonRuntimePolicyObservation {
+      let effects = base.effects.map { value in
+        guard value.family == .pulseEcho else { return value }
+        return LongHorizonPolicyEffectObservation(family: value.family,
+          observedBarCount: value.observedBarCount,
+          eligibleBarCount: value.eligibleBarCount + eligibleOffset,
+          activeBarCount: active, tailOnlyBarCount: tail, recoveryCount: recovery,
+          maximumActiveRunBars: run,
+          wetBarOccupancy: Double(active) / Double(value.observedBarCount),
+          maximumReturnToSourceDB: returnDB, materialWorldCount: nil,
+          meanEffectWorldDistance: nil, maximumEffectWorldDistance: nil)
+      }
+      let observation = LongHorizonPolicyObservation(engineVersion: base.engineVersion,
+        primaryPolicyVersion: base.primaryPolicyVersion, rootSeed: base.rootSeed,
+        semanticFingerprint: base.semanticFingerprint,
+        observedPhraseCount: base.observedPhraseCount, observedBarCount: base.observedBarCount,
+        semanticValues: base.semanticValues, sampleRates: base.sampleRates,
+        signalFingerprints: base.signalFingerprints,
+        signalObservationCounts: base.signalObservationCounts,
+        signalOmittedPhraseCounts: base.signalOmittedPhraseCounts,
+        operatorDeltas: base.operatorDeltas, effects: effects)
+      return try LongHorizonRuntimePolicyObservation(calibrationObservation: observation, sampleRate: rate)
+    }
+    let a = try route(44_100, active: 2493, tail: 2202, recovery: 8, run: 60, returnDB: -16)
+    let b = try route(48_000, active: 2492, tail: 2201, recovery: 7, run: 61, returnDB: -15)
+    let merged = try LongHorizonPolicyObservation(routeObservations: [a, b])
+    let effect = try #require(merged.effects.first { $0.family == .pulseEcho })
+    #expect(merged.isComplete)
+    #expect(effect.activeBarCount == 2493 && effect.tailOnlyBarCount == 2202)
+    #expect(effect.recoveryCount == 7 && effect.maximumActiveRunBars == 61)
+    #expect(effect.wetBarOccupancy == Double(2493) / Double(base.observedBarCount))
+    #expect(effect.maximumReturnToSourceDB == -15)
+    #expect(try merged.deterministicJSON() ==
+      LongHorizonPolicyObservation(routeObservations: [b, a]).deterministicJSON())
+    let dry = try route(48_000, active: 0, tail: 0, recovery: 0, run: 0, returnDB: nil)
+    let partlyWet = try LongHorizonPolicyObservation(routeObservations: [a, dry])
+    #expect(partlyWet.effects.first { $0.family == .pulseEcho }?.maximumReturnToSourceDB == -16)
+    let wrongScore = try route(48_000, active: 2492, tail: 2201,
+      recovery: 7, run: 61, returnDB: -15, eligibleOffset: 1)
+    #expect(throws: LongHorizonProfessionalPolicyError.incompatibleJourney) {
+      try LongHorizonPolicyObservation(routeObservations: [a, wrongScore])
+    }
+    // A bad physical route remains non-compensable after the join. The fixture
+    // profile's exposure bounds are far below these synthetic native tails.
+    let evaluator = try LongHorizonProfessionalProfileEvaluator(profile: qualifiedArtifacts(sampleRates: [44_100, 48_000]).profile)
+    #expect(evaluator.evaluate(merged).failedEffectFamilies.contains(.pulseEcho))
+  }
+
   @Test("Missing duplicate nonnative or semantically incompatible routes cannot qualify")
   func nativeRouteReductionRejectsForeignInputs() throws {
     let base = makeObservation(rootSeed: 99, sampleRates: [44_100, 48_000])
@@ -275,7 +328,8 @@ struct LongHorizonProfessionalPolicyTests {
     }
     for retired in ["autotechno-long-horizon-policy-observation.v2",
       "autotechno-long-horizon-policy-observation.v3",
-      "autotechno-long-horizon-policy-observation.v4"] {
+      "autotechno-long-horizon-policy-observation.v4",
+      "autotechno-long-horizon-policy-observation.v5"] {
       object["schemaVersion"] = retired
       #expect(throws: LongHorizonProfessionalPolicyError.nonCanonicalJSON) {
         try LongHorizonPolicyObservation.decodeDeterministicJSON(
@@ -428,7 +482,7 @@ struct LongHorizonProfessionalPolicyTests {
       #expect(!retired.isStructurallyComplete)
     }
     var profile = try #require(JSONSerialization.jsonObject(with: artifacts.profile.deterministicJSON()) as? [String: Any])
-    for version in ["v17", "v18"] {
+    for version in ["v17", "v18", "v19"] {
       profile["profileVersion"] = "autotechno-long-horizon-professional-profile." + version
       #expect(throws: LongHorizonProfessionalPolicyError.nonCanonicalJSON) {
         try LongHorizonProfessionalProfile.decodeDeterministicJSON(

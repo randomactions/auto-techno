@@ -1760,3 +1760,26 @@ separate this interpretation from historical data. The current Long Horizon
 seals remain unavailable until fresh development, adversarial and disjoint
 holdout qualification completes. Every resource, lifecycle, platform and
 applicable output gate remains required.
+
+
+## Native-rate effect exposure reduction
+
+LongHorizonPolicyObservation remains the sole multi-rate calibration join. Two
+complete native routes must preserve the same root, primary policy, musical
+history, phrase/bar geometry and score-owned effect eligibility. Physical
+activity and tail counts can differ when a decaying return crosses the existing
+activity floor at different sample rates. The join now retains the maximum
+active/tail counts, wet occupancy, active-run length and available return level
+independently across routes. It retains the minimum descriptive recovery count
+and material-world diversity. No average can conceal a worse route. A missing
+return-level observation on one route does not erase the other's measured level.
+
+Calibration observation/corpus v6 and profile/adversarial/holdout/policy v20
+version this conservative envelope. Historical v19 artifacts cannot activate
+it; current seals remain nil until fresh qualification passes. Existing runtime
+observation v4, signal report v3, PCM, score, continuation and callback work do
+not change. Tests cover asymmetric native tails, different worst dimensions,
+route-order invariance, absent return levels, unchanged rejection of mismatched
+score eligibility, historical-schema refusal and non-compensable effect fatigue.
+This extends the canonical reducer rather than adding a route-specific policy.
+Every resource, lifecycle, platform and applicable output requirement remains.

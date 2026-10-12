@@ -7,17 +7,17 @@ import Foundation
 /// cross-episode relationships.
 package enum LongHorizonProfessionalPolicySchema {
   package static let observationVersion =
-    "autotechno-long-horizon-policy-observation.v5"
+    "autotechno-long-horizon-policy-observation.v6"
   package static let corpusVersion =
-    "autotechno-long-horizon-policy-corpus.v5"
+    "autotechno-long-horizon-policy-corpus.v6"
   package static let profileVersion =
-    "autotechno-long-horizon-professional-profile.v19"
+    "autotechno-long-horizon-professional-profile.v20"
   package static let adversarialVersion =
-    "autotechno-long-horizon-adversarial.v19"
+    "autotechno-long-horizon-adversarial.v20"
   package static let holdoutVersion =
-    "autotechno-long-horizon-holdout.v19"
+    "autotechno-long-horizon-holdout.v20"
   package static let policyFamilyVersion =
-    "autotechno-long-horizon.primary-calibrated.v19"
+    "autotechno-long-horizon.primary-calibrated.v20"
   package static let minimumDevelopmentJourneyCount = 7
   package static let minimumHoldoutJourneyCount = 2
   package static let minimumJourneyBars = 7_200
@@ -179,20 +179,21 @@ package struct LongHorizonPolicyObservation: Codable, Equatable, Sendable {
         return value
       }
       let a = values[0], b = values[1]
-      guard a.eligibleBarCount == b.eligibleBarCount,
-        a.activeBarCount == b.activeBarCount,
-        a.tailOnlyBarCount == b.tailOnlyBarCount,
-        a.recoveryCount == b.recoveryCount,
-        a.maximumActiveRunBars == b.maximumActiveRunBars,
-        a.wetBarOccupancy == b.wetBarOccupancy,
-        (a.maximumReturnToSourceDB == nil) == (b.maximumReturnToSourceDB == nil)
+      // Eligibility belongs to the common score. Wet/tail activity belongs to
+      // native PCM: a decaying return may cross the activity floor on different
+      // bars at different rates. Preserve every upper-bound exposure, never an
+      // average or the measurements from just one preferred route. Recovery is
+      // descriptive; retain the lower count so no route invents extra recovery.
+      guard a.eligibleBarCount == b.eligibleBarCount
       else { throw LongHorizonProfessionalPolicyError.incompatibleJourney }
       return LongHorizonPolicyEffectObservation(family: family,
         observedBarCount: first.observedBarCount,
-        eligibleBarCount: a.eligibleBarCount, activeBarCount: a.activeBarCount,
-        tailOnlyBarCount: a.tailOnlyBarCount, recoveryCount: a.recoveryCount,
-        maximumActiveRunBars: a.maximumActiveRunBars,
-        wetBarOccupancy: a.wetBarOccupancy,
+        eligibleBarCount: a.eligibleBarCount,
+        activeBarCount: max(a.activeBarCount, b.activeBarCount),
+        tailOnlyBarCount: max(a.tailOnlyBarCount, b.tailOnlyBarCount),
+        recoveryCount: min(a.recoveryCount, b.recoveryCount),
+        maximumActiveRunBars: max(a.maximumActiveRunBars, b.maximumActiveRunBars),
+        wetBarOccupancy: max(a.wetBarOccupancy, b.wetBarOccupancy),
         maximumReturnToSourceDB: values.compactMap(\.maximumReturnToSourceDB).max(),
         materialWorldCount: values.compactMap(\.materialWorldCount).min(),
         meanEffectWorldDistance: values.compactMap(\.meanEffectWorldDistance).max(),
