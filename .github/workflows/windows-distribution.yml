@@ -392,7 +392,7 @@ jobs:
         run: >-
           swift test -c release --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-component"
-          --filter '(SourceTerminalDeclickTests|RenderFingerprintParityTests|algorithmicFullPhrase(Bass|Companion)Faults)'
+          --filter '(SourceTerminalDeclickTests|RenderFingerprintParityTests|RepeatHoldEvolutionTests|algorithmicFullPhrase(Bass|Companion|BassBehavior|OutputFrame)Faults|nativePreparedAdmissionFaultMatrix)'
       - name: Generate and validate semantic codebase map
         run: |
           python3 scripts/codebase_map.py generate --build-path "$RUNNER_TEMP/auto-techno-component"
