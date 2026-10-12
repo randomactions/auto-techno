@@ -162,8 +162,11 @@ package struct ProfessionalQualityModalSuccessorEvidence: Encodable, Equatable, 
               source.outgoingState == incomingQuality,
               nextRoute.previousGraphFingerprint == origin.graphFingerprint,
               source.outgoingLiveMasterFingerprint == next.incomingLiveMasterStateFingerprint,
-              let last = origin.modalPercussion.last?.continuousWindows,
-              let first = next.modalPercussion.first?.continuousWindows,
+              let sourceModalBar = origin.modalPercussion.last,
+              let successorModalBar = next.modalPercussion.first,
+              Self.renderedModalBoundaryIsContinuous(sourceModalBar, successorModalBar),
+              let last = sourceModalBar.continuousWindows,
+              let first = successorModalBar.continuousWindows,
               last.bar < Int.max, first.bar == last.bar + 1,
               last.outgoingStateFingerprint == first.incomingStateFingerprint,
               last.isValid, first.isValid,
@@ -207,6 +210,16 @@ package struct ProfessionalQualityModalSuccessorEvidence: Encodable, Equatable, 
         successorPreviousGraphFingerprint = nextRoute.previousGraphFingerprint
         firstBar = first
         _ = try deterministicJSON()
+    }
+
+    /// Requested DSP identity and measurement continuity do not prove that the
+    /// renderer retained its sounding modal slots. Bind the actual voice state.
+    package static func renderedModalBoundaryIsContinuous(
+        _ source: AutonomousModalPercussionBarEvidence,
+        _ successor: AutonomousModalPercussionBarEvidence
+    ) -> Bool {
+        source.bar < Int.max && successor.bar == source.bar + 1 &&
+            source.outgoingStateFingerprint == successor.incomingStateFingerprint
     }
 
     /// Full report identity also binds checkpoint/fixture labels. The existing

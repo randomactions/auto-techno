@@ -927,6 +927,42 @@ struct ModalSuccessorReportJoinTests {
         FileHandle.standardOutput.write(Data([0x0A]))
     }
 
+    @Test("Actual modal voice state binds the native successor independently of its measurement ledger",
+          arguments: [44_100.0, 48_000.0])
+    @MainActor
+    func nativeRenderedModalVoiceBoundary(rate: Double) throws {
+        // Known canonical mechanical fixture, not an unseen calibration family.
+        // The existing receipt owner guards actual rendered state before a child
+        // can authorize its parent; no callback, score or new policy is added.
+        let director = AutonomousSessionDirector(rootSeed: 48_300)
+        var state = director.initialState()
+        for _ in 0..<21 { state.advancePlanning(using: director.plan(from: state)) }
+        let plan = director.plan(from: state)
+        try #require(plan.phraseIndex == 21 && plan.startBar == 225)
+        let control = PreparedValidationControl()
+        let source = try #require(prepareValidationSource(state: state, plan: plan, rate: rate,
+            evaluator: PreparedValidationTestEvaluator(startingState: state,
+                control: control, mode: .actualSuccessor)).preparedPhrase)
+        let successor = try #require(source.preparedValidation?.qualifiedSuccessor)
+        try #require(source.commitEligible && successor.commitEligible)
+        let last = try #require(source.selectedCandidateEvidence.modalPercussion.last)
+        let first = try #require(successor.selectedCandidateEvidence.modalPercussion.first)
+        try #require(last.activeOutgoingVoiceCount > 0)
+        #expect(ProfessionalQualityModalSuccessorEvidence.renderedModalBoundaryIsContinuous(last, first))
+        let data = try JSONEncoder().encode(first)
+        for fault in ["lost-voice-state", "bar-gap"] {
+            var wire = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            if fault == "lost-voice-state" { wire["incomingStateFingerprint"] = "0000000000000000" }
+            else { wire["bar"] = first.bar + 1 }
+            let altered = try JSONDecoder().decode(AutonomousModalPercussionBarEvidence.self,
+                from: JSONSerialization.data(withJSONObject: wire, options: [.sortedKeys]))
+            #expect(altered.continuousWindows == first.continuousWindows)
+            #expect(!ProfessionalQualityModalSuccessorEvidence.renderedModalBoundaryIsContinuous(last, altered))
+        }
+        #expect(!ProfessionalQualityModalSuccessorEvidence.renderedModalBoundaryIsContinuous(first, last))
+        #expect(state.quality.acceptedEvidenceFingerprint == director.initialState().quality.acceptedEvidenceFingerprint)
+    }
+
     @Test("Actual successor input mismatches refuse native prepared admission", arguments: [44_100.0, 48_000.0])
     @MainActor
     func nativePreparedSuccessorBindingFaultMatrix(rate: Double) throws {
