@@ -296,9 +296,11 @@ jobs:
         run: |
           git rev-parse HEAD
           swift --version
+      # Optimized DSP keeps the complete native-rate matrix bounded. The
+      # integration banks retain Debug coverage; this changes no test oracle.
       - name: Verify full-phrase bass render and transaction binding
         run: >-
-          swift test --no-parallel
+          swift test -c release --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-component"
           --filter '(RenderFingerprintParityTests|algorithmicFullPhraseBassFaults)'
       - name: Verify semantic codebase map
