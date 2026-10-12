@@ -161,6 +161,29 @@ struct LongHorizonSignalTrajectoryTests {
         plan: plan,
         rootSeed: state.rootSeed,
         signalOffset: Double(plan.phraseIndex % 17) * 0.05)
+      if ProcessInfo.processInfo.environment["AUTOTECHNO_TRACE_PLANNING_BASELINE"] == "1" {
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        print("LONG_HORIZON_SIGNAL_PHRASE_JSON "
+          + String(decoding: try encoder.encode(evidence), as: UTF8.self))
+        // Bounded test-only reflection locates scalar drift in early plans.
+        // Production identity continues to use the typed streaming encoder.
+        if plan.phraseIndex < 16 {
+          var fields: [String: String] = ["phraseIndex": String(plan.phraseIndex)]
+          func collect(_ value: Any, path: String, depth: Int) {
+            guard depth <= 32 else { return }
+            if let scalar = value as? Double {
+              fields[path] = String(scalar.bitPattern, radix: 16)
+              return
+            }
+            for (index, child) in Mirror(reflecting: value).children.enumerated() {
+              collect(child.value, path: path + "." + (child.label ?? String(index)), depth: depth + 1)
+            }
+          }
+          collect(plan, path: "plan", depth: 0)
+          print("LONG_HORIZON_PLAN_SCALARS_JSON "
+            + String(decoding: try encoder.encode(fields), as: UTF8.self))
+        }
+      }
       #expect(accumulator.observe(evidence) == .accepted)
       state.advancePlanning(using: plan)
     }

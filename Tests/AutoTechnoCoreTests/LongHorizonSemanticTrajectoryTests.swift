@@ -12,6 +12,9 @@ struct LongHorizonSemanticTrajectoryTests {
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         let firstData = try encoder.encode(first)
         let replayData = try encoder.encode(replay)
+        if ProcessInfo.processInfo.environment["AUTOTECHNO_TRACE_PLANNING_BASELINE"] == "1" {
+            print("LONG_HORIZON_SEMANTIC_REPORT_JSON " + String(decoding: firstData, as: UTF8.self))
+        }
         let decoded = try JSONDecoder().decode(
             LongHorizonSemanticTrajectoryReport.self,
             from: firstData
