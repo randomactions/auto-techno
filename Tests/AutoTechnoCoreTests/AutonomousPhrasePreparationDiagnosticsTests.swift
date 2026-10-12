@@ -185,6 +185,9 @@ struct AutonomousPhrasePreparationDiagnosticsTests {
     }
 
     @Test("Final retry retains the historical crest-span comparison without activating legacy policy")
+    // Keep large value-type fixture setup on the main stack. Explicit detached
+    // preparation and the original refusal/crest assertions remain unchanged.
+    @MainActor
     func finalRetryBoundsLatePhraseCrestSpan() throws {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         var state = director.initialState()

@@ -1040,6 +1040,9 @@ struct IterativeSuccessorPreparationTests {
     }
 
     @Test("Rejected or missing child proof and cancellation discard the entire tentative chain")
+    // Keep large value-type fixture setup on the main stack. Explicit detached
+    // preparation and the original refusal/crest assertions remain unchanged.
+    @MainActor
     func childRefusalAndCancellation() async throws {
         let request = Self.sourceRequest(rate: 8_000)
         let original = AutonomousCandidateFingerprint.sessionState(request.sourceState)
