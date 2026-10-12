@@ -77,6 +77,25 @@ jobs:
             throw "The selected Swift executable does not match the pinned 6.3.3 toolchain."
           }
 
+      # Swift's registered environment may put the WindowsApps python alias
+      # ahead of runner tools. Install/select Python after that PATH update.
+      - name: Set up Python for complete Windows banks
+        if: startsWith(matrix.test-library, 'bank-')
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+
+      - name: Verify bank planner before compiling tests
+        if: startsWith(matrix.test-library, 'bank-')
+        shell: pwsh
+        run: |
+          python --version
+          if ($LASTEXITCODE -ne 0) { throw "Python startup failed." }
+          python -c "import sys; assert sys.version_info[:2] == (3, 13)"
+          if ($LASTEXITCODE -ne 0) { throw "Unexpected Python runtime." }
+          python -m unittest discover -s scripts -p test_windows_test_plan.py
+          if ($LASTEXITCODE -ne 0) { throw "Bank-plan regression tests failed." }
+
       - name: Build and test without distribution
         if: matrix.test-library == 'all'
         shell: pwsh
@@ -180,8 +199,6 @@ jobs:
         env:
           TEST_BANK: ${{ matrix.test-library }}
         run: |
-          python -m unittest discover -s scripts -p test_windows_test_plan.py
-          if ($LASTEXITCODE -ne 0) { throw "Bank-plan regression tests failed." }
           $bank = [int]($env:TEST_BANK -replace '^bank-', '')
           .\scripts\test-windows-bank.ps1 -Bank $bank -Banks 8
 
