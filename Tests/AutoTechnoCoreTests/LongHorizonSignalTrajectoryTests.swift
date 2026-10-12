@@ -221,7 +221,11 @@ struct LongHorizonSignalTrajectoryTests {
     #expect(report.schemaIdentifier == LongHorizonSignalTrajectoryReportSchema.schemaIdentifier)
     #expect(report.recentPhrases.allSatisfy { $0.schemaVersion == 1 && $0.schemaIdentifier == "autotechno-long-horizon-signal-trajectory.v1" })
     #expect(report.trajectoryFingerprint.count == 16)
-    #expect(report.trajectoryFingerprint == "3ec4be3485e7455a")
+    // v49 selects tonal wash after final timing relocation. In this frozen
+    // journey that changes ten plan identities; realized fixture values and
+    // episode ordering remain exact. Both native hosts share this one oracle.
+    #expect(QualityQualificationContract.engineVersion == "autotechno-canonical-engine.v49")
+    #expect(report.trajectoryFingerprint == "9a4e0d4d7a70ca1e")
     #expect(encoded.count < 500_000)
     print(
       "LONG_HORIZON_SIGNAL_8H observations=\(report.observationCount) "
