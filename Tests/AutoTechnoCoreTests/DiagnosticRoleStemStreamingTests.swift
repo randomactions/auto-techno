@@ -635,10 +635,24 @@ struct DiagnosticRoleStemStreamingTests {
             .reduce(0) { $0 + $1.capacityBytes }
         #expect(first.valid && rawFloatCapacity + first.typedMetadataHeadroomBytes == counted)
         #expect(first.ownerRecords.contains { $0.owner.hasSuffix(".pulseEchoBuffer") && $0.aliasOf != nil })
-        #expect(first.ownerRecords.contains { $0.owner.hasSuffix(".spatialFDNLineOffsets") &&
-            $0.capacityBytes >= 32 * 8 })
-        #expect(first.ownerRecords.contains { $0.owner.hasSuffix(".spatialFDNDampingStates") &&
-            $0.capacityBytes >= 32 * 8 })
+        // The shared v5 FDN encoder emits its own field names. Check the
+        // complete physical allocation, including reserved but unused elements.
+        let offsets = try #require(first.ownerRecords.first {
+            $0.owner.hasPrefix("first.render.") && $0.owner.hasSuffix(".lineOffsets")
+        })
+        #expect(offsets.elementCount == state.spatialFDNState.lineOffsets.count)
+        #expect(offsets.elementCapacity == state.spatialFDNState.lineOffsets.capacity)
+        #expect(offsets.elementStride == MemoryLayout<Int>.stride)
+        #expect(offsets.capacityBytes == state.spatialFDNState.lineOffsets.capacity * MemoryLayout<Int>.stride)
+        #expect(offsets.elementCapacity >= 32 && offsets.aliasOf == nil)
+        let damping = try #require(first.ownerRecords.first {
+            $0.owner.hasPrefix("first.render.") && $0.owner.hasSuffix(".dampingStates")
+        })
+        #expect(damping.elementCount == state.spatialFDNState.dampingStates.count)
+        #expect(damping.elementCapacity == state.spatialFDNState.dampingStates.capacity)
+        #expect(damping.elementStride == MemoryLayout<Double>.stride)
+        #expect(damping.capacityBytes == state.spatialFDNState.dampingStates.capacity * MemoryLayout<Double>.stride)
+        #expect(damping.elementCapacity >= 32 && damping.aliasOf == nil)
         AutonomousTypedFingerprint.registerContinuationStorage(renderState: state,
             generatedDSPState: graph, inventory: inventory, owner: "alias")
         let second = inventory.snapshot(phase: "second", bar: 0)

@@ -172,7 +172,7 @@ jobs:
 
       # This focused recovery/build scope is independent of the full Windows
       # suite. Each selected test owner must exist in native discovery first.
-      - name: Verify Windows recovery and fingerprint contracts
+      - name: Verify Windows recovery, fingerprint and storage contracts
         if: matrix.test-library == 'recovery'
         timeout-minutes: 15
         shell: pwsh
@@ -187,8 +187,12 @@ jobs:
             }
           }
           $discovered | Where-Object { $_ -match '(AutonomousQualityRecoveryHostPolicyTests|RenderFingerprintParityTests)/' } | Write-Output
-          swift test --build-path .build-windows --skip-build --no-parallel --disable-xctest --enable-swift-testing --filter '(AutonomousQualityRecoveryHostPolicyTests|RenderFingerprintParityTests)'
-          if ($LASTEXITCODE -ne 0) { throw "Windows recovery/fingerprint contracts failed." }
+          $storageTest = 'DiagnosticRoleStemStreamingTests/typedStorageIdentity'
+          if (-not ($discovered | Select-String -SimpleMatch $storageTest -Quiet)) {
+            throw "Required continuation storage test was not discovered."
+          }
+          swift test --build-path .build-windows --skip-build --no-parallel --disable-xctest --enable-swift-testing --filter '(AutonomousQualityRecoveryHostPolicyTests|RenderFingerprintParityTests|DiagnosticRoleStemStreamingTests/typedStorageIdentity)'
+          if ($LASTEXITCODE -ne 0) { throw "Windows recovery/fingerprint/storage contracts failed." }
 
       - name: Diagnose native planning baseline fields
         if: matrix.test-library == 'planning'
