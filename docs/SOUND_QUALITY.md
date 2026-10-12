@@ -1734,3 +1734,29 @@ Native initial/corrected root-child controls must preserve exact products and
 ordinary/observed outcomes, released-owner absence, overflow refusal and bounded
 pass counts. This corrects one lifetime term; it does not establish complete
 heap/RSS/deadline or selected native capture qualification.
+
+
+## Finite relative effect levels in long-horizon evidence
+
+The existing LongHorizonSignalTrajectory owner now distinguishes relative RMS
+levels from absolute signal-safety measurements. A finite, nonzero effect tail
+can yield wet/dry ratios below -240 dB while the accepted full mix remains safe.
+The prior shared range incorrectly made that complete same-pass evidence
+unavailable. Wet/dry and graph output/input ratios now retain their exact values
+within `20 * (log10(Double.greatestFiniteMagnitude) -
+log10(Double.leastNonzeroMagnitude))` in either direction: the mathematical
+range of the positive finite Double inputs used by effect-dose measurement.
+This is a representation bound, not a calibrated quality threshold. Values are
+not clipped; zero/absent denominators keep the existing nil semantics. Nonfinite
+or unrepresentable values, failed absolute safety, stale schema and inconsistent
+score/PCM/effect bindings still refuse before accumulator state advances.
+
+Independent subnormal-tail and gain-ratio controls at both native route rates
+exercise exact preservation, canonical encoding, nil applicability and
+transactional rejection. Rendering, primary features/seals, score, continuation
+and callback work are unchanged. Signal phrase v2/report v3, runtime observation
+and adaptation v4, calibration observation/corpus v5 and profile family v19
+separate this interpretation from historical data. The current Long Horizon
+seals remain unavailable until fresh development, adversarial and disjoint
+holdout qualification completes. Every resource, lifecycle, platform and
+applicable output gate remains required.

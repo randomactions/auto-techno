@@ -121,10 +121,10 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     let directory = try outputDirectory()
     try development.deterministicJSON().write(
       to: directory.appendingPathComponent(
-        "long-horizon-development-corpus-local-v4.json"))
+        "long-horizon-development-corpus-local-v5.json"))
     try holdout.deterministicJSON().write(
       to: directory.appendingPathComponent(
-        "long-horizon-holdout-corpus-local-v4.json"))
+        "long-horizon-holdout-corpus-local-v5.json"))
   }
 
   private func outputDirectory() throws -> URL {

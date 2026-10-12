@@ -4,9 +4,20 @@ import Foundation
 /// Fixed-capacity contract for detached, realized long-horizon signal evidence.
 /// Raw PCM, renderer state, and callback-owned objects never enter this value.
 package enum LongHorizonSignalTrajectorySchema {
-  package static let schemaVersion = 1
+  package static let schemaVersion = 2
   package static let schemaIdentifier =
-    "autotechno-long-horizon-signal-trajectory.v1"
+    "autotechno-long-horizon-signal-trajectory.v2"
+  // Relative RMS levels are differences of logarithms, not absolute dBFS.
+  // Finite nonzero tails can lie far below -240 dB relative to the dry signal.
+  // This bound follows the complete positive Double domain used by effect-dose
+  // evidence, rather than inventing a quality cutoff or clipping measurements.
+  package static let maximumRepresentableLevelRelationshipDB = 20 * (
+    log10(Double.greatestFiniteMagnitude) - log10(Double.leastNonzeroMagnitude))
+
+  package static func isRepresentableLevelRelationship(_ value: Double) -> Bool {
+    value.isFinite && abs(value) <= maximumRepresentableLevelRelationshipDB
+  }
+
   package static let recentPhraseCapacity = 32
   package static let recentTransitionCapacity = 32
   package static let recentEpisodeCapacity = 16
@@ -14,13 +25,13 @@ package enum LongHorizonSignalTrajectorySchema {
     "no-calibrated-long-horizon-policy"
 }
 
-/// Report interpretation is independent of unchanged same-pass phrase evidence.
+/// This report binds the current relative-level interpretation of phrase evidence.
 /// A neutral fallback has no episode-completion authority; the next bound
 /// episode either resumes the pending identity or closes it by replacement.
 package enum LongHorizonSignalTrajectoryReportSchema {
-  package static let schemaVersion = 2
+  package static let schemaVersion = 3
   package static let schemaIdentifier =
-    "autotechno-long-horizon-signal-trajectory-report.v2"
+    "autotechno-long-horizon-signal-trajectory-report.v3"
 }
 
 package enum LongHorizonSignalTrajectoryAvailability: String, Codable,
@@ -170,7 +181,7 @@ package struct LongHorizonRealizedSignalVector: Codable, Equatable, Sendable {
     let energySum = lowEnergyRatio + midEnergyRatio + highEnergyRatio
     return required.count == LongHorizonSignalMetric.allCases.count - 1
       && required.allSatisfy { $0.value.isFinite }
-      && meanWetToDryDB.map { $0.isFinite && (-240...120).contains($0) } ?? true
+      && (meanWetToDryDB.map(LongHorizonSignalTrajectorySchema.isRepresentableLevelRelationship) ?? true)
       && (-200...24).contains(integratedLoudnessLUFS)
       && (-200...24).contains(maximumMomentaryLoudnessLUFS)
       && (-200...24).contains(truePeakDBTP)
@@ -237,10 +248,8 @@ package struct LongHorizonSignalBarEvidence: Codable, Equatable, Sendable {
       && (0...30).contains(transientDensityPerSecond)
       && (-240...120).contains(crestFactorDB)
       && (0...1).contains(maximumMaskingOverlap)
-      && wetToDryDB.map { $0.isFinite && (-240...120).contains($0) } ?? true
-      && graphOutputToInputDB.map {
-        $0.isFinite && (-240...120).contains($0)
-      } ?? true
+      && (wetToDryDB.map(LongHorizonSignalTrajectorySchema.isRepresentableLevelRelationship) ?? true)
+      && (graphOutputToInputDB.map(LongHorizonSignalTrajectorySchema.isRepresentableLevelRelationship) ?? true)
   }
 }
 

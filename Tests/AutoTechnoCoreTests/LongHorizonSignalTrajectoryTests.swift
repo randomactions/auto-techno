@@ -45,6 +45,92 @@ struct LongHorizonSignalTrajectoryTests {
     #expect(!json.contains("samples"))
   }
 
+  @Test("Finite relative levels retain quiet tails and gain without clipping")
+  func finiteRelativeLevelsPreserveTailsAndGain() throws {
+    // A single least-subnormal Float frame in a 100-frame window has this
+    // nonzero RMS. Its ratio to a 0.01 dry RMS is valid far below -240 dB.
+    let tailRMS = Double(Float.leastNonzeroMagnitude) / sqrt(100.0)
+    let tailDB = 20 * log10(tailRMS / 0.01)
+    #expect(tailDB < -800 && tailDB.isFinite)
+    let maximumDB = 20 * (log10(Double.greatestFiniteMagnitude)
+      - log10(Double.leastNonzeroMagnitude))
+    let levels: [(Double?, Double?)] = [
+      (tailDB, 300), (300, tailDB), (-maximumDB, maximumDB), (nil, nil),
+    ]
+    for rate in [44_100.0, 48_000.0] {
+      let director = AutonomousSessionDirector(rootSeed: 48_291)
+      var state = director.initialState()
+      var accumulator = LongHorizonSignalTrajectoryAccumulator(rootSeed: state.rootSeed,
+        sampleRate: rate)
+      for (wet, gain) in levels {
+        let plan = director.plan(from: state)
+        let evidence = syntheticEvidence(plan: plan, rootSeed: state.rootSeed,
+          sampleRate: rate, wetToDryDB: wet, graphOutputToInputDB: gain)
+        #expect(evidence.isComplete)
+        #expect(evidence.signal.meanWetToDryDB == wet)
+        #expect(evidence.bars.allSatisfy { $0.wetToDryDB == wet && $0.graphOutputToInputDB == gain })
+        let roundTrip = try JSONDecoder().decode(LongHorizonSignalPhraseEvidence.self,
+          from: JSONEncoder().encode(evidence))
+        #expect(roundTrip == evidence && roundTrip.isComplete)
+        #expect(accumulator.observe(evidence) == .accepted)
+        state.advancePlanning(using: plan)
+      }
+      #expect(accumulator.report.observationCount == levels.count)
+      #expect(accumulator.report.omittedPhraseCount == 0)
+    }
+  }
+
+  @Test("Nonfinite and unrepresentable relative levels still refuse transactionally")
+  func invalidRelativeLevelsRemainUnavailable() {
+    let director = AutonomousSessionDirector(rootSeed: 48_291)
+    let state = director.initialState(), plan = director.plan(from: director.initialState())
+    let maximumDB = 20 * (log10(Double.greatestFiniteMagnitude)
+      - log10(Double.leastNonzeroMagnitude))
+    for invalid in [Double.nan, .infinity, -.infinity, maximumDB.nextUp, -maximumDB.nextUp] {
+      for evidence in [
+        syntheticEvidence(plan: plan, rootSeed: state.rootSeed, wetToDryDB: invalid),
+        syntheticEvidence(plan: plan, rootSeed: state.rootSeed, graphOutputToInputDB: invalid),
+      ] {
+        var accumulator = LongHorizonSignalTrajectoryAccumulator(rootSeed: state.rootSeed, sampleRate: 8_000)
+        #expect(!evidence.isComplete)
+        #expect(accumulator.observe(evidence) == .unavailable(.inconsistentEvidence))
+        #expect(accumulator.report.observationCount == 0 && accumulator.report.recentPhrases.isEmpty)
+      }
+    }
+  }
+
+  @Test("Relative-level interpretation cannot admit retired evidence or failed absolute safety")
+  func relativeLevelsKeepSchemaAndSafetyGuards() throws {
+    let director = AutonomousSessionDirector(rootSeed: 48_291)
+    let state = director.initialState(), plan = director.plan(from: director.initialState())
+    let evidence = syntheticEvidence(plan: plan, rootSeed: state.rootSeed, wetToDryDB: -900)
+    #expect(evidence.isComplete)
+    let object = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(evidence)) as? [String: Any])
+    for fault in 0..<4 {
+      var changed = object
+      switch fault {
+      case 0:
+        changed["schemaVersion"] = 1
+        changed["schemaIdentifier"] = "autotechno-long-horizon-signal-trajectory.v1"
+      case 1: changed["hardGatesPassed"] = false
+      case 2:
+        var signal = try #require(changed["signal"] as? [String: Any])
+        signal["truePeakDBTP"] = 25.0
+        changed["signal"] = signal
+      default:
+        var bars = try #require(changed["bars"] as? [[String: Any]])
+        bars[0]["finite"] = false
+        changed["bars"] = bars
+      }
+      let refused = try JSONDecoder().decode(LongHorizonSignalPhraseEvidence.self,
+        from: JSONSerialization.data(withJSONObject: changed, options: [.sortedKeys]))
+      #expect(!refused.isComplete)
+      var accumulator = LongHorizonSignalTrajectoryAccumulator(rootSeed: state.rootSeed, sampleRate: 8_000)
+      #expect(accumulator.observe(refused) == .unavailable(.inconsistentEvidence))
+      #expect(accumulator.report.observationCount == 0)
+    }
+  }
+
   @Test("Neutral debt fallback does not complete Core's still-pending episode")
   func neutralFallbackKeepsPendingEpisode() throws {
     let director = AutonomousSessionDirector(rootSeed: 48_291)
@@ -219,13 +305,13 @@ struct LongHorizonSignalTrajectoryTests {
         == "no-calibrated-long-horizon-policy")
     #expect(report.schemaVersion == LongHorizonSignalTrajectoryReportSchema.schemaVersion)
     #expect(report.schemaIdentifier == LongHorizonSignalTrajectoryReportSchema.schemaIdentifier)
-    #expect(report.recentPhrases.allSatisfy { $0.schemaVersion == 1 && $0.schemaIdentifier == "autotechno-long-horizon-signal-trajectory.v1" })
+    #expect(report.recentPhrases.allSatisfy { $0.schemaVersion == 2 && $0.schemaIdentifier == "autotechno-long-horizon-signal-trajectory.v2" })
     #expect(report.trajectoryFingerprint.count == 16)
-    // v49 selects tonal wash after final timing relocation. In this frozen
-    // journey that changes ten plan identities; realized fixture values and
-    // episode ordering remain exact. Both native hosts share this one oracle.
+    // Signal phrase v2 and report v3 bind the finite relative-level domain.
+    // Engine v49, plan identities, fixture values and episode ordering remain
+    // unchanged. Both native hosts share this versioned trajectory oracle.
     #expect(QualityQualificationContract.engineVersion == "autotechno-canonical-engine.v49")
-    #expect(report.trajectoryFingerprint == "9a4e0d4d7a70ca1e")
+    #expect(report.trajectoryFingerprint == "1e90955e389c8215")
     #expect(encoded.count < 500_000)
     print(
       "LONG_HORIZON_SIGNAL_8H observations=\(report.observationCount) "
@@ -435,7 +521,9 @@ private func syntheticEvidence(
   rootSeed: UInt64,
   sampleRate: Double = 8_000,
   signalOffset: Double = 0,
-  coordination: LongHorizonEnergyCoordination? = nil
+  coordination: LongHorizonEnergyCoordination? = nil,
+  wetToDryDB: Double? = -18,
+  graphOutputToInputDB: Double? = -0.5
 ) -> LongHorizonSignalPhraseEvidence {
   let barEvidence = plan.resolvedBars.map { resolved in
     LongHorizonSignalBarEvidence(
@@ -445,8 +533,8 @@ private func syntheticEvidence(
       transientDensityPerSecond: 2 + signalOffset * 0.01,
       crestFactorDB: 12 - signalOffset * 0.05,
       maximumMaskingOverlap: min(1, 0.2 + signalOffset * 0.001),
-      wetToDryDB: -18 + signalOffset * 0.1,
-      graphOutputToInputDB: -0.5 + signalOffset * 0.01,
+      wetToDryDB: wetToDryDB.map { $0 + signalOffset * 0.1 },
+      graphOutputToInputDB: graphOutputToInputDB.map { $0 + signalOffset * 0.01 },
       finite: true)
   }
   let signal = LongHorizonRealizedSignalVector(
@@ -462,7 +550,7 @@ private func syntheticEvidence(
     midEnergyRatio: 0.35,
     highEnergyRatio: 0.15,
     maximumMaskingOverlap: min(1, 0.2 + signalOffset * 0.001),
-    meanWetToDryDB: -18 + signalOffset * 0.1,
+    meanWetToDryDB: wetToDryDB.map { $0 + signalOffset * 0.1 },
     stereoCorrelation: 0.7,
     lowStereoCorrelation: 0.99,
     movementScore: min(1, 0.2 + signalOffset * 0.001))

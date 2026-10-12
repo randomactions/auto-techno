@@ -274,7 +274,8 @@ struct LongHorizonProfessionalPolicyTests {
       #expect(!retagged.isComplete)
     }
     for retired in ["autotechno-long-horizon-policy-observation.v2",
-      "autotechno-long-horizon-policy-observation.v3"] {
+      "autotechno-long-horizon-policy-observation.v3",
+      "autotechno-long-horizon-policy-observation.v4"] {
       object["schemaVersion"] = retired
       #expect(throws: LongHorizonProfessionalPolicyError.nonCanonicalJSON) {
         try LongHorizonPolicyObservation.decodeDeterministicJSON(
@@ -420,15 +421,19 @@ struct LongHorizonProfessionalPolicyTests {
       calibrationObservation: artifacts.holdoutCorpus.observations[0], sampleRate: 8_000)
     #expect(current.isStructurallyComplete)
     var runtime = try #require(JSONSerialization.jsonObject(with: current.deterministicJSON()) as? [String: Any])
-    runtime["schemaVersion"] = "autotechno-long-horizon-runtime-observation.v2"
-    let retired = try JSONDecoder().decode(LongHorizonRuntimePolicyObservation.self,
-      from: JSONSerialization.data(withJSONObject: runtime, options: [.sortedKeys]))
-    #expect(!retired.isStructurallyComplete)
+    for version in ["v2", "v3"] {
+      runtime["schemaVersion"] = "autotechno-long-horizon-runtime-observation." + version
+      let retired = try JSONDecoder().decode(LongHorizonRuntimePolicyObservation.self,
+        from: JSONSerialization.data(withJSONObject: runtime, options: [.sortedKeys]))
+      #expect(!retired.isStructurallyComplete)
+    }
     var profile = try #require(JSONSerialization.jsonObject(with: artifacts.profile.deterministicJSON()) as? [String: Any])
-    profile["profileVersion"] = "autotechno-long-horizon-professional-profile.v17"
-    #expect(throws: LongHorizonProfessionalPolicyError.nonCanonicalJSON) {
-      try LongHorizonProfessionalProfile.decodeDeterministicJSON(
-        JSONSerialization.data(withJSONObject: profile, options: [.sortedKeys]))
+    for version in ["v17", "v18"] {
+      profile["profileVersion"] = "autotechno-long-horizon-professional-profile." + version
+      #expect(throws: LongHorizonProfessionalPolicyError.nonCanonicalJSON) {
+        try LongHorizonProfessionalProfile.decodeDeterministicJSON(
+          JSONSerialization.data(withJSONObject: profile, options: [.sortedKeys]))
+      }
     }
   }
 
