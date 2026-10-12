@@ -8159,6 +8159,13 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             render.renderedStartFrames == expectedStartFrames &&
             assignment.use == .foundationBass &&
             assignment.isValid &&
+            render.naturalSupportMatches(
+                expectedStartFrames: expectedStartFrames,
+                naturalDurationFrames: max(1, Int((sampleRate * (
+                    0.16 + assignment.automation.shape * 0.18
+                )).rounded())),
+                destinationFrameCount: block.left.count
+            ) &&
             preKickPocketBindingValid &&
             block.foundationRhythmRenderPassesMatch
         return AutonomousFoundationRhythmBarEvidence(

@@ -5,6 +5,70 @@ import Testing
 
 @Suite("Score-owned foundation rhythm")
 struct FoundationRhythmicRelationTests {
+    @Test("Native bass natural support binds actual events and preserves authorized releases",
+          arguments: [44_100.0, 48_000.0])
+    func nativeBassNaturalSupport(sampleRate: Double) throws {
+        for behavior: FoundationBehavior in [.monotone, .pump, .point, .subPulse, .absent] {
+            let director = AutonomousSessionDirector(rootSeed: 1)
+            var session = director.initialState()
+            var selected: (AutonomousPhrasePlan, ResolvedPerformanceBar)?
+            for _ in 0..<128 {
+                let plan = director.plan(from: session)
+                if let bar = plan.resolvedBars.first(where: { bar in
+                    bar.foundationBehavior == behavior && bar.foundationRhythmicRelation == .established &&
+                    (behavior == .absent || bar.ensemble.events.contains { $0.voice == .bass && $0.intensity > 0 &&
+                        !(bar.performance.signatureEvent == .delayedBassEntry && $0.step < 8) })
+                }) { selected = (plan, bar); break }
+                session.advancePlanning(using: plan)
+            }
+            let (plan, bar) = try #require(selected)
+            try checkNaturalSupport(plan: plan, bar: bar, sampleRate: sampleRate,
+                expectsBass: behavior != .absent)
+        }
+        let dotted = try #require(firstDottedPlan())
+        let bar = try #require(dotted.resolvedBars.first {
+            $0.foundationRhythmicRelation == .dottedThreeSixteenth
+        })
+        try checkNaturalSupport(plan: dotted, bar: bar, sampleRate: sampleRate, expectsBass: true)
+    }
+
+    private func checkNaturalSupport(plan: AutonomousPhrasePlan, bar: ResolvedPerformanceBar,
+                                     sampleRate: Double, expectsBass: Bool) throws {
+        let synth = SynthPerformancePlan(scene: plan.scene, dna: plan.dna, kind: plan.kind,
+            resolvedBars: [bar])
+        let assignment = synth.bars[0].foundationInstrument
+        let evidence = renderProjection(resolved: bar, plan: plan,
+            sampleRate: sampleRate, layer: .protectedRhythm).foundation
+        let full = renderProjection(resolved: bar, plan: plan,
+            sampleRate: sampleRate, layer: .full).foundation
+        #expect(evidence == full)
+        let frames = Int((240.0 / AutonomousSessionDirector.bpm * sampleRate).rounded())
+        let starts = bar.ensemble.events.filter { $0.voice == .bass &&
+            !(bar.performance.signatureEvent == .delayedBassEntry && $0.step < 8) }.map { event in
+                Int(((Double(event.step) + VoiceRenderer.timingOffsetInSteps(
+                    for: .bass, step: event.step, dna: plan.dna)) * Double(frames) / 16).rounded())
+            }
+        #expect(starts.isEmpty != expectsBass)
+        let duration = max(1, Int((sampleRate * (0.16 + assignment.automation.shape * 0.18)).rounded()))
+        #expect(evidence.renderedStartFrames == starts)
+        #expect(evidence.naturalSupportMatches(expectedStartFrames: starts,
+            naturalDurationFrames: duration, destinationFrameCount: frames))
+        #expect(!evidence.naturalSupportMatches(expectedStartFrames: starts,
+            naturalDurationFrames: 0, destinationFrameCount: frames))
+        #expect(!evidence.naturalSupportMatches(expectedStartFrames: [-1],
+            naturalDurationFrames: duration, destinationFrameCount: frames))
+        if expectsBass {
+            #expect(!evidence.naturalSupportMatches(expectedStartFrames: [],
+                naturalDurationFrames: duration, destinationFrameCount: frames))
+            #expect(!evidence.naturalSupportMatches(expectedStartFrames: starts,
+                naturalDurationFrames: 1, destinationFrameCount: frames))
+        }
+        if bar.foundationRhythmicRelation == .dottedThreeSixteenth {
+            #expect(evidence.preKickPocket.applied)
+            #expect(evidence.preKickPocket.naturalEndFrame > evidence.preKickPocket.releaseEndFrame)
+        }
+    }
+
     @Test("Dotted relation owns one exact kick-complementary two-bar cell")
     func dottedCellGeometry() {
         #expect(FoundationRhythmicRelationContract.cellLengthInBars == 2)

@@ -1225,11 +1225,37 @@ package struct FoundationRhythmRenderEvidence: Equatable, Sendable {
     package let renderedBassEventCount: Int
     package let renderedBassStepMask: UInt16
     package let renderedStartFrames: [Int]
+    package let naturalSupportFingerprint: String
     package let dryFoundationSampleHash: String
     package let peak: Double
     package let rms: Double
     package let preKickPocket: FoundationPreKickPocketRenderEvidence
     package let finite: Bool
+
+    /// Same-pass natural source support; authorized terminal release is separate.
+    /// Keep this bounded digest local to rendering and the existing binding gate.
+    static func naturalSupportSink() -> StreamingFNV1a {
+        var sink = StreamingFNV1a()
+        sink.domain("foundation-bass-natural-support.typed.v1")
+        return sink
+    }
+
+    package func naturalSupportMatches(
+        expectedStartFrames: [Int], naturalDurationFrames: Int,
+        destinationFrameCount: Int
+    ) -> Bool {
+        guard naturalDurationFrames > 0, destinationFrameCount > 0,
+              expectedStartFrames.count <= 16,
+              expectedStartFrames.allSatisfy({ (0..<destinationFrameCount).contains($0) }) else {
+            return false
+        }
+        var sink = Self.naturalSupportSink()
+        for start in expectedStartFrames {
+            sink.int(start)
+            sink.int(min(naturalDurationFrames, destinationFrameCount - start))
+        }
+        return naturalSupportFingerprint == fixedWidthFingerprintHex(sink.value)
+    }
 
     package static let neutral = FoundationRhythmRenderEvidence(
         bar: -1,
@@ -1239,6 +1265,7 @@ package struct FoundationRhythmRenderEvidence: Equatable, Sendable {
         renderedBassEventCount: 0,
         renderedBassStepMask: 0,
         renderedStartFrames: [],
+        naturalSupportFingerprint: "",
         dryFoundationSampleHash: "",
         peak: 0,
         rms: 0,

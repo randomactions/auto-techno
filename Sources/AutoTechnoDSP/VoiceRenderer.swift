@@ -1012,6 +1012,7 @@ package enum VoiceRenderer {
         var renderedBassEventCount = 0
         var renderedBassStepMask: UInt16 = 0
         var renderedBassStartFrames: [Int] = []
+        var bassNaturalSupport = FoundationRhythmRenderEvidence.naturalSupportSink()
         renderedBassStartFrames.reserveCapacity(6)
         var preKickPocketFoundationResult: (
             eventStartFrame: Int,
@@ -1085,6 +1086,8 @@ package enum VoiceRenderer {
                     renderedBassEventCount += 1
                     renderedBassStepMask |= UInt16(1) << UInt16(event.step)
                     renderedBassStartFrames.append(start)
+                    bassNaturalSupport.int(start)
+                    bassNaturalSupport.int(renderedBass.naturalFrameCount)
                 }
             case .rumble:
                 if let terminalEvidence = rumble(
@@ -1284,6 +1287,7 @@ package enum VoiceRenderer {
             renderedBassEventCount: renderedBassEventCount,
             renderedBassStepMask: renderedBassStepMask,
             renderedStartFrames: renderedBassStartFrames,
+            naturalSupportFingerprint: fixedWidthFingerprintHex(bassNaturalSupport.value),
             dryFoundationSampleHash: ExactPCMFingerprint.mono(foundationStem),
             peak: foundationPeak,
             rms: foundationRMS,

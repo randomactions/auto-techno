@@ -1680,3 +1680,24 @@ on native bars, bounded/invalid inputs and metadata controls. Capacity removal i
 component evidence: the original64-channel scratch charge,128MiB ceiling and
 two-pass admission remain unchanged. Complete allocation/metadata/lifetime,
 parent/child capture, RSS/deadline and runtime qualification remain separate.
+
+
+## Natural bass support binding
+
+The existing foundation-rhythm render evidence now retains a bounded digest of
+each actually rendered bass event's start frame and natural frame count. The
+existing candidate binding check compares that same-pass digest with the
+unchanged resolved foundation assignment and destination geometry. Both render
+passes must still agree. A shortened source can no longer satisfy admission
+merely by retaining the correct event count and onset.
+
+This extends VoiceRenderer and the canonical foundation evidence owner; it adds
+no musical parameter, PCM buffer, renderer, callback work or persistent state. The
+separate authorized pre-kick terminal release remains valid because natural
+source support and applied terminal support are distinct. Invalid or missing
+support fails the existing binding gate before a future product can be committed.
+Normal PCM, wire schema and quality thresholds are unchanged. Source-bound
+mutation controls preserve the original16 unexpected admissions, then require
+all16 duration-halved cases to refuse with identical before/after normal and
+damaged PCM. This component repair does not qualify current calibration,
+complete memory/deadlines, lifecycle or physical output.
