@@ -76,7 +76,7 @@ jobs:
         run: >-
           swift test --build-path "$RUNNER_TEMP/at0039-map" --skip-build --no-parallel
           --disable-xctest --enable-swift-testing
-          --filter '(PrimaryEvaluatorReadinessTests|IterativeSuccessorPreparationTests[/.](actualIterativeChain|protectedBoundaryRefusal|childRefusalAndCancellation)|ProfessionalQualityCalibrationTests[/.]activeHarmonicTailProjectionMatchesEvidence|AutonomousPhrasePreparationDiagnosticsTests[/.](renderBoundaryMismatchIsReasonCoded|finalRetryBoundsLatePhraseCrestSpan))'
+          --filter '(PrimaryEvaluatorReadinessTests|LongHorizonSignalTrajectoryTests|LongHorizonProfessionalPolicyTests|IterativeSuccessorPreparationTests[/.](actualIterativeChain|protectedBoundaryRefusal|childRefusalAndCancellation|selectedStreamedChain)|ProfessionalQualityCalibrationTests[/.]activeHarmonicTailProjectionMatchesEvidence|AutonomousPhrasePreparationDiagnosticsTests[/.](renderBoundaryMismatchIsReasonCoded|finalRetryBoundsLatePhraseCrestSpan))'
       - name: Emit source-bound generated map
         run: |
           python3 - <<'PYMAP'

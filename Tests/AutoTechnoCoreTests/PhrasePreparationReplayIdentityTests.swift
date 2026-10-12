@@ -1316,6 +1316,9 @@ struct IterativeSuccessorPreparationTests {
     }
 
     @Test("Selected initial and corrected drafts bind exact root-child objects and unchanged products")
+    // Setup and assertions contain large prepared values in native Debug.
+    // Keep them on the main stack; both canonical preparations below remain detached.
+    @MainActor
     func selectedStreamedChain() async throws {
         for mode in [Control.Mode.accept, .forceCorrection] {
             let request = Self.sourceRequest(rate: 8_000)
