@@ -499,6 +499,10 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
             "signal=" + String(describing: signalStatus),
             "effects=" + String(describing: effectStatus),
           ]
+          if source.prepared.longHorizonSignalTrajectoryEvidence == nil {
+            details += Self.writeRefusedSignalInputs(source.prepared,
+              rootSeed: rootSeed, sampleRate: sampleRate)
+          }
           break
         }
         let end = samples.addingReportingOverflow(frames)
@@ -644,6 +648,64 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
       try candidate.deterministicJSON().write(to: url, options: .withoutOverwriting)
       return []
     } catch { return ["refused-instrument-witness-write-failed"] }
+  }
+
+  /// Derived inputs to every signal-construction guard, retained only after
+  /// the actual source refuses. This witness cannot restore continuation or
+  /// supply accepted evidence; no PCM is copied and the refusal is unchanged.
+  private struct RefusedSignalInputs: Encodable {
+    let schema = "autotechno-refused-long-signal-inputs.v1"
+    let rootSeed: UInt64
+    let phraseIndex: Int
+    let startBar: Int
+    let barCount: Int
+    let phraseKind: String
+    let coordination: LongHorizonEnergyCoordination
+    let planFingerprint: String
+    let candidateEvaluationFingerprint: String
+    let preflightSampleHash: String
+    let commitEligible: Bool
+    let playbackHardGatesPassed: Bool
+    let candidate: AutonomousCandidateEvaluationVector
+    let effects: LongHorizonEffectDosePhraseEvidence?
+    let musical: [String: Double]
+  }
+
+  private static func writeRefusedSignalInputs(_ prepared: PreparedAutonomousPhrase,
+    rootSeed: UInt64, sampleRate: Double
+  ) -> [String] {
+    guard let directory = ProcessInfo.processInfo.environment[
+      "AUTOTECHNO_LONG_HORIZON_RESOURCE_DIRECTORY"
+    ] else { return ["refused-signal-witness-output-unavailable"] }
+    let musical = prepared.audioPreflight.quality.musical
+    let witness = RefusedSignalInputs(rootSeed: rootSeed,
+      phraseIndex: prepared.plan.phraseIndex, startBar: prepared.plan.startBar,
+      barCount: prepared.plan.barCount, phraseKind: String(describing: prepared.plan.kind),
+      coordination: prepared.plan.longHorizonEnergyCoordination,
+      planFingerprint: AutonomousTypedFingerprint.plan(prepared.plan),
+      candidateEvaluationFingerprint: prepared.candidateEvaluationFingerprint,
+      preflightSampleHash: prepared.audioPreflight.quality.sampleHash,
+      commitEligible: prepared.commitEligible,
+      playbackHardGatesPassed: prepared.playbackHardGatesPassed,
+      candidate: prepared.selectedCandidateEvidence,
+      effects: prepared.longHorizonEffectDoseEvidence,
+      musical: [
+        "spectralCentroid": musical.spectralCentroid,
+        "spectralCentroidSpreadHz": musical.perceptualEvidence.spectralCentroidSpreadHz,
+        "positiveSpectralFluxMean": musical.perceptualEvidence.positiveSpectralFluxMean,
+        "lowEnergy": musical.lowEnergy, "midEnergy": musical.midEnergy,
+        "highEnergy": musical.highEnergy,
+      ])
+    let url = URL(fileURLWithPath: directory, isDirectory: true)
+      .appendingPathComponent("refused-signal-\(rootSeed)-\(Int(sampleRate))-\(prepared.plan.phraseIndex).json")
+    do {
+      let encoder = JSONEncoder()
+      encoder.outputFormatting = [.sortedKeys]
+      encoder.nonConformingFloatEncodingStrategy = .convertToString(
+        positiveInfinity: "Infinity", negativeInfinity: "-Infinity", nan: "NaN")
+      try encoder.encode(witness).write(to: url, options: .withoutOverwriting)
+      return ["refused-signal-witness-written"]
+    } catch { return ["refused-signal-witness-write-failed"] }
   }
 
   /// Inspect the existing Core transition from this actual refusal only.
