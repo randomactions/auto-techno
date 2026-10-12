@@ -12,6 +12,7 @@ on:
           - windows
           - windows-diagnostics
           - windows-recovery-build
+          - windows-full-banks
           - modal-continuation
           - rumble-duration
           - foundation-timing
@@ -26,14 +27,15 @@ concurrency:
 
 jobs:
   validate-windows-source:
-    if: inputs.validation == 'windows' || inputs.validation == 'windows-diagnostics' || inputs.validation == 'windows-recovery-build' || inputs.validation == ''
+    if: inputs.validation == 'windows' || inputs.validation == 'windows-diagnostics' || inputs.validation == 'windows-recovery-build' || inputs.validation == 'windows-full-banks' || inputs.validation == ''
     name: Windows x64 source validation (${{ matrix.test-library }})
     runs-on: windows-2025
-    timeout-minutes: ${{ inputs.validation == 'windows-recovery-build' && 90 || 60 }}
+    timeout-minutes: ${{ inputs.validation == 'windows-full-banks' && 360 || inputs.validation == 'windows-recovery-build' && 90 || 60 }}
     strategy:
       fail-fast: false
+      max-parallel: 4
       matrix:
-        test-library: ${{ fromJSON(inputs.validation == 'windows-diagnostics' && '["xctest","swift-testing"]' || inputs.validation == 'windows-recovery-build' && '["recovery"]' || '["all"]') }}
+        test-library: ${{ fromJSON(inputs.validation == 'windows-diagnostics' && '["xctest","swift-testing"]' || inputs.validation == 'windows-recovery-build' && '["recovery"]' || inputs.validation == 'windows-full-banks' && '["bank-0","bank-1","bank-2","bank-3","bank-4","bank-5","bank-6","bank-7"]' || '["all"]') }}
 
     steps:
       - name: Check out source
@@ -171,6 +173,23 @@ jobs:
         run: |
           .\scripts\build-windows.ps1 -SkipTests
           Write-Host "Focused recovery contracts and release compilation only; full Windows tests and device/runtime qualification remain required."
+
+      - name: Execute every discovered suite in assigned Windows bank
+        if: startsWith(matrix.test-library, 'bank-')
+        shell: pwsh
+        env:
+          TEST_BANK: ${{ matrix.test-library }}
+        run: |
+          python -m unittest discover -s scripts -p test_windows_test_plan.py
+          if ($LASTEXITCODE -ne 0) { throw "Bank-plan regression tests failed." }
+          $bank = [int]($env:TEST_BANK -replace '^bank-', '')
+          .\scripts\test-windows-bank.ps1 -Bank $bank -Banks 8
+
+      - name: Build release app in full Windows validation
+        if: matrix.test-library == 'bank-0'
+        timeout-minutes: 30
+        shell: pwsh
+        run: .\scripts\build-windows.ps1 -SkipTests
 
       - name: Record diagnostic process state
         if: always() && matrix.test-library != 'all'
