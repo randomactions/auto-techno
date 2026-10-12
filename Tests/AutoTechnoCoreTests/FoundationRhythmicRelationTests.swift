@@ -828,7 +828,11 @@ struct FoundationRhythmicRelationTests {
                         selectedAttemptIndex: 0, correctionCount: 0)
                     let valid = scenario == "unaltered"
                     let renderedEventCount = blocks.reduce(0) { $0 + $1.foundationRhythmRenderEvidence.renderedBassEventCount }
-                    #expect(renderedEventCount == (valid || scenario == "shifted-bass" ? originalEvents : 0))
+                    // The renderer counts scheduled bass voices with a natural
+                    // duration, including zero-intensity events. Silence is a
+                    // PCM/binding fault, not deletion of the scheduled event.
+                    let retainsBassEvents = valid || scenario == "shifted-bass" || scenario == "zero-intensity"
+                    #expect(renderedEventCount == (retainsBassEvents ? originalEvents : 0))
                     #expect((AutonomousCandidateFingerprint.plan(renderPlan) == reference.planFingerprint) == valid)
                     let foundationComplete = vector.foundationRhythm.allSatisfy { $0.isComplete(sampleRate: rate) }
                     #expect(foundationComplete == valid)
