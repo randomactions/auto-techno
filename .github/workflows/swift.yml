@@ -589,6 +589,14 @@ jobs:
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(ModalPercussionDSPTests|ModalPercussionPlanningTests|ModalSuccessorReportJoinTests)'
+          --skip nativePreparedAdmissionFaultMatrix
+
+      - name: Run native-rate prepared admission fault matrix
+        if: matrix.bank == 'modal'
+        run: >-
+          swift test -c release --no-parallel
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter nativePreparedAdmissionFaultMatrix
 
       - name: Run measurement fixture and provenance controls
         if: matrix.bank == 'remaining'

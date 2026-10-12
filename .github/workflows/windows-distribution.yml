@@ -16,6 +16,7 @@ on:
           - windows-planning-math
           - windows-full-banks
           - modal-continuation
+          - prepared-admission
           - rumble-duration
           - foundation-timing
           - full-phrase-bass
@@ -347,5 +348,27 @@ jobs:
           swift test -c release --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-component"
           --filter '(RenderFingerprintParityTests|algorithmicFullPhrase${{ inputs.validation == 'full-phrase-bass-behaviors' && 'BassBehavior' || inputs.validation == 'full-phrase-foundation' && '(Bass|Companion)' || 'Bass' }}Faults)'
+      - name: Verify semantic codebase map
+        run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/auto-techno-component"
+
+  prepared-admission:
+    if: inputs.validation == 'prepared-admission'
+    name: Native prepared admission fault matrix
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Record candidate and toolchain
+        run: |
+          git rev-parse HEAD
+          swift --version
+      - name: Verify native-rate prepared admission faults
+        run: >-
+          swift test -c release --no-parallel
+          --build-path "$RUNNER_TEMP/auto-techno-component"
+          --filter '(nativePreparedAdmissionFaultMatrix|RenderFingerprintParityTests)'
       - name: Verify semantic codebase map
         run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/auto-techno-component"

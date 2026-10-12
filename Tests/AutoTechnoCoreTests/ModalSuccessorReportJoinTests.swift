@@ -806,6 +806,127 @@ struct ModalSuccessorReportJoinTests {
             options: [.sortedKeys]), as: UTF8.self))
     }
 
+    @Test("Prepared admission faults refuse at both native sample rates", arguments: [44_100.0, 48_000.0])
+    @MainActor
+    func nativePreparedAdmissionFaultMatrix(rate: Double) throws {
+        // Reuse the frozen score-only source/successor pair. These are paired
+        // mechanical controls, not new calibration families or quality labels.
+        let director = AutonomousSessionDirector(rootSeed: 48_300)
+        var state = director.initialState()
+        for _ in 0..<21 { state.advancePlanning(using: director.plan(from: state)) }
+        let plan = director.plan(from: state)
+        try #require(plan.phraseIndex == 21 && plan.startBar == 225)
+        let originalState = state
+        let positiveControl = PreparedValidationControl()
+        let positive = try #require(prepareValidationSource(state: state, plan: plan, rate: rate,
+            evaluator: PreparedValidationTestEvaluator(startingState: state,
+                control: positiveControl, mode: .actualSuccessor)).preparedPhrase)
+        try #require(positive.commitEligible)
+        let proof = try #require(positive.preparedValidation)
+        try #require(proof.hasRequiredMeasurements && proof.hasQualifiedContinuation)
+        try #require(proof.requiresQualifiedSuccessor && proof.qualifiedSuccessor?.commitEligible == true)
+        struct Row: Encodable {
+            let scenario: String
+            let commitEligible: Bool
+            let preparedProductPresent: Bool
+            let sourcePCMUnchanged: Bool?
+            let acceptedEvidenceUnchanged: Bool
+            let validationCalls: Int
+            let successorRenders: Int
+            let failureCode: String?
+            let diagnostics: [String]
+        }
+        #expect(positiveControl.snapshot.calls == 1 && positiveControl.snapshot.probes == 1)
+        let positiveRetainsOldAcceptance = positive.qualityContinuationState.acceptedEvidenceFingerprint ==
+            state.quality.acceptedEvidenceFingerprint
+        #expect(!positiveRetainsOldAcceptance)
+        var rows = [Row(scenario: "unaltered", commitEligible: positive.commitEligible, preparedProductPresent: true,
+            sourcePCMUnchanged: true, acceptedEvidenceUnchanged: positiveRetainsOldAcceptance,
+            validationCalls: positiveControl.snapshot.calls, successorRenders: positiveControl.snapshot.probes,
+            failureCode: nil, diagnostics: positive.commitFailureDiagnostics)]
+        let faults: [(String, PreparedValidationTestEvaluator.Mode)] = [
+            ("missing-proof", .missingProof), ("missing-successor", .missingSuccessor),
+            ("unaccepted-successor", .unacceptedSuccessor), ("rejected-assessment", .reject),
+            ("changed-accepted-reason", .changedAcceptedReason), ("foreign-route-proof", .foreignProof),
+            ("cancelled-validation", .cancel)]
+        for (name, mode) in faults {
+            let control = PreparedValidationControl(cached: mode == .foreignProof ? proof : nil)
+            let result = prepareValidationSource(state: state, plan: plan, rate: rate,
+                evaluator: PreparedValidationTestEvaluator(startingState: state, control: control, mode: mode),
+                routeGeneration: mode == .foreignProof ? 1 : 0)
+            #expect(control.snapshot.calls == 1)
+            #expect(result.preparedPhrase?.commitEligible != true)
+            var pcmUnchanged: Bool?
+            if mode == .changedAcceptedReason || mode == .cancel {
+                #expect(result.preparedPhrase == nil)
+                #expect(result.failure?.code == (mode == .cancel ? .cancelled : .preparedValidationMismatch))
+                if mode == .changedAcceptedReason {
+                    #expect(result.failure?.details.contains("prepared-validation-source") == true)
+                }
+            } else {
+                let refused = try #require(result.preparedPhrase)
+                #expect(!refused.qualityDecision.isAcceptanceOutcome)
+                #expect(refused.qualityContinuationState.acceptedEvidenceFingerprint ==
+                    state.quality.acceptedEvidenceFingerprint)
+                pcmUnchanged = refused.audioPreflight.quality.sampleHash == positive.audioPreflight.quality.sampleHash
+                #expect(pcmUnchanged == true)
+                if mode == .missingProof || mode == .foreignProof {
+                    #expect(refused.preparedValidation == nil)
+                    #expect(refused.qualityDiagnosticDetails == [mode == .missingProof
+                        ? "prepared-validation=missing" : "prepared-validation=source-mismatch"])
+                }
+                if mode == .missingSuccessor {
+                    #expect(refused.preparedValidation?.hasRequiredMeasurements == false)
+                    #expect(control.snapshot.probes == 0 && control.snapshot.assessments == 0)
+                }
+                if mode == .unacceptedSuccessor {
+                    #expect(refused.preparedValidation?.hasRequiredMeasurements == true)
+                    #expect(refused.preparedValidation?.hasQualifiedContinuation == false)
+                    #expect(control.snapshot.probes == 1 && control.snapshot.assessments == 0)
+                }
+                if mode == .reject {
+                    #expect(refused.qualityDecision.outcome == .rejected)
+                    #expect(control.snapshot.probes == 1 && control.snapshot.assessments == 1)
+                }
+            }
+            #expect(state == originalState)
+            rows.append(Row(scenario: name, commitEligible: result.preparedPhrase?.commitEligible ?? false,
+                preparedProductPresent: result.preparedPhrase != nil, sourcePCMUnchanged: pcmUnchanged,
+                acceptedEvidenceUnchanged: result.preparedPhrase.map {
+                    $0.qualityContinuationState.acceptedEvidenceFingerprint == state.quality.acceptedEvidenceFingerprint
+                } ?? true, validationCalls: control.snapshot.calls, successorRenders: control.snapshot.probes,
+                failureCode: result.failure?.code.rawValue,
+                diagnostics: result.failure?.details ?? result.preparedPhrase?.qualityDiagnosticDetails ?? []))
+        }
+        let replay = try #require(prepareValidationSource(state: state, plan: plan, rate: rate,
+            evaluator: PreparedValidationTestEvaluator(startingState: state,
+                control: PreparedValidationControl(), mode: .actualSuccessor)).preparedPhrase)
+        let exactReplay = replay.commitEligible && replay.blocks == positive.blocks &&
+            replay.commitProvenance == positive.commitProvenance &&
+            replay.qualityContinuationState == positive.qualityContinuationState &&
+            replay.preparedValidation?.observation == proof.observation &&
+            replay.preparedValidation?.qualifiedSuccessor?.blocks == proof.qualifiedSuccessor?.blocks
+        #expect(exactReplay && state == originalState)
+        struct Report: Encodable {
+            let schema = "autotechno-native-prepared-admission-faults.v1"
+            let rootSeed: UInt64
+            let phraseIndex: Int
+            let sampleRate: Int
+            let sourceIdentity: String
+            let sampleHash: String
+            let exactControlReplay: Bool
+            let rows: [Row]
+            let qualification = "mechanical-only-not-installed"
+            let unavailable = ["full-supported-prepared-fault-matrix", "production-calibration",
+                "perceptual-quality", "runtime-resource-lifecycle-physical-qualification"]
+        }
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        FileHandle.standardOutput.write(try encoder.encode(Report(rootSeed: state.rootSeed,
+            phraseIndex: plan.phraseIndex, sampleRate: Int(rate), sourceIdentity: proof.sourceIdentityFingerprint,
+            sampleHash: positive.audioPreflight.quality.sampleHash, exactControlReplay: exactReplay, rows: rows)))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
     private func prepareValidationSource(state: AutonomousSessionState,
         plan: AutonomousPhrasePlan, rate: Double,
         evaluator: PreparedValidationTestEvaluator,
