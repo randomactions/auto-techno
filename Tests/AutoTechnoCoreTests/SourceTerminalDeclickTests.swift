@@ -5,6 +5,136 @@ import Testing
 
 @Suite("Source-terminal de-clicking")
 struct SourceTerminalDeclickTests {
+    @MainActor
+    @Test("Canonical full-phrase rumble support reaches candidate admission")
+    func algorithmicRumbleFullPhraseSupport() throws {
+        struct Support: Encodable {
+            let bar: Int
+            let scoreEventIndex: Int
+            let step: Int
+            let barFrames: Int
+            let expectedFrames: Int
+            let renderedFrames: Int
+            let terminalComplete: Bool
+            let admissionComplete: Bool
+        }
+        struct Row: Encodable {
+            let rootSeed: UInt64
+            let sampleRate: Int
+            let planFingerprint: String
+            let graphFingerprint: String
+            let sampleHash: String
+            let frameCount: Int
+            let scoreRumbleEvents: Int
+            let support: [Support]
+            let exactReplay: Bool
+            let preparedProductPresent: Bool
+            let preparedMatchesDirectRender: Bool?
+            let vectorComplete: Bool
+            let transactionComplete: Bool
+            let audioSafetyValid: Bool?
+            let evaluationHardGatesPassed: Bool
+            let commitEligible: Bool
+            let commitFailureDiagnostics: [String]
+            let preparationFailure: String?
+        }
+        var rows: [Row] = []
+        // Frozen mutation protocol: known roots, first score-only phrase with a
+        // positive step-zero rumble, no output-based selection. The independent
+        // integer oracle never calls the source-duration admission predicate.
+        // The normal test expects valid production. An isolated mutation build
+        // changes source duration before the same nonlinear render; its expected
+        // test failures and emitted report are checked outside the shipping code.
+        for seed: UInt64 in [1, 6011] {
+            let director = AutonomousSessionDirector(rootSeed: seed)
+            var session = director.initialState()
+            var selected: AutonomousPhrasePlan?
+            for _ in 0..<128 {
+                let plan = director.plan(from: session)
+                if plan.resolvedBars.contains(where: { bar in
+                    bar.ensemble.events.contains { $0.voice == .rumble && $0.step == 0 && $0.intensity > 0 }
+                }) { selected = plan; break }
+                session.advancePlanning(using: plan)
+            }
+            let plan = try #require(selected)
+            let scoreCount = plan.resolvedBars.flatMap(\.ensemble.events).filter { $0.voice == .rumble }.count
+            for rate in [44_100.0, 48_000.0] {
+                let graph = DSPGraphGenerator.plan(sessionSeed: seed, phrase: plan,
+                    memory: session.memory, previous: nil)
+                var incoming = RenderState(); incoming.barIndex = plan.startBar
+                let incomingGraph = GeneratedDSPContinuationState()
+                var outgoing = incoming; var outgoingGraph = incomingGraph
+                let blocksResult = AutonomousPhraseRenderer.renderIfNotCancelled(
+                    plan: plan, graph: graph, sampleRate: rate, state: &outgoing,
+                    graphState: &outgoingGraph, cancellationRequested: { false })
+                let blocks = try #require(blocksResult)
+                let preflightResult = PhraseAudioPreflight(blocks: blocks, sampleRate: rate,
+                    cancellationRequested: { false })
+                let preflight = try #require(preflightResult)
+                var support: [Support] = []
+                for block in blocks {
+                    for event in block.sourceTerminalDeclickRenderEvidence where event.voice == .rumble {
+                        let start = (event.step * block.left.count + 8) / 16
+                        let expected = min(Int(rate) * 17 / 25, block.left.count - start)
+                        support.append(Support(bar: block.bar, scoreEventIndex: event.scoreEventIndex,
+                            step: event.step, barFrames: block.left.count, expectedFrames: expected,
+                            renderedFrames: event.renderedFrameCount,
+                            terminalComplete: event.isComplete(sampleRate: rate),
+                            admissionComplete: event.isComplete(sampleRate: rate,
+                                destinationFrameCount: block.left.count)))
+                    }
+                }
+                try #require(support.count == scoreCount && !support.isEmpty)
+                #expect(support.allSatisfy { $0.expectedFrames == $0.renderedFrames })
+                #expect(support.allSatisfy { $0.terminalComplete && $0.admissionComplete })
+                var replayState = incoming; var replayGraph = incomingGraph
+                let replay = try #require(AutonomousPhraseRenderer.renderIfNotCancelled(
+                    plan: plan, graph: graph, sampleRate: rate, state: &replayState,
+                    graphState: &replayGraph, cancellationRequested: { false }))
+                let exactReplay = replay == blocks &&
+                    AutonomousCandidateFingerprint.renderDSPContinuation(renderState: replayState,
+                        generatedDSPState: replayGraph) ==
+                    AutonomousCandidateFingerprint.renderDSPContinuation(renderState: outgoing,
+                        generatedDSPState: outgoingGraph)
+                #expect(exactReplay)
+                let outcome = AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(
+                    plan: plan, sessionSeed: seed, memory: session.memory, sampleRate: rate,
+                    incomingRenderState: incoming, incomingGraphState: incomingGraph, previousGraph: nil,
+                    incomingQualityState: session.quality, evaluator: AcceptingPrimaryTestEvaluator(),
+                    cancellationRequested: { false })
+                let prepared = outcome.preparedPhrase
+                let matches = prepared.map { $0.blocks == blocks }
+                let vectorComplete = prepared?.selectedCandidateEvidence.isComplete ?? false
+                let transactionComplete = prepared?.candidateEvaluation.isComplete ?? false
+                #expect(prepared != nil && vectorComplete && transactionComplete)
+                #expect(prepared?.selectedCandidateEvidence.hardGates.audioSafetyValid == true)
+                if let matches { #expect(matches) }
+                rows.append(Row(rootSeed: seed, sampleRate: Int(rate),
+                    planFingerprint: AutonomousCandidateFingerprint.plan(plan),
+                    graphFingerprint: AutonomousCandidateFingerprint.graph(graph),
+                    sampleHash: preflight.quality.sampleHash,
+                    frameCount: blocks.reduce(0) { $0 + $1.left.count }, scoreRumbleEvents: scoreCount,
+                    support: support, exactReplay: exactReplay, preparedProductPresent: prepared != nil,
+                    preparedMatchesDirectRender: matches, vectorComplete: vectorComplete,
+                    transactionComplete: transactionComplete,
+                    audioSafetyValid: prepared?.selectedCandidateEvidence.hardGates.audioSafetyValid,
+                    evaluationHardGatesPassed: prepared?.selectedCandidateEvidence.hardGatesPassed ?? false,
+                    commitEligible: prepared?.commitEligible ?? false,
+                    commitFailureDiagnostics: prepared?.commitFailureDiagnostics ?? [],
+                    preparationFailure: outcome.failure.map { $0.stage.rawValue + ":" + $0.code.rawValue }))
+            }
+        }
+        #expect(rows.count == 4)
+        struct Report: Encodable {
+            let schema = "autotechno-rumble-full-phrase-source-support.v1"
+            let scope = "canonical-nonlinear-render-and-preparer-duration-binding"
+            let rows: [Row]
+        }
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        FileHandle.standardOutput.write(try encoder.encode(Report(rows: rows)))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
     @Test("Raised-cosine release preserves the first 8 ms and reaches exact zero")
     func physicalTimeGeometry() {
         for sampleRate in [44_100.0, 48_000.0] {
