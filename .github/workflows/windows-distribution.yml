@@ -11,6 +11,7 @@ on:
         options:
           - windows
           - windows-diagnostics
+          - windows-recovery-build
           - modal-continuation
           - rumble-duration
           - foundation-timing
@@ -25,14 +26,14 @@ concurrency:
 
 jobs:
   validate-windows-source:
-    if: inputs.validation == 'windows' || inputs.validation == 'windows-diagnostics' || inputs.validation == ''
+    if: inputs.validation == 'windows' || inputs.validation == 'windows-diagnostics' || inputs.validation == 'windows-recovery-build' || inputs.validation == ''
     name: Windows x64 source validation (${{ matrix.test-library }})
     runs-on: windows-2025
-    timeout-minutes: 60
+    timeout-minutes: ${{ inputs.validation == 'windows-recovery-build' && 90 || 60 }}
     strategy:
       fail-fast: false
       matrix:
-        test-library: ${{ fromJSON(inputs.validation == 'windows-diagnostics' && '["xctest","swift-testing"]' || '["all"]') }}
+        test-library: ${{ fromJSON(inputs.validation == 'windows-diagnostics' && '["xctest","swift-testing"]' || inputs.validation == 'windows-recovery-build' && '["recovery"]' || '["all"]') }}
 
     steps:
       - name: Check out source
@@ -91,7 +92,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Diagnostic test build failed." }
 
       - name: Discover selected test library
-        if: matrix.test-library != 'all'
+        if: matrix.test-library == 'xctest' || matrix.test-library == 'swift-testing'
         timeout-minutes: 5
         shell: pwsh
         env:
@@ -115,7 +116,7 @@ jobs:
           }
 
       - name: Execute discovered diagnostic probe
-        if: matrix.test-library != 'all'
+        if: matrix.test-library == 'xctest' || matrix.test-library == 'swift-testing'
         timeout-minutes: 5
         shell: pwsh
         env:
@@ -129,6 +130,47 @@ jobs:
           swift test --build-path .build-windows --skip-build --no-parallel @libraryArguments
           if ($LASTEXITCODE -ne 0) { throw "The discovered diagnostic probe failed." }
           Write-Host "Diagnostic probe only; full Windows validation remains required."
+
+      # This focused recovery/build scope is independent of the full Windows
+      # suite. Each selected test owner must exist in native discovery first.
+      - name: Verify Windows recovery and fingerprint contracts
+        if: matrix.test-library == 'recovery'
+        timeout-minutes: 15
+        shell: pwsh
+        run: |
+          $discovered = @(swift test --build-path .build-windows list --skip-build --disable-xctest --enable-swift-testing)
+          if ($LASTEXITCODE -ne 0) { throw "Native Swift Testing discovery failed." }
+          $owners = @("AutonomousQualityRecoveryHostPolicyTests", "RenderFingerprintParityTests")
+          foreach ($owner in $owners) {
+            $pattern = 'AutoTechnoCoreTests\.' + [regex]::Escape($owner) + '/'
+            if (-not ($discovered | Select-String -Pattern $pattern -Quiet)) {
+              throw "Required test owner was not discovered: $owner"
+            }
+          }
+          $discovered | Where-Object { $_ -match '(AutonomousQualityRecoveryHostPolicyTests|RenderFingerprintParityTests)/' } | Write-Output
+          swift test --build-path .build-windows --skip-build --no-parallel --disable-xctest --enable-swift-testing --filter '(AutonomousQualityRecoveryHostPolicyTests|RenderFingerprintParityTests)'
+          if ($LASTEXITCODE -ne 0) { throw "Windows recovery/fingerprint contracts failed." }
+
+      - name: Verify Windows live-master fingerprint parity
+        if: matrix.test-library == 'recovery'
+        timeout-minutes: 5
+        shell: pwsh
+        run: |
+          $discovered = @(swift test --build-path .build-windows list --skip-build --enable-xctest --disable-swift-testing)
+          if ($LASTEXITCODE -ne 0) { throw "Native XCTest discovery failed." }
+          if (-not ($discovered | Select-String -Pattern 'LiveMasterTrimFingerprintTests/testTrimIsFingerprintBound' -Quiet)) {
+            throw "Required live-master fingerprint test was not discovered."
+          }
+          swift test --build-path .build-windows --skip-build --no-parallel --enable-xctest --disable-swift-testing --filter LiveMasterTrimFingerprintTests.testTrimIsFingerprintBound
+          if ($LASTEXITCODE -ne 0) { throw "Windows live-master fingerprint parity failed." }
+
+      - name: Build Windows release app after focused recovery validation
+        if: matrix.test-library == 'recovery'
+        timeout-minutes: 30
+        shell: pwsh
+        run: |
+          .\scripts\build-windows.ps1 -SkipTests
+          Write-Host "Focused recovery contracts and release compilation only; full Windows tests and device/runtime qualification remain required."
 
       - name: Record diagnostic process state
         if: always() && matrix.test-library != 'all'
