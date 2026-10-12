@@ -22,9 +22,11 @@ try {
     python scripts/windows_test_plan.py --xctest windows-discovery-xctest.txt --swift-testing windows-discovery-swift-testing.txt --bank $Bank --banks $Banks --output windows-bank-plan.json
     if ($LASTEXITCODE -ne 0) { throw "Native bank planning failed." }
     $plan = Get-Content -Raw windows-bank-plan.json | ConvertFrom-Json
+    if ($plan.schema -ne "autotechno-windows-test-bank-plan.v2" -or
+        $plan.partitionUnit -ne "discovered-test-identity") { throw "Unknown bank partition contract." }
     $results = @()
     foreach ($suite in $plan.selected) {
-        Write-Host "BEGIN native suite $($suite.library):$($suite.suite), bank $Bank/$Banks"
+        Write-Host "BEGIN native suite slice $($suite.library):$($suite.suite), bank $Bank/$Banks"
         $arguments = if ($suite.library -eq "xctest") {
             @("--enable-xctest", "--disable-swift-testing")
         } else { @("--disable-xctest", "--enable-swift-testing") }
@@ -39,23 +41,33 @@ try {
         $completionLines = @(Select-String -Path $log -Pattern $summary)
         if ($completionLines.Count -eq 0) { throw "Missing native completion summary for $($suite.suite)." }
         $count = [int]$completionLines[-1].Matches[0].Groups[1].Value
-        if ($count -eq 0 -and -not (Select-String -Path $log -Pattern 'skipped' -Quiet)) {
-            throw "No tests executed or explicitly skipped for $($suite.suite)."
+        $expected = @($suite.identifiers).Count
+        if ($expected -eq 0 -or $count -ne $expected) {
+            throw "Native slice count mismatch for $($suite.suite): discovered $expected, reported $count."
         }
+        # Swift Testing's summary includes explicitly skipped methods. Record
+        # those separately; a discovery or skip never proves its behavior ran.
+        $skipPattern = if ($suite.library -eq "xctest") {
+            'Test Case .* skipped'
+        } else { 'Test ".*" skipped' }
+        $skipped = @(Select-String -Path $log -Pattern $skipPattern).Count
+        if ($skipped -gt $count) { throw "Inconsistent skipped-test count." }
         $results += [ordered]@{
             library = $suite.library; suite = $suite.suite
-            discovered = @($suite.identifiers).Count; reportedTests = $count
+            discovered = $expected; reportedTests = $count
+            identifiers = @($suite.identifiers); selector = $suite.selector
+            explicitlySkippedTests = $skipped; executedTests = $count - $skipped
             logSHA256 = (Get-FileHash -Algorithm SHA256 $log).Hash.ToLowerInvariant()
             exitCode = $testExit
         }
-        Write-Host "END native suite $($suite.library):$($suite.suite)"
+        Write-Host "END native suite slice $($suite.library):$($suite.suite)"
     }
     [ordered]@{
-        schema = "autotechno-windows-test-bank-result.v1"
+        schema = "autotechno-windows-test-bank-result.v2"
         source = (git rev-parse HEAD).Trim(); bank = $Bank; banks = $Banks
         discoverySHA256 = $plan.discoverySHA256
         discoveredIdentifiers = $plan.discoveredIdentifiers
-        completedSuites = $results
+        partitionUnit = $plan.partitionUnit; completedSlices = $results
         fullWindowsQualification = $false
     } | ConvertTo-Json -Depth 8 -Compress | Write-Output
 } finally { Pop-Location }

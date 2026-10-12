@@ -261,7 +261,7 @@ jobs:
           .\scripts\build-windows.ps1 -SkipTests
           Write-Host "Focused recovery contracts and release compilation only; full Windows tests and device/runtime qualification remain required."
 
-      - name: Execute every discovered suite in assigned Windows bank
+      - name: Execute every discovered test slice in assigned Windows bank
         if: startsWith(matrix.test-library, 'bank-')
         shell: pwsh
         env:

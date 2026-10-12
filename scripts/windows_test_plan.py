@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Partition every native discovered suite; never infer execution from discovery."""
+"""Partition every native discovered test identity; never infer execution from discovery."""
 import argparse
 import hashlib
 import json
@@ -15,7 +15,8 @@ def plan(discoveries, bank, banks):
     if set(discoveries) != {'xctest', 'swift-testing'}:
         raise ValueError('both native frameworks must be discovered')
     all_cases = []
-    suites = []
+    slices = []
+    suite_count = 0
     for library in sorted(discoveries):
         identifiers = []
         owners = {}
@@ -34,19 +35,31 @@ def plan(discoveries, bank, banks):
             owners.setdefault(match['suite'], []).append(line)
         if not identifiers:
             raise ValueError('empty discovery: ' + library)
+        suite_count += len(owners)
         for suite, cases in sorted(owners.items()):
-            # Match the complete suite token in either XCTest's dot spelling or
-            # Swift Testing's slash spelling. Equal names across modules stay
-            # together, so a shared filter cannot cross bank boundaries.
-            selector = r'(^|\.)' + re.escape(suite) + r'[./]'
-            assignment = int.from_bytes(hashlib.sha256((library + ':' + suite).encode()).digest()[:8], 'big') % banks
-            suites.append(dict(library=library, suite=suite, selector=selector,
-                               bank=assignment, identifiers=sorted(cases)))
+            groups = {}
+            for case in cases:
+                test = IDENTIFIER.fullmatch(case)['test']
+                # Equal suite/method names across modules must stay together:
+                # SwiftPM's cross-framework filter can match either module.
+                identity = library + ':' + suite + '/' + test
+                assignment = int.from_bytes(hashlib.sha256(identity.encode()).digest()[:8], 'big') % banks
+                groups.setdefault(assignment, []).append(case)
+            for assignment, selected_cases in sorted(groups.items()):
+                tests = sorted({IDENTIFIER.fullmatch(case)['test'] for case in selected_cases})
+                # Swift Testing appends a source-location component to its
+                # runtime ID. Permit that slash, never a longer method token.
+                # All parameterized cases of one discovered method stay intact.
+                selector = (r'(^|\.)' + re.escape(suite) + r'[./](?:' +
+                            '|'.join(re.escape(test) for test in tests) + r')(/|$)')
+                slices.append(dict(library=library, suite=suite, selector=selector,
+                                   bank=assignment, identifiers=sorted(selected_cases)))
         all_cases.extend(library + ':' + item for item in sorted(identifiers))
-    return dict(schema='autotechno-windows-test-bank-plan.v1', bank=bank, banks=banks,
+    return dict(schema='autotechno-windows-test-bank-plan.v2', bank=bank, banks=banks,
                 discoverySHA256=hashlib.sha256('\n'.join(sorted(all_cases)).encode()).hexdigest(),
-                discoveredIdentifiers=len(all_cases), discoveredSuites=len(suites),
-                selected=[suite for suite in suites if suite['bank'] == bank],
+                discoveredIdentifiers=len(all_cases), discoveredSuites=suite_count,
+                partitionUnit="discovered-test-identity",
+                selected=[item for item in slices if item['bank'] == bank],
                 nativeExecutionProven=False)
 
 

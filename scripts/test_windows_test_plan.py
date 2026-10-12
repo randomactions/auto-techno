@@ -36,6 +36,51 @@ class NativeWindowsBankPlanTests(unittest.TestCase):
             for case in suite['identifiers']:
                 self.assertRegex(case.replace('/', '.'), suite['selector'])
 
+    def test_large_owner_is_distributed_without_losing_or_splitting_methods(self):
+        inputs = self.fixture()
+        inputs['swift-testing'] = '\n'.join(
+            f'{module}.HeavyTests/case{index}(sampleRate:)'
+            for module in ['FirstTests', 'SecondTests'] for index in range(128))
+        rows = [plan(inputs, bank, 8) for bank in range(8)]
+        self.assertEqual({row['schema'] for row in rows}, {'autotechno-windows-test-bank-plan.v2'})
+        self.assertEqual({row['partitionUnit'] for row in rows}, {'discovered-test-identity'})
+        owners = {}
+        for row in rows:
+            selected = [item for item in row['selected'] if item['suite'] == 'HeavyTests']
+            self.assertEqual(len(selected), 1)
+            for case in selected[0]['identifiers']:
+                owners.setdefault(case.split('/', 1)[1], []).append(row['bank'])
+        self.assertEqual(len(owners), 128)
+        self.assertTrue(all(len(banks) == 2 and banks[0] == banks[1] for banks in owners.values()))
+        self.assertEqual({row['discoveredSuites'] for row in rows}, {2})
+        self.assertEqual({row['discoveredIdentifiers'] for row in rows}, {257})
+
+    def test_every_bank_selector_matches_only_its_discovered_methods(self):
+        inputs = self.fixture()
+        inputs['swift-testing'] += '\n' + '\n'.join([
+            'AutoTechnoCoreTests.RecoveryTests/initial(value:)',
+            'AutoTechnoCoreTests.RecoveryTests/initialExtra()',
+        ])
+        for bank in range(8):
+            for item in plan(inputs, bank, 8)['selected']:
+                candidates = inputs[item['library']].splitlines()
+                self.assertEqual({case for case in candidates if re.search(item['selector'], case)},
+                                 set(item['identifiers']))
+                for case in item['identifiers']:
+                    self.assertRegex(case + '/TestFile.swift:20:3', item['selector'])
+                    self.assertNotRegex(case + 'Extra', item['selector'])
+                    self.assertNotRegex(case.replace(item['suite'] + '/', item['suite'] + 'Unexpected/', 1), item['selector'])
+
+    def test_complete_method_token_is_escaped_and_source_suffix_supported(self):
+        inputs = {'xctest': 'AutoTechnoCoreTests.TrimTests/testTrim',
+                  'swift-testing': 'AutoTechnoCoreTests.OwnerTests/fault(rate:mode:)'}
+        item = next(item for item in plan(inputs, 0, 1)['selected']
+                    if item['library'] == 'swift-testing')
+        self.assertRegex(inputs['swift-testing'], item['selector'])
+        self.assertRegex(inputs['swift-testing'] + '/Fixture.swift:42:5', item['selector'])
+        self.assertNotRegex('AutoTechnoCoreTests.OwnerTests/faultXrate:mode:Y', item['selector'])
+        self.assertNotRegex(inputs['swift-testing'] + 'Suffix', item['selector'])
+
     def test_missing_duplicate_unknown_and_invalid_banks_refuse(self):
         for mutate in [lambda d:d.pop('xctest'), lambda d:d.update(xctest=''),
                        lambda d:d.update(xctest=d['xctest']*2),
