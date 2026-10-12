@@ -10,6 +10,7 @@ on:
         default: windows
         options:
           - windows
+          - windows-diagnostics
           - modal-continuation
           - rumble-duration
           - foundation-timing
@@ -23,10 +24,14 @@ concurrency:
 
 jobs:
   validate-windows-source:
-    if: inputs.validation == 'windows' || inputs.validation == ''
-    name: Windows x64 source validation
+    if: inputs.validation == 'windows' || inputs.validation == 'windows-diagnostics' || inputs.validation == ''
+    name: Windows x64 source validation (${{ matrix.test-library }})
     runs-on: windows-2025
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        test-library: ${{ fromJSON(inputs.validation == 'windows-diagnostics' && '["xctest","swift-testing"]' || '["all"]') }}
 
     steps:
       - name: Check out source
@@ -69,8 +74,68 @@ jobs:
           }
 
       - name: Build and test without distribution
+        if: matrix.test-library == 'all'
         shell: pwsh
         run: .\scripts\build-windows.ps1
+
+      # Diagnostic scopes do not replace the full source-validation command.
+      # Separate framework discovery from compilation and a single execution so
+      # a silent aggregate run cannot hide which boundary is still active.
+      - name: Build diagnostic test executable
+        if: matrix.test-library != 'all'
+        timeout-minutes: 30
+        shell: pwsh
+        run: |
+          swift build --build-tests --build-path .build-windows
+          if ($LASTEXITCODE -ne 0) { throw "Diagnostic test build failed." }
+
+      - name: Discover selected test library
+        if: matrix.test-library != 'all'
+        timeout-minutes: 5
+        shell: pwsh
+        env:
+          TEST_LIBRARY: ${{ matrix.test-library }}
+        run: |
+          $libraryArguments = if ($env:TEST_LIBRARY -eq "xctest") {
+            @("--enable-xctest", "--disable-swift-testing")
+          } else {
+            @("--disable-xctest", "--enable-swift-testing")
+          }
+          swift test --build-path .build-windows list --skip-build @libraryArguments |
+            Tee-Object -FilePath "test-discovery-$env:TEST_LIBRARY.txt"
+          if ($LASTEXITCODE -ne 0) { throw "Test-library discovery failed." }
+          $probe = if ($env:TEST_LIBRARY -eq "xctest") {
+            'LiveMasterTrimFingerprintTests[/.]testTrimIsFingerprintBound'
+          } else {
+            'DeterministicSignalFixturesTests[/.]musicalRoleFixtureProperties'
+          }
+          if (-not (Select-String -Path "test-discovery-$env:TEST_LIBRARY.txt" -Pattern $probe -Quiet)) {
+            throw "The declared diagnostic probe was not discovered."
+          }
+
+      - name: Execute discovered diagnostic probe
+        if: matrix.test-library != 'all'
+        timeout-minutes: 5
+        shell: pwsh
+        env:
+          TEST_LIBRARY: ${{ matrix.test-library }}
+        run: |
+          $libraryArguments = if ($env:TEST_LIBRARY -eq "xctest") {
+            @("--enable-xctest", "--disable-swift-testing", "--filter", "LiveMasterTrimFingerprintTests.testTrimIsFingerprintBound")
+          } else {
+            @("--disable-xctest", "--enable-swift-testing", "--filter", "DeterministicSignalFixturesTests.musicalRoleFixtureProperties")
+          }
+          swift test --build-path .build-windows --skip-build --no-parallel @libraryArguments
+          if ($LASTEXITCODE -ne 0) { throw "The discovered diagnostic probe failed." }
+          Write-Host "Diagnostic probe only; full Windows validation remains required."
+
+      - name: Record diagnostic process state
+        if: always() && matrix.test-library != 'all'
+        shell: pwsh
+        run: |
+          Get-Process | Where-Object { $_.ProcessName -match 'swift|AutoTechno' } |
+            Select-Object Id, ProcessName, CPU, WorkingSet64
+
 
   modal-continuation:
     if: inputs.validation == 'modal-continuation'
