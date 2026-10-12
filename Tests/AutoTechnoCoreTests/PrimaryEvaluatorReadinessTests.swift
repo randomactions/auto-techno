@@ -53,17 +53,22 @@ struct PrimaryEvaluatorReadinessTests {
         }
     }
 
-    @Test("Pending matching current resources cannot leave a partially ready production host")
-    func pendingCurrentPairStaysUnavailable() {
-        #expect(ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint == nil)
-        #expect(ProfessionalQualityPrimaryArtifacts.expectedAdversarialSuiteFingerprint == nil)
-        #expect(ProfessionalQualityPrimaryArtifacts.expectedHoldoutQualificationFingerprint == nil)
+    @Test("Installed current primary seals do not authorize a host without Long Horizon qualification")
+    func installedPrimaryRetainsUnavailableLongHorizonHost() throws {
+        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+        #expect(artifacts.profile.fingerprint == "e0f587d6587c72b8")
+        #expect(artifacts.adversarialSuite.fingerprint == "1a5ad075c35b4635")
+        #expect(artifacts.holdoutQualification.fingerprint == "a0a036a77dcfd6b4")
+        #expect(artifacts.adversarialSuite.passed)
+        #expect(artifacts.holdoutQualification.qualified)
         #expect(LongHorizonProfessionalPolicySchema.requiredPrimaryPolicyVersion ==
-            "autotechno-quality.primary-calibrated.v32.unqualified")
-        #expect(!ProfessionalQualityPrimaryArtifacts.containsBundledResource(
-            named: ProfessionalQualityPrimaryArtifacts.profileResource))
+            artifacts.evaluator.policyVersion)
+        for rate in [44_100.0, 48_000.0] {
+            #expect(ProfessionalQualityPreparationEvaluator(sampleRate: rate,
+                artifacts: artifacts).availability == .available)
+        }
         #expect(LongHorizonProfessionalPolicyArtifacts.expectedProfileFingerprint == nil)
-        #expect(throws: ProfessionalQualityCalibrationError.invalidIdentity) {
+        #expect(throws: LongHorizonProfessionalPolicyError.invalidEvidence) {
             try AutonomousPerformanceArtifactSet.load()
         }
     }

@@ -2066,9 +2066,12 @@ Profile schema 25/version v33 and primary policy/evaluator v32 invalidate prior
 qualification. The completed d1259f3 engine-v48 native study supplied historical primary
 seals: profile eb1eba16cde88415, adversarial b76d744054bfa22f and
 holdout 19742f5c60933b29. Engine v49 changes canonical final-anchor ownership, so those seals
-are no longer current authority. Current primary seals are unset and the
-long-horizon dependency remains unqualified pending fresh complete native primary
-qualification. Qualified Long Horizon v18 seals and paired production resources
+are no longer current authority. The completed frozen a44698c engine-v49 study
+now supplies the sole current primary v33 seals: profile e0f587d6587c72b8,
+adversarial 1a5ad075c35b4635 and holdout a0a036a77dcfd6b4. Its 40 development
+and 6 disjoint holdout trajectories pass all 34 adversarial cases and accept
+all 84 holdout observations. The Long Horizon dependency binds this exact triple;
+primary qualification alone does not authorize the production host. Qualified Long Horizon v18 seals and paired production resources
 remain absent.
 Synthetic reduction/replay controls have no activation authority. The live-target
 artifact gate uses the same continuous observation/profile scope owner and exact
