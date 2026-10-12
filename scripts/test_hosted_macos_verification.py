@@ -33,7 +33,7 @@ def fixture(include_retired=False):
         if bank == 0: names += ['Run complete tooling tests', 'Build macOS Release app', 'Validate codebase map']
         rows.append(dict(receipt=dict(schema='autotechno-hosted-macos-bank.v1', source=SOURCE,
              environment='hosted-macos', bank=bank, banks=8, discovery=discovery, plan=plan, completedSlices=completed),
-             job=dict(id=100+bank, run_id=50, head_sha=SOURCE, name=f'Complete macOS bank {bank}',
+             job=dict(id=100+bank, run_id=50, head_sha=SOURCE, name=f'hosted-macos / Complete macOS bank {bank}',
                       status='completed', conclusion='success', steps=[dict(name=n,status='completed',conclusion='success') for n in names])))
     return dict(schema=hosted.SCHEMA,source=SOURCE,workflow=dict(id=20,path=hosted.WORKFLOW,state='active'),
                 run=dict(id=50,workflow_id=20,head_sha=SOURCE,status='completed',conclusion='success',
@@ -61,7 +61,7 @@ class HostedMacOSVerificationTests(unittest.TestCase):
           lambda d:d['run'].__setitem__('status','in_progress'),
           lambda d:d['run'].__setitem__('head_sha','f'*40),
           lambda d:d['run']['repository'].__setitem__('full_name','other/repo'),
-          lambda d:d['workflow'].__setitem__('path','.github/workflows/windows-distribution.yml'),
+          lambda d:d['workflow'].__setitem__('path','.github/workflows/swift.yml'),
           lambda d:d['banks'][0]['job'].__setitem__('run_id',51),
           lambda d:d['banks'][0]['job'].__setitem__('head_sha','f'*40),
           lambda d:d['banks'][0]['job'].__setitem__('conclusion','cancelled'),

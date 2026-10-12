@@ -15,7 +15,7 @@ from windows_test_plan import plan
 SCHEMA = 'autotechno-hosted-macos-verification.v1'
 EXECUTION_SCHEMA = 'autotechno-at0039-hosted-execution.v1'
 BANKS = 8
-WORKFLOW = '.github/workflows/at0039-hosted-macos.yml'
+WORKFLOW = '.github/workflows/windows-distribution.yml'
 RETIRED_SKIPS = {
     'Legacy random mutation suppression': 'AutoTechnoCoreTests.GeneratedDSPTopologyTests/mutationSuppression()',
     'Legacy rejected random mutation': 'AutoTechnoCoreTests.GeneratedDSPTopologyTests/rejectedMutationClearsPriorMetadata()',
@@ -116,7 +116,7 @@ def verify(bundle, source):
         require(type(job.get('id')) is int and job['id'] > 0 and job['id'] not in jobs and
                 job.get('run_id') == run['id'] and job.get('head_sha') == source and
                 job.get('status') == 'completed' and job.get('conclusion') == 'success' and
-                job.get('name') == f'Complete macOS bank {bank}', 'successful exact bank job')
+                job.get('name') == f'hosted-macos / Complete macOS bank {bank}', 'successful exact bank job')
         jobs.add(job['id'])
         for name in ['Verify macOS environment', 'Build all native tests', 'Execute complete native bank'] + (
                 ['Run complete tooling tests', 'Build macOS Release app', 'Validate codebase map'] if bank == 0 else []):
