@@ -669,8 +669,8 @@ struct FoundationRhythmicRelationTests {
     }
 
     @MainActor
-    @Test("Native full-phrase bass deletion cannot bind to the original transaction")
-    func algorithmicFullPhraseBassDeletion() throws {
+    @Test("Native full-phrase bass faults cannot bind to the original transaction")
+    func algorithmicFullPhraseBassFaults() throws {
         struct Row: Encodable {
             let rootSeed: UInt64
             let split: String
@@ -690,9 +690,9 @@ struct FoundationRhythmicRelationTests {
             let exactReplay: Bool
         }
         struct Report: Encodable {
-            let schema = "autotechno-full-phrase-bass-deletion.v1"
+            let schema = "autotechno-full-phrase-bass-faults.v2"
             let scope = "canonical-full-phrase-render-and-candidate-transaction-binding"
-            let unavailable = ["all-foundation-behaviors", "other-fault-recipes",
+            let unavailable = ["all-foundation-behaviors", "companion-and-truncation-faults",
                 "accepted-continuous-journey", "production-calibration", "perceptual-quality",
                 "full-prepared-commit-fault-matrix", "population-error-intervals"]
             let rows: [Row]
@@ -740,15 +740,39 @@ struct FoundationRhythmicRelationTests {
             // Require a lossless no-op reconstruction before permitting the
             // intervention. Constructor normalization must not hide another edit.
             try #require(copyingPlan(original.resolvedBars) == original)
-            let deletedBars = original.resolvedBars.map { bar in
-                replacingRelation(in: bar, with: bar.foundationRhythmicRelation,
-                    ensemble: EnsembleContext(focusRole: bar.ensemble.focusRole,
-                        events: bar.ensemble.events.filter { $0.voice != .bass },
-                        kickAnchors: bar.ensemble.kickAnchors,
-                        intentionalPileup: bar.ensemble.intentionalPileup))
+            // Reuse the frozen component recipes verbatim. These roots and
+            // recipes are already known; this adds canonical nonlinear coverage,
+            // not new independent families or held-out population evidence.
+            let scenarios = ["unaltered", "deleted-bass", "shifted-bass", "wrong-voice", "zero-intensity"]
+            let variants = try scenarios.map { scenario -> (String, AutonomousPhrasePlan) in
+                let bars = original.resolvedBars.map { bar in
+                    let events = bar.ensemble.events.compactMap { event -> EnsembleResolvedEvent? in
+                        guard event.voice == .bass else { return event }
+                        switch scenario {
+                        case "deleted-bass": return nil
+                        case "shifted-bass":
+                            return EnsembleResolvedEvent(voice: .bass, step: (event.step + 1) % 16,
+                                intensity: event.intensity, relocated: event.relocated)
+                        case "wrong-voice":
+                            return EnsembleResolvedEvent(voice: .percussion, step: event.step,
+                                intensity: event.intensity, relocated: event.relocated)
+                        case "zero-intensity":
+                            return EnsembleResolvedEvent(voice: .bass, step: event.step,
+                                intensity: 0, relocated: event.relocated)
+                        default: return event
+                        }
+                    }
+                    return replacingRelation(in: bar, with: bar.foundationRhythmicRelation,
+                        ensemble: EnsembleContext(focusRole: bar.ensemble.focusRole, events: events,
+                            kickAnchors: bar.ensemble.kickAnchors,
+                            intentionalPileup: bar.ensemble.intentionalPileup))
+                }
+                let variant = copyingPlan(bars)
+                try #require(variant.resolvedBars == bars)
+                if scenario == "unaltered" { try #require(variant == original) }
+                else { try #require(variant != original) }
+                return (scenario, variant)
             }
-            let deleted = copyingPlan(deletedBars)
-            try #require(deleted.resolvedBars == deletedBars)
             for rate in [44_100.0, 48_000.0] {
                 var incoming = RenderState(); incoming.barIndex = original.startBar
                 let graphIncoming = GeneratedDSPContinuationState()
@@ -763,7 +787,7 @@ struct FoundationRhythmicRelationTests {
                 try #require(prepared.candidateEvaluation.correctionCount == 0)
                 try #require(reference.crossPhraseTransition == .initial)
                 let route = reference.routeContinuation
-                for (scenario, renderPlan) in [("unaltered", original), ("deleted-bass", deleted)] {
+                for (scenario, renderPlan) in variants {
                     var outgoing = incoming
                     var graphOutgoing = graphIncoming
                     let blocks = try #require(AutonomousPhraseRenderer.renderIfNotCancelled(
@@ -804,7 +828,7 @@ struct FoundationRhythmicRelationTests {
                         selectedAttemptIndex: 0, correctionCount: 0)
                     let valid = scenario == "unaltered"
                     let renderedEventCount = blocks.reduce(0) { $0 + $1.foundationRhythmRenderEvidence.renderedBassEventCount }
-                    #expect(renderedEventCount == (valid ? originalEvents : 0))
+                    #expect(renderedEventCount == (valid || scenario == "shifted-bass" ? originalEvents : 0))
                     #expect((AutonomousCandidateFingerprint.plan(renderPlan) == reference.planFingerprint) == valid)
                     let foundationComplete = vector.foundationRhythm.allSatisfy { $0.isComplete(sampleRate: rate) }
                     #expect(foundationComplete == valid)
@@ -849,7 +873,7 @@ struct FoundationRhythmicRelationTests {
                 }
             }
         }
-        #expect(rows.count == 8)
+        #expect(rows.count == 20)
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
         FileHandle.standardOutput.write(try encoder.encode(Report(rows: rows)))
         FileHandle.standardOutput.write(Data([0x0A]))

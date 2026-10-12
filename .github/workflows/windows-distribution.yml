@@ -248,7 +248,7 @@ jobs:
 
   full-phrase-bass:
     if: inputs.validation == 'full-phrase-bass'
-    name: Native full-phrase bass transaction fault
+    name: Native full-phrase bass transaction faults
     runs-on: macos-15
     timeout-minutes: 120
     steps:
@@ -264,6 +264,6 @@ jobs:
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-component"
-          --filter '(RenderFingerprintParityTests|algorithmicFullPhraseBassDeletion)'
+          --filter '(RenderFingerprintParityTests|algorithmicFullPhraseBassFaults)'
       - name: Verify semantic codebase map
         run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/auto-techno-component"
