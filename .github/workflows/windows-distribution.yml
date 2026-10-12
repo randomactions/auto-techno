@@ -13,6 +13,7 @@ on:
           - modal-continuation
           - rumble-duration
           - foundation-timing
+          - full-phrase-bass
 
 permissions:
   contents: read
@@ -135,5 +136,27 @@ jobs:
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-component"
           --filter algorithmicFoundationBassFaults
+      - name: Verify semantic codebase map
+        run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/auto-techno-component"
+
+  full-phrase-bass:
+    if: inputs.validation == 'full-phrase-bass'
+    name: Native full-phrase bass transaction fault
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Record candidate and toolchain
+        run: |
+          git rev-parse HEAD
+          swift --version
+      - name: Verify full-phrase bass render and transaction binding
+        run: >-
+          swift test --no-parallel
+          --build-path "$RUNNER_TEMP/auto-techno-component"
+          --filter algorithmicFullPhraseBassDeletion
       - name: Verify semantic codebase map
         run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/auto-techno-component"

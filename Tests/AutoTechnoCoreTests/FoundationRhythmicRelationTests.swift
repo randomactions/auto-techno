@@ -669,6 +669,188 @@ struct FoundationRhythmicRelationTests {
     }
 
     @MainActor
+    @Test("Native full-phrase bass deletion cannot bind to the original transaction")
+    func algorithmicFullPhraseBassDeletion() throws {
+        struct Row: Encodable {
+            let rootSeed: UInt64
+            let split: String
+            let sampleRate: Int
+            let scenario: String
+            let originalPlanFingerprint: String
+            let renderedPlanFingerprint: String
+            let originalSampleHash: String
+            let renderedSampleHash: String
+            let originalBassEvents: Int
+            let renderedBassEvents: Int
+            let frameCount: Int
+            let differenceRMS: Double
+            let foundationComplete: Bool
+            let vectorComplete: Bool
+            let transactionComplete: Bool
+            let exactReplay: Bool
+        }
+        struct Report: Encodable {
+            let schema = "autotechno-full-phrase-bass-deletion.v1"
+            let scope = "canonical-full-phrase-render-and-candidate-transaction-binding"
+            let unavailable = ["all-foundation-behaviors", "other-fault-recipes",
+                "accepted-continuous-journey", "production-calibration", "perceptual-quality",
+                "full-prepared-commit-fault-matrix", "population-error-intervals"]
+            let rows: [Row]
+        }
+        // Fixed before native PCM inspection. Select the first score-only phrase
+        // with ordinary positive bass events within128 proposals, retaining its
+        // canonical plan, memory and graph. Rates/replays are paired observations.
+        // Fault PCM is rerendered through the complete canonical phrase graph;
+        // never subtract a dry stem from an already processed nonlinear mix.
+        var rows: [Row] = []
+        for seed: UInt64 in [1, 6011] {
+            let director = AutonomousSessionDirector(rootSeed: seed)
+            var session = director.initialState()
+            var chosen: AutonomousPhrasePlan?
+            for _ in 0..<128 {
+                let plan = director.plan(from: session)
+                if plan.resolvedBars.contains(where: { bar in
+                    bar.foundationRhythmicRelation == .established &&
+                    bar.ensemble.events.contains(where: { $0.voice == .bass && $0.intensity > 0 })
+                }) {
+                    chosen = plan; break
+                }
+                session.advancePlanning(using: plan)
+            }
+            let original = try #require(chosen)
+            let originalEvents = original.resolvedBars.flatMap(\.ensemble.events).filter { $0.voice == .bass }.count
+            #expect(originalEvents > 0)
+            func copyingPlan(_ bars: [ResolvedPerformanceBar]) -> AutonomousPhrasePlan {
+                AutonomousPhrasePlan(phraseIndex: original.phraseIndex, startBar: original.startBar,
+                    barCount: original.barCount, kind: original.kind, scene: original.scene, dna: original.dna,
+                    resolvedBars: bars, openedDebt: original.openedDebt, paidDebtIDs: original.paidDebtIDs,
+                    requestsTopologyMutation: original.requestsTopologyMutation, interest: original.interest,
+                    endingInterlockState: original.endingInterlockState,
+                    endingSpatialContrastState: original.endingSpatialContrastState,
+                    endingNarrativeState: original.endingNarrativeState,
+                    harmonicContinuation: original.incomingHarmonicContinuation,
+                    resampledMemory: original.incomingResampledMemory,
+                    longHorizonSelection: original.longHorizonSelection,
+                    longHorizonEnergyCoordination: original.longHorizonEnergyCoordination,
+                    materialWorld: original.materialWorld,
+                    incomingEffectCarrierState: session.memory.longHorizon.effectCarrierState,
+                    qualityRecoveryContext: original.qualityRecoveryContext,
+                    presentationStartBar: original.presentationStartBar)
+            }
+            // Require a lossless no-op reconstruction before permitting the
+            // intervention. Constructor normalization must not hide another edit.
+            try #require(copyingPlan(original.resolvedBars) == original)
+            let deletedBars = original.resolvedBars.map { bar in
+                replacingRelation(in: bar, with: bar.foundationRhythmicRelation,
+                    ensemble: EnsembleContext(focusRole: bar.ensemble.focusRole,
+                        events: bar.ensemble.events.filter { $0.voice != .bass },
+                        kickAnchors: bar.ensemble.kickAnchors,
+                        intentionalPileup: bar.ensemble.intentionalPileup))
+            }
+            let deleted = copyingPlan(deletedBars)
+            try #require(deleted.resolvedBars == deletedBars)
+            for rate in [44_100.0, 48_000.0] {
+                var incoming = RenderState(); incoming.barIndex = original.startBar
+                let graphIncoming = GeneratedDSPContinuationState()
+                let preparedResult = AutonomousPhrasePreparer.prepareIfNotCancelled(
+                    plan: original, sessionSeed: seed, memory: session.memory, sampleRate: rate,
+                    incomingRenderState: incoming, incomingGraphState: graphIncoming,
+                    previousGraph: nil, incomingQualityState: session.quality,
+                    evaluator: AcceptingPrimaryTestEvaluator(), cancellationRequested: { false })
+                let prepared = try #require(preparedResult)
+                let reference = prepared.selectedCandidateEvidence
+                try #require(reference.isComplete)
+                try #require(prepared.candidateEvaluation.correctionCount == 0)
+                try #require(reference.crossPhraseTransition == .initial)
+                let route = reference.routeContinuation
+                for (scenario, renderPlan) in [("unaltered", original), ("deleted-bass", deleted)] {
+                    var outgoing = incoming
+                    var graphOutgoing = graphIncoming
+                    let blocks = try #require(AutonomousPhraseRenderer.renderIfNotCancelled(
+                        plan: renderPlan, graph: prepared.graph, sampleRate: rate,
+                        state: &outgoing, graphState: &graphOutgoing, cancellationRequested: { false }))
+                    let preflightResult = PhraseAudioPreflight(blocks: blocks, sampleRate: rate,
+                        cancellationRequested: { false })
+                    let preflight = try #require(preflightResult)
+                    let vectorResult = AutonomousCandidateEvaluationVector.make(
+                        plan: original, graph: prepared.graph, planFingerprint: reference.planFingerprint,
+                        graphFingerprint: reference.graphFingerprint, blocks: blocks, audioPreflight: preflight,
+                        crossPhraseTransition: .initial,
+                        upperTimbreEvidence: UpperTimbreEvidence.aggregating(blocks.map(\.postGraphRemainderTimbreEvidence)),
+                        sampleRate: rate, routeChannelCount: route.channelCount, routeGeneration: route.routeGeneration,
+                        routeFingerprint: route.routeFingerprint,
+                        incomingContinuationFingerprint: route.incomingContinuationFingerprint,
+                        incomingRenderDSPFingerprint: route.incomingRenderDSPFingerprint,
+                        incomingQualityStateFingerprint: route.incomingQualityStateFingerprint,
+                        incomingKickCorrectionDB: route.incomingKickCorrectionDB,
+                        incomingTopologyRevision: route.incomingTopologyRevision,
+                        previousGraphFingerprint: route.previousGraphFingerprint, routeRecovery: route.routeRecovery,
+                        outgoingRenderDSPFingerprint: AutonomousCandidateFingerprint.renderDSPContinuation(
+                            renderState: outgoing, generatedDSPState: graphOutgoing),
+                        controllerStateFingerprint: AutonomousCandidateFingerprint.combinedController(
+                            kickCorrectionDB: outgoing.automaticMixState.kickCorrectionDB,
+                            liveMasterHeadroom: prepared.liveMasterHeadroomContinuationState, proposalFingerprint: nil),
+                        incomingLiveMasterState: prepared.incomingLiveMasterHeadroomState,
+                        outgoingLiveMasterState: prepared.liveMasterHeadroomContinuationState,
+                        liveProposal: nil, liveProposalOutcome: .hold, liveTargetStartSample: nil,
+                        incomingDramaticDebts: session.memory.openDebts, cancellationRequested: { false })
+                    let vector = try #require(vectorResult)
+                    let transaction = AutonomousCandidateEvaluationTransaction(
+                        engineVersion: prepared.candidateEvaluation.engineVersion,
+                        policyVersion: prepared.candidateEvaluation.policyVersion,
+                        evaluatorVersion: prepared.candidateEvaluation.evaluatorVersion,
+                        planFingerprint: reference.planFingerprint,
+                        attempts: [AutonomousCandidateAttempt(kind: .initialRender, vector: vector)],
+                        selectedAttemptIndex: 0, correctionCount: 0)
+                    let valid = scenario == "unaltered"
+                    let renderedEventCount = blocks.reduce(0) { $0 + $1.foundationRhythmRenderEvidence.renderedBassEventCount }
+                    #expect(renderedEventCount == (valid ? originalEvents : 0))
+                    #expect((AutonomousCandidateFingerprint.plan(renderPlan) == reference.planFingerprint) == valid)
+                    let foundationComplete = vector.foundationRhythm.allSatisfy { $0.isComplete(sampleRate: rate) }
+                    #expect(foundationComplete == valid)
+                    #expect(vector.isComplete == valid)
+                    #expect(transaction.isComplete == valid)
+                    #expect(blocks.count == prepared.blocks.count)
+                    var errorEnergy = 0.0
+                    var sampleCount = 0
+                    for (actual, expected) in zip(blocks, prepared.blocks) {
+                        try #require(actual.left.count == expected.left.count && actual.right.count == expected.right.count)
+                        for (a, b) in zip(actual.left, expected.left) { let d = Double(a)-Double(b); errorEnergy += d*d }
+                        for (a, b) in zip(actual.right, expected.right) { let d = Double(a)-Double(b); errorEnergy += d*d }
+                        sampleCount += actual.left.count + actual.right.count
+                    }
+                    let difference = sqrt(errorEnergy / Double(max(1, sampleCount)))
+                    #expect(difference.isFinite && (valid ? difference == 0 : difference > 0))
+                    if valid { #expect(blocks == prepared.blocks); #expect(vector == reference) }
+                    else { #expect(vector.fullMix.sampleHash != reference.fullMix.sampleHash) }
+                    var replayState = incoming
+                    var replayGraph = graphIncoming
+                    let replay = try #require(AutonomousPhraseRenderer.renderIfNotCancelled(
+                        plan: renderPlan, graph: prepared.graph, sampleRate: rate,
+                        state: &replayState, graphState: &replayGraph, cancellationRequested: { false }))
+                    let exactReplay = replay == blocks &&
+                        AutonomousCandidateFingerprint.renderDSPContinuation(renderState: replayState, generatedDSPState: replayGraph) ==
+                        AutonomousCandidateFingerprint.renderDSPContinuation(renderState: outgoing, generatedDSPState: graphOutgoing)
+                    #expect(exactReplay)
+                    rows.append(Row(rootSeed: seed, split: seed == 1 ? "development" : "held-out-root",
+                        sampleRate: Int(rate), scenario: scenario, originalPlanFingerprint: reference.planFingerprint,
+                        renderedPlanFingerprint: AutonomousCandidateFingerprint.plan(renderPlan),
+                        originalSampleHash: reference.fullMix.sampleHash, renderedSampleHash: vector.fullMix.sampleHash,
+                        originalBassEvents: originalEvents,
+                        renderedBassEvents: renderedEventCount,
+                        frameCount: sampleCount / 2, differenceRMS: difference,
+                        foundationComplete: foundationComplete, vectorComplete: vector.isComplete,
+                        transactionComplete: transaction.isComplete, exactReplay: exactReplay))
+                }
+            }
+        }
+        #expect(rows.count == 8)
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        FileHandle.standardOutput.write(try encoder.encode(Report(rows: rows)))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
+    @MainActor
     @Test("Native foundation bass binding rejects score-to-PCM faults")
     func algorithmicFoundationBassFaults() throws {
         struct Row: Encodable {
