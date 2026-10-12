@@ -3,6 +3,7 @@
 import argparse
 import base64
 import hashlib
+import gzip
 import json
 import os
 from pathlib import Path
@@ -229,9 +230,55 @@ def run_bank(bank, build_path, output):
               bank=bank, banks=BANKS, discovery=discoveries, plan=selection, completedSlices=results))
 
 
+def collect(run_id, source, output):
+    """Fetch terminal GitHub evidence; never construct native success locally."""
+    require(type(run_id) is int and run_id > 0 and
+            re.fullmatch('[0-9a-f]{40}', source), 'run and exact source required')
+    require(not output.exists(), 'new evidence directory required')
+    prefix = 'repos/randomactions/auto-techno/actions/'
+    def api(suffix, raw=False):
+        data = subprocess.check_output(['gh', 'api', prefix + suffix], timeout=120)
+        require(len(data) <= 64 * 1024 * 1024, 'bounded native response')
+        return data if raw else strict_json(data)
+    run = api(f'runs/{run_id}')
+    require(run.get('head_sha') == source and run.get('status') == 'completed' and
+            run.get('conclusion') == 'success', 'terminal exact-source success required')
+    workflow = api(f'workflows/{run["workflow_id"]}')
+    listing = api(f'runs/{run_id}/jobs?per_page=100&filter=latest')
+    require(type(listing.get('total_count')) is int and listing['total_count'] <= 100 and
+            len(listing.get('jobs', [])) == listing['total_count'], 'complete job listing')
+    jobs = [job for job in listing['jobs'] if
+            re.fullmatch(r'hosted-macos / Complete macOS bank [0-7]', job.get('name', ''))]
+    require(len(jobs) == BANKS, 'all native bank jobs required')
+    rows = []; logs = {}
+    for job in sorted(jobs,key=lambda j:j['name']):
+        bank = int(job['name'][-1])
+        raw = api(f'jobs/{job["id"]}/logs', raw=True)
+        receipt = decode_chunks(raw.decode('utf-8'), source, bank)
+        rows.append(dict(job=job, receipt=receipt)); logs[f'bank-{bank}.log.gz'] = gzip.compress(raw,mtime=0)
+    bundle = dict(schema=SCHEMA,source=source,run=run,workflow=workflow,banks=rows)
+    result = verify(bundle,source)
+    refreshed = api(f'runs/{run_id}')
+    require(all(refreshed.get(key) == run.get(key) for key in
+                ['id','head_sha','status','conclusion','run_attempt','workflow_id']), 'run changed during collection')
+    output.mkdir(parents=True,exist_ok=False)
+    for name, raw in logs.items(): (output/name).write_bytes(raw)
+    (output/'receipt.json').write_text(json.dumps(bundle,indent=2,sort_keys=True)+'\n')
+    (output/'verification.json').write_text(json.dumps(result,indent=2,sort_keys=True)+'\n')
+    return result
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--bank', type=int, required=True)
-    parser.add_argument('--build-path', type=Path, required=True)
+    parser.add_argument('--bank', type=int)
+    parser.add_argument('--build-path', type=Path)
+    parser.add_argument('--run', type=int)
+    parser.add_argument('--source')
     parser.add_argument('--output', type=Path, required=True)
-    args = parser.parse_args(); run_bank(args.bank, args.build_path, args.output)
+    args = parser.parse_args()
+    if args.run is not None:
+        require(args.source and args.bank is None and args.build_path is None, 'collection arguments')
+        print(json.dumps(collect(args.run,args.source,args.output),sort_keys=True))
+    else:
+        require(args.bank is not None and args.build_path is not None and args.source is None, 'native bank arguments')
+        run_bank(args.bank,args.build_path,args.output)

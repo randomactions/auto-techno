@@ -148,6 +148,35 @@ class HostedMacOSVerificationTests(unittest.TestCase):
         for raw in ['{"bank":0,"bank":1}','{"count":NaN}','{"count":Infinity}']:
             with self.assertRaises(ValueError):hosted.strict_json(raw)
 
+    def test_collection_binds_live_job_logs_and_refuses_changed_run(self):
+        bundle=fixture()
+        def response(command,**kwargs):
+            path=command[-1]
+            if path.endswith('/runs/50'): return json.dumps(bundle['run']).encode()
+            if path.endswith('/workflows/20'): return json.dumps(bundle['workflow']).encode()
+            if '/jobs?' in path:
+                return json.dumps(dict(total_count=8,jobs=[r['job'] for r in bundle['banks']])).encode()
+            job=int(path.split('/')[-2]);stream=io.StringIO()
+            with contextlib.redirect_stdout(stream):hosted.emit(bundle['banks'][job-100]['receipt'])
+            return stream.getvalue().encode()
+        with tempfile.TemporaryDirectory() as folder,mock.patch.object(hosted.subprocess,'check_output',side_effect=response):
+            out=Path(folder)/'complete'
+            self.assertTrue(hosted.collect(50,SOURCE,out)['completeNativeSuitesAndReleaseBuild'])
+            self.assertEqual(len(list(out.glob('bank-*.log.gz'))),8)
+            with self.assertRaises(ValueError):hosted.collect(50,SOURCE,out)
+            calls=0
+            def moved(command,**kwargs):
+                nonlocal calls
+                value=response(command,**kwargs)
+                if command[-1].endswith('/runs/50'):
+                    calls+=1
+                    if calls>1:
+                        d=json.loads(value);d['run_attempt']=2;value=json.dumps(d).encode()
+                return value
+            with mock.patch.object(hosted.subprocess,'check_output',side_effect=moved):
+                with self.assertRaises(ValueError):hosted.collect(50,SOURCE,Path(folder)/'moved')
+                self.assertFalse((Path(folder)/'moved').exists())
+
     def test_non_native_execution_refuses_before_running_commands(self):
         with mock.patch.object(hosted.platform,'system',return_value='Linux'),mock.patch.object(hosted.subprocess,'check_output') as call:
             with self.assertRaises(ValueError):hosted.run_bank(0,Path('/tmp/build'),Path('/tmp/output'))
