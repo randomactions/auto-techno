@@ -2649,3 +2649,23 @@ and future-boundary contracts remain unchanged. The existing 128 MiB charge and
 two-pass limit are not lowered; reference allocation overhead remains part of
 outstanding complete physical-storage qualification. A worker-stack repair does
 not establish native deadlines, physical output or current runtime promotion.
+
+### Canonical continuation fingerprint parity repair
+
+`AutonomousTypedFingerprint` now uses one RenderState encoder for ordinary and
+cancellable hashing, including the same nested FeedbackDelayNetworkState layout.
+The previous cancellable path flattened that state differently, so identical
+continuation values could fail the full-phrase unchanged-control vector join.
+`render-state.typed.v5` and `render-dsp-continuation.typed.v5` explicitly replace
+both incompatible v4 identities. Historical receipts remain historical; no v4
+qualification identity is translated or admitted as v5 evidence. PCM, planning,
+engine v49 and evaluator policy are unchanged; this is a provenance-format
+repair, and all current qualification seals remain unset.
+
+The existing detached encoder remains the canonical owner. It checks cancellation
+within long storage arrays and returns no digest on cancellation. No new state,
+callback work, adaptation parameter, renderer or fallback is introduced. Tests
+compare empty and populated reverb/live-master continuation through both APIs,
+exercise scalar/storage mutations, and cancel at each observed checkpoint. The
+full-phrase unaltered control fails immediately on any PCM/vector mismatch before
+claiming a fault-matrix result.

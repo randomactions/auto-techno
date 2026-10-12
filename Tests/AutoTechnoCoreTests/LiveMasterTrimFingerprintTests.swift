@@ -34,6 +34,9 @@ final class LiveMasterTrimFingerprintTests: XCTestCase {
         let cancellableNewerRevision = cancellableFingerprint(
             liveState: newerRevisionState
         )
+        XCTAssertEqual(home, cancellableHome)
+        XCTAssertEqual(attenuated, cancellableAttenuated)
+        XCTAssertEqual(newerRevision, cancellableNewerRevision)
         XCTAssertNotNil(cancellableHome)
         XCTAssertNotNil(cancellableAttenuated)
         XCTAssertNotNil(cancellableNewerRevision)

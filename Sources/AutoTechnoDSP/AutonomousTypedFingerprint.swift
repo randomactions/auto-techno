@@ -47,7 +47,7 @@ package enum AutonomousTypedFingerprint {
     }
 
     package static func renderState(_ state: RenderState) -> String {
-        digest(domain: "render-state.typed.v4") { sink in
+        digest(domain: "render-state.typed.v5") { sink in
             encode(state, into: &sink)
         }
     }
@@ -57,7 +57,7 @@ package enum AutonomousTypedFingerprint {
         cancellationRequested: @Sendable () -> Bool
     ) -> String? {
         cancellableDigest(
-            domain: "render-state.typed.v4",
+            domain: "render-state.typed.v5",
             cancellationRequested: cancellationRequested
         ) { sink in
             encode(
@@ -454,7 +454,7 @@ package enum AutonomousTypedFingerprint {
         renderState: RenderState,
         generatedDSPState: GeneratedDSPContinuationState
     ) -> String {
-        digest(domain: "render-dsp-continuation.typed.v4") { sink in
+        digest(domain: "render-dsp-continuation.typed.v5") { sink in
             sink.field("renderState"); encode(renderState, into: &sink)
             sink.field("generatedDSPState"); encode(generatedDSPState, into: &sink)
         }
@@ -466,7 +466,7 @@ package enum AutonomousTypedFingerprint {
         cancellationRequested: @Sendable () -> Bool
     ) -> String? {
         cancellableDigest(
-            domain: "render-dsp-continuation.typed.v4",
+            domain: "render-dsp-continuation.typed.v5",
             cancellationRequested: cancellationRequested
         ) { sink in
             sink.field("renderState")
@@ -1769,73 +1769,21 @@ private extension AutonomousTypedFingerprint {
     // MARK: Render continuation
 
     static func encode(_ value: RenderState, into sink: inout StreamingFNV1a) {
-        sink.aggregate("RenderState")
-        sink.field("barIndex"); sink.int(value.barIndex)
-        sink.field("delayBuffer"); encode(value.delayBuffer, into: &sink)
-        sink.field("delayWriteIndex"); sink.int(value.delayWriteIndex)
-        sink.field("pulseEchoBuffer"); encode(value.pulseEchoBuffer, into: &sink)
-        sink.field("pulseEchoWriteIndex"); sink.int(value.pulseEchoWriteIndex)
-        sink.field("pulseEchoHighPassState"); sink.double(value.pulseEchoHighPassState)
-        sink.field("pulseEchoLowPassState"); sink.double(value.pulseEchoLowPassState)
-        sink.field("earlyReflectionBuffer"); encode(value.earlyReflectionBuffer, into: &sink)
-        sink.field("earlyReflectionWriteIndex"); sink.int(value.earlyReflectionWriteIndex)
-        sink.field("stereoPanPhase"); sink.double(value.stereoPanPhase)
-        sink.field("chorusDelay"); encode(value.chorusDelay, into: &sink)
-        sink.field("chorusWriteIndex"); sink.int(value.chorusWriteIndex)
-        sink.field("chorusPhase"); sink.double(value.chorusPhase)
-        sink.field("masterEnvelope"); sink.double(value.masterEnvelope)
-        sink.field("lowBandEnvelope"); sink.double(value.lowBandEnvelope)
-        sink.field("highBandEnvelope"); sink.double(value.highBandEnvelope)
-        sink.field("automaticMixState"); encode(value.automaticMixState, into: &sink)
-        // The all-zero home state is the pre-feature semantic identity. Only a
-        // committed live transition appends new provenance to that identity.
-        if value.liveMasterHeadroomState != LiveMasterHeadroomContinuationState() {
-            sink.field("liveMasterHeadroomState")
-            encode(value.liveMasterHeadroomState, into: &sink)
-        }
-        sink.field("spatialFDNState")
-        encode(value.spatialFDNState, into: &sink)
-        sink.field("spatialSendHighPassState")
-        sink.double(value.spatialSendHighPassState)
-        sink.field("spatialSendLowPassState")
-        sink.double(value.spatialSendLowPassState)
-        sink.field("modalPercussionState")
-        encode(value.modalPercussionState, into: &sink)
-        sink.field("resonantFoundationState")
-        encode(value.resonantFoundationState, into: &sink)
-        sink.field("resonantAnchorState"); encode(value.resonantAnchorState, into: &sink)
-        sink.field("resonantShadowState"); encode(value.resonantShadowState, into: &sink)
-        sink.field("resonantResponseState"); encode(value.resonantResponseState, into: &sink)
-        sink.field("alienAnchorState"); encode(value.alienAnchorState, into: &sink)
-        sink.field("alienShadowState"); encode(value.alienShadowState, into: &sink)
-        sink.field("alienAtmosphereState"); encode(value.alienAtmosphereState, into: &sink)
-        sink.field("alienResponseState"); encode(value.alienResponseState, into: &sink)
-        sink.field("alienTransitionState"); encode(value.alienTransitionState, into: &sink)
-        sink.field("spectralResponseState"); encode(value.spectralResponseState, into: &sink)
-        sink.field("spectralAtmosphereState")
-        encode(value.spectralAtmosphereState, into: &sink)
-        sink.field("spectralTransitionState")
-        encode(value.spectralTransitionState, into: &sink)
-        sink.field("polyphonicPadState")
-        encode(value.polyphonicPadState, into: &sink)
-        sink.field("previousResonantAnchorEvidenceFrame")
-        encode(value.previousResonantAnchorEvidenceFrame, into: &sink)
-        sink.field("previousDetunedCompanionEvidenceFrame")
-        encode(value.previousDetunedCompanionEvidenceFrame, into: &sink)
-        sink.field("previousGraphInputRemainderEvidenceFrame")
-        encode(value.previousGraphInputRemainderEvidenceFrame, into: &sink)
-        sink.field("previousPostGraphRemainderEvidenceFrame")
-        encode(value.previousPostGraphRemainderEvidenceFrame, into: &sink)
-        sink.field("outputTransitionState")
-        encode(value.outputTransitionState, into: &sink)
+        // One field layout for ordinary and cancellable provenance. Cancellation
+        // affects availability only, never the identity of a completed digest.
+        _ = encode(value, into: &sink, cancellationRequested: { false })
     }
 
     static func encode(
         _ value: FeedbackDelayNetworkState,
-        into sink: inout StreamingFNV1a
-    ) {
+        into sink: inout StreamingFNV1a,
+        cancellationRequested: @Sendable () -> Bool
+    ) -> Bool {
+        guard !cancellationRequested() else { return false }
         sink.aggregate("FeedbackDelayNetworkState")
-        sink.field("storage"); encode(value.storage, into: &sink)
+        sink.field("storage")
+        guard encode(value.storage, into: &sink,
+                     cancellationRequested: cancellationRequested) else { return false }
         sink.field("lineOffsets"); sink.collection(value.lineOffsets.count)
         sink.primitiveStorage(value.lineOffsets)
         for offset in value.lineOffsets { sink.int(offset) }
@@ -1885,6 +1833,7 @@ private extension AutonomousTypedFingerprint {
         sink.field("wetGainStep"); sink.double(value.wetGainStep)
         sink.field("parameterTransitionRemainingFrames")
         sink.int(value.parameterTransitionRemainingFrames)
+        return true
     }
 
     static func encode(
@@ -1937,75 +1886,8 @@ private extension AutonomousTypedFingerprint {
             encode(value.liveMasterHeadroomState, into: &sink)
         }
         sink.field("spatialFDNState")
-        guard encode(
-            value.spatialFDNState.storage,
-            into: &sink,
-            cancellationRequested: cancellationRequested
-        ) else { return false }
-        sink.field("spatialFDNLineOffsets")
-        sink.collection(value.spatialFDNState.lineOffsets.count)
-        sink.primitiveStorage(value.spatialFDNState.lineOffsets)
-        for offset in value.spatialFDNState.lineOffsets { sink.int(offset) }
-        sink.field("spatialFDNLineLengths")
-        sink.collection(value.spatialFDNState.lineLengths.count)
-        sink.primitiveStorage(value.spatialFDNState.lineLengths)
-        for length in value.spatialFDNState.lineLengths { sink.int(length) }
-        sink.field("spatialFDNWriteIndices")
-        sink.collection(value.spatialFDNState.writeIndices.count)
-        sink.primitiveStorage(value.spatialFDNState.writeIndices)
-        for index in value.spatialFDNState.writeIndices { sink.int(index) }
-        sink.field("spatialFDNDampingStates")
-        sink.collection(value.spatialFDNState.dampingStates.count)
-        sink.primitiveStorage(value.spatialFDNState.dampingStates)
-        for state in value.spatialFDNState.dampingStates { sink.double(state) }
-        sink.field("spatialFDNRouteSampleRate")
-        sink.double(value.spatialFDNState.routeSampleRate)
-        sink.field("spatialFDNGeometryRoomScale")
-        sink.double(value.spatialFDNState.geometryRoomScale)
-        sink.field("spatialFDNAppliedFeedbackGains")
-        sink.collection(value.spatialFDNState.appliedFeedbackGains.count)
-        sink.primitiveStorage(value.spatialFDNState.appliedFeedbackGains)
-        for gain in value.spatialFDNState.appliedFeedbackGains {
-            sink.double(gain)
-        }
-        sink.field("spatialFDNTargetFeedbackGains")
-        sink.collection(value.spatialFDNState.targetFeedbackGains.count)
-        sink.primitiveStorage(value.spatialFDNState.targetFeedbackGains)
-        for gain in value.spatialFDNState.targetFeedbackGains {
-            sink.double(gain)
-        }
-        sink.field("spatialFDNFeedbackGainSteps")
-        sink.collection(value.spatialFDNState.feedbackGainSteps.count)
-        sink.primitiveStorage(value.spatialFDNState.feedbackGainSteps)
-        for step in value.spatialFDNState.feedbackGainSteps {
-            sink.double(step)
-        }
-        sink.field("spatialFDNAppliedDampingCoefficient")
-        sink.double(value.spatialFDNState.appliedDampingCoefficient)
-        sink.field("spatialFDNTargetDampingCoefficient")
-        sink.double(value.spatialFDNState.targetDampingCoefficient)
-        sink.field("spatialFDNDampingCoefficientStep")
-        sink.double(value.spatialFDNState.dampingCoefficientStep)
-        sink.field("spatialFDNAppliedSynthSendGain")
-        sink.double(value.spatialFDNState.appliedSynthSendGain)
-        sink.field("spatialFDNTargetSynthSendGain")
-        sink.double(value.spatialFDNState.targetSynthSendGain)
-        sink.field("spatialFDNSynthSendGainStep")
-        sink.double(value.spatialFDNState.synthSendGainStep)
-        sink.field("spatialFDNAppliedPercussionSendGain")
-        sink.double(value.spatialFDNState.appliedPercussionSendGain)
-        sink.field("spatialFDNTargetPercussionSendGain")
-        sink.double(value.spatialFDNState.targetPercussionSendGain)
-        sink.field("spatialFDNPercussionSendGainStep")
-        sink.double(value.spatialFDNState.percussionSendGainStep)
-        sink.field("spatialFDNAppliedWetGain")
-        sink.double(value.spatialFDNState.appliedWetGain)
-        sink.field("spatialFDNTargetWetGain")
-        sink.double(value.spatialFDNState.targetWetGain)
-        sink.field("spatialFDNWetGainStep")
-        sink.double(value.spatialFDNState.wetGainStep)
-        sink.field("spatialFDNParameterTransitionRemainingFrames")
-        sink.int(value.spatialFDNState.parameterTransitionRemainingFrames)
+        guard encode(value.spatialFDNState, into: &sink,
+                     cancellationRequested: cancellationRequested) else { return false }
         sink.field("spatialSendHighPassState")
         sink.double(value.spatialSendHighPassState)
         sink.field("spatialSendLowPassState")

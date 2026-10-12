@@ -157,6 +157,6 @@ jobs:
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-component"
-          --filter algorithmicFullPhraseBassDeletion
+          --filter '(RenderFingerprintParityTests|algorithmicFullPhraseBassDeletion)'
       - name: Verify semantic codebase map
         run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/auto-techno-component"

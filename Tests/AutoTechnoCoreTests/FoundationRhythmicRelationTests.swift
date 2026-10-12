@@ -821,7 +821,12 @@ struct FoundationRhythmicRelationTests {
                     }
                     let difference = sqrt(errorEnergy / Double(max(1, sampleCount)))
                     #expect(difference.isFinite && (valid ? difference == 0 : difference > 0))
-                    if valid { #expect(blocks == prepared.blocks); #expect(vector == reference) }
+                    if valid {
+                        let exactBlocks = blocks == prepared.blocks
+                        let exactVector = vector == reference
+                        try #require(exactBlocks)
+                        try #require(exactVector)
+                    }
                     else { #expect(vector.fullMix.sampleHash != reference.fullMix.sampleHash) }
                     var replayState = incoming
                     var replayGraph = graphIncoming
