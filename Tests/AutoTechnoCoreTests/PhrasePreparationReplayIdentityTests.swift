@@ -743,6 +743,10 @@ struct IterativeSuccessorPreparationTests {
     }
 
     @Test("Retained numeric storage shares the canonical typed inventory and counts buffer capacity")
+    // The native Debug fixture requires a 1.24 MiB frame, exceeding the
+    // 544 KiB cooperative-worker stack. Keep this synchronous inventory
+    // proof on the main actor; production preparation remains detached.
+    @MainActor
     func typedRetainedStorageInventory() throws {
         let base = RenderState()
         let graph = GeneratedDSPContinuationState()
