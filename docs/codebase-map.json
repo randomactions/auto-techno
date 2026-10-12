@@ -270,7 +270,8 @@
         "material-bound coupled modal foundation plan"
       ],
       "evidence": [
-        "score-owned assignment, pitch, automation, modal material, and coupling provenance"
+        "score-owned assignment, pitch, automation, modal material, and coupling provenance",
+        "Final authored anchor selection after canonical composition, timing and held polymetric relocation; source-index lineage, late/legato home fallback, authored home-correction eligibility and both-native same-pass tonal tail regression. Core owns relation placement; DSP windows and bounds remain unchanged, with no continuing-journey qualification."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoCore/FoundationPitchResolver.swift",
@@ -281,7 +282,8 @@
       "testPaths": [
         "Tests/AutoTechnoCoreTests/InstrumentPaletteTests.swift",
         "Tests/AutoTechnoCoreTests/ModalPercussionPlanningTests.swift",
-        "Tests/AutoTechnoCoreTests/UpperTimbrePlanningTests.swift"
+        "Tests/AutoTechnoCoreTests/UpperTimbrePlanningTests.swift",
+        "Tests/AutoTechnoCoreTests/TonalEnvelopeBoundaryTests.swift"
       ],
       "contracts": [
         "docs/INSTRUMENT_PALETTE.md",
@@ -380,7 +382,7 @@
     {
       "id": "quality-and-feedback-contracts",
       "name": "Quality and feedback contracts",
-      "responsibility": "Define reason-coded quality decisions, accepted and observed provenance, live-feedback observations/proposals, revision rules, fail-closed future-boundary state, the non-promotional boundary for optional local listening hypotheses, the detached evidence-ranked deficit register, the offline baseline lifecycle and schema-migration policy, and the aggregate Phase-1 reproducible-evidence gate; none can independently authorize or enter runtime decisions. Rhythmic export regeneration waits for the existing shared whole/stem source-cohort provenance check. Its shared live test fixture preserves the legacy causal vector chain while retaining actual prepared products for continuous source construction; fixture calibration is not a replacement-profile qualification claim. Offline roadmap/result validators bind no-change dependency satisfaction to complete current exact-source receipts; passed full verification or automated qualification cannot name a mutable working tree. The same offline completion guard covers completed and verified-no-change states; a fixed exact-row/plan historical 1–38 boundary grants planning prerequisites only, with prerequisite-chain validation and no current qualification authority.",
+      "responsibility": "Define reason-coded quality decisions, accepted and observed provenance, live-feedback observations/proposals, revision rules, fail-closed future-boundary state, the non-promotional boundary for optional local listening hypotheses, the detached evidence-ranked deficit register, the offline baseline lifecycle and schema-migration policy, and the aggregate Phase-1 reproducible-evidence gate; none can independently authorize or enter runtime decisions. Rhythmic export regeneration waits for the existing shared whole/stem source-cohort provenance check. Its shared live test fixture preserves the legacy causal vector chain while retaining actual prepared products for continuous source construction; fixture calibration is not a replacement-profile qualification claim. Offline roadmap/result validators bind no-change dependency satisfaction to complete current exact-source receipts; passed full verification or automated qualification cannot name a mutable working tree. The same offline completion guard covers completed and verified-no-change states; a fixed exact-row/plan historical 1\u201338 boundary grants planning prerequisites only, with prerequisite-chain validation and no current qualification authority.",
       "targets": [
         "AutoTechnoCore"
       ],
@@ -392,6 +394,10 @@
         {
           "symbol": "LiveMasterHeadroomContinuationState",
           "path": "Sources/AutoTechnoCore/LiveFeedback.swift"
+        },
+        {
+          "symbol": "AutonomousQualityRecoveryStep",
+          "path": "Sources/AutoTechnoCore/QualityQualification.swift"
         }
       ],
       "state": [
@@ -420,11 +426,11 @@
         "schema-, contract-, corpus-, engine-, route-, build-, and dependency-bound evidence lifecycle metadata",
         "fifteen current artifact bindings, subordinate validation, exact whole/role PCM, and deficit-source traceability without a musical-quality claim",
         "offline process-local independent stereo analysis reuse with live input hashes, unchanged per-asset comparisons, bounded memory, cold fallback and all nineteen aggregate subordinate validators",
-        "detached committed-origin dependency snapshots and conservative producer/analyzer/execution impact assessment for all fifteen baseline families; no artifact currency or promotion authority before fresh producer integration",
-        "scripts/roadmap_integrity.py and scripts/result_status_vocabulary.py validate current no-change receipts and immutable qualification revisions, covered by scripts/test_roadmap_integrity.py and scripts/test_result_status_vocabulary.py; no runtime authority or listening approval; private outcome, dependency and acceptance-plan scope is hash-bound alongside measured verification evidence; validated no-change chains retain their own prerequisite eligibility and cannot unlock descendants through incomplete rows; scripts/local_artifact_doctor.py admits optional private result-records directories while rejecting tracked, symlinked or unexpected artifacts, covered by scripts/test_local_artifact_doctor.py and the combined receipt/layout control in scripts/test_roadmap_integrity.py; no-change admission requires passed implementation, focused/full verification and automated qualification, with not-applicable limited to the five named release-only gates; positive no-change admission is unavailable until an authoritative item-specific verifier substantiates every required objective gate; passed labels, free text, generic execution receipts and bounded Phase-1 flags cannot provide missing qualification authority; development result reporting remains usable",
+        "Engine v49 and quality-contract schema50 bind post-relocation tonal ownership; candidate-vector43/transaction14 unchanged and all current primary seals unset pending complete fresh native qualification.",
         "driver-owned fresh capture transaction binding with exact output/PCM coverage, original source ancestry, conservative frozen dependencies and exact transitive upstream captures; actual producer invocation accounting and scoped artifact currency remain required adoption work; lifecycle assessment v2 and Phase-1 v2 retain original whole/role envelopes with separate current source/context/probe verification, enforce paired origin/current bindings and post-cold byte/source checks, and keep unsupported families conservative",
         "Registered tracked-derived deficit output is generated and independently checked in a separate same-origin candidate checkout. Original source, HEAD, index, inventory and complete upstream captures remain frozen; only the exact JSON/Markdown output slots may differ. Checked publication revalidates immutable inputs and restores original output bytes on validation failure; no currency or promotion authority.",
-        "scripts/baseline_producer_witness.py selects one actual supported Xcode or conventional SwiftPM package test image and records build.v2 original Python version, executable path and byte identity. scripts/baseline_capture_scope.py preserves that original context and validator argv; scripts/baseline_retained_capture.py separately probes current native context and classifies current Python changes for cold reanalysis. Complete reader, original-identity/argv tampering and both image-layout controls are owned by scripts/test_baseline_capture_scope.py and scripts/test_baseline_producer_witness.py; missing historical interpreter witness requires regeneration.",
+        "One host-independent calibrated rejection transition preserves finite startup/successor recovery scheduling, target isolation and exact request/score binding for macOS and Windows.",
+        "scripts/roadmap_integrity.py and scripts/result_status_vocabulary.py validate current no-change receipts and immutable qualification revisions, covered by scripts/test_roadmap_integrity.py and scripts/test_result_status_vocabulary.py; no runtime authority or listening approval; private outcome, dependency and acceptance-plan scope is hash-bound alongside measured verification evidence; validated no-change chains retain their own prerequisite eligibility and cannot unlock descendants through incomplete rows; scripts/local_artifact_doctor.py admits optional private result-records directories while rejecting tracked, symlinked or unexpected artifacts, covered by scripts/test_local_artifact_doctor.py and the combined receipt/layout control in scripts/test_roadmap_integrity.py; no-change admission requires passed implementation, focused/full verification and automated qualification, with not-applicable limited to the five named release-only gates; positive no-change admission is unavailable until an authoritative item-specific verifier substantiates every required objective gate; passed labels, free text, generic execution receipts and bounded Phase-1 flags cannot provide missing qualification authority; development result reporting remains usable",
         "scripts/roadmap_integrity.py retains fixed reviewed historical row/plan hashes for AT-0001 through AT-0038, checks all admitted completion prerequisite chains, requires an admitted last_completed_item, and refuses new or changed completed states without current authoritative machine qualification. scripts/test_roadmap_integrity.py covers status/controller bypass, completed receipt parity, historical row/plan and symlink tampering, local inventory extension, and non-topological or unfinished chains; scripts/test_phase_zero_gate.py explicitly pins synthetic historical scope. Historical planning hashes cannot qualify runtime, resources or musical quality and do not form another work queue."
       ],
       "sourcePaths": [
@@ -434,7 +440,8 @@
       "testPaths": [
         "Tests/AutoTechnoCoreTests/LiveFeedbackCoreTests.swift",
         "Tests/AutoTechnoCoreTests/LiveFeedbackTestSupport.swift",
-        "Tests/AutoTechnoCoreTests/QualityQualificationFoundationTests.swift"
+        "Tests/AutoTechnoCoreTests/QualityQualificationFoundationTests.swift",
+        "Tests/AutoTechnoCoreTests/AutonomousQualityRecoveryHostPolicyTests.swift"
       ],
       "contracts": [
         "docs/SOUND_QUALITY.md",
@@ -477,13 +484,31 @@
         {
           "symbol": "ModalPercussionMeasurementState",
           "path": "Sources/AutoTechnoDSP/ModalPercussionMeasurementContinuity.swift"
+        },
+        {
+          "symbol": "DiagnosticRoleStemCaptureSpool",
+          "path": "Sources/AutoTechnoDSP/DiagnosticRoleStemCapture.swift"
+        },
+        {
+          "symbol": "DiagnosticRoleStemCaptureSession",
+          "path": "Sources/AutoTechnoDSP/DiagnosticRoleStemCapture.swift"
+        },
+        {
+          "symbol": "PreparationWorkingStorageProbe",
+          "path": "Sources/AutoTechnoDSP/PreparationNumericStorage.swift"
+        },
+        {
+          "symbol": "PreparationStorageObservation",
+          "path": "Sources/AutoTechnoDSP/PreparationNumericStorage.swift"
         }
       ],
       "state": [
         "RenderState",
         "voice and phrase-composition continuation",
         "four-slot modal material, coupling, and eight-mode continuation",
-        "eight bounded event-observation records; origin identity, actual samples, retired-slot zero contribution, and expected successor bar"
+        "eight bounded event-observation records; origin identity, actual samples, retired-slot zero contribution, and expected successor bar",
+        "Detached diagnostic session/file lifecycle and reduced source bindings; shared transport supplies exact admitted root/child objects after reverse validation. No capture ownership enters musical continuation or scheduled playback.",
+        "Diagnostic PreparationWorkingStorageProbe owns at most32 phase maxima with at most4096 owner records each, single-writer and detached; no musical continuation, prepared-source, callback or policy authority."
       ],
       "inputs": [
         "AutonomousPhrasePlan",
@@ -493,7 +518,8 @@
       "outputs": [
         "RenderBlock",
         "transient role taps and opt-in local diagnostic captures",
-        "ending render state"
+        "ending render state",
+        "Opt-in detached synchronous bar sink and attempt-owned local 32-channel f32 diagnostic drafts; no accepted-source or successor authority."
       ],
       "evidence": [
         "role-local render evidence",
@@ -504,7 +530,16 @@
         "modal material, coupling, stability, decay, and pitch evidence",
         "spatial-dust channel, cadence, low-band exclusion, and clearing evidence",
         "actual modal attack/body/tail sample support, with missing/partial/complete window geometry",
-        "same-pass continuous modal windows with explicit pending, interruption and overflow; legacy bar-local metrics and PCM preserved"
+        "same-pass continuous modal windows with explicit pending, interruption and overflow; legacy bar-local metrics and PCM preserved",
+        "Final authored anchor selection after canonical composition, timing and held polymetric relocation; source-index lineage, late/legato home fallback, authored home-correction eligibility and both-native same-pass tonal tail regression. Core owns relation placement; DSP windows and bounds remain unchanged, with no continuing-journey qualification.",
+        "Every full11/protected11/stage10 tap streams from the same canonical pass with exact channel and final-block fingerprints. Bounded per-bar borrowed array-capacity inventory and 64KiB write chunks; order/rate/geometry/finite/capacity mismatch, cancellation, incomplete capture and I/O failure discard attempt-owned files. Ordinary PCM, repeat candidates and ending render/graph state remain exact. Canonical private selected-attempt/root-exact-child session binding is implemented through reverse admission; full native capture capacity and combined allocation/RSS/deadline accounting remain pending.",
+        "Default-off detached renderer observations at protected-voice return, full-voice return, graph/pump return and bar delivery register live primitive array capacities with per-snapshot alias deduplication. The existing typed replay visitor supplies continuation buffers and separately labelled encoded scalar/field headroom; hold accumulators supply retained variants and looper buffers. Metadata maxima retain no PCM or addresses and have finite owner/phase bounds. Instrumentation can extend observed lifetimes. Inner transients, analysis, parent/child and corrective overlap, heap metadata, writer chunks, RSS and deadlines remain uncovered; these observations cannot reduce admission charges or qualify native capture capacity.",
+        "Nested synchronous storage scopes join immutable outer phrase/hold/capture owners with actual inner voice product/local buses/FDN scratch and generated-graph split, node-return old/new COW, branch and mixed/output buffers. Canonical component typed visitors supply active, retiring and temporary node state without shadow state-field inventories. Scope closures and captured owners die before later mutations; explicit complete-observation lifetimes prevent stale-address aliasing. Native graph retirement and scope-release controls preserve exact PCM/continuation. Observations remain partial and cannot qualify resource capacity or reduce any charge.",
+        "Optional synchronous preparer scopes expose incoming, selected and pre-correction numeric owners. Reference-owned CandidateSynthesisStorage owns canonical PCM and ending DSP state; after immutable initial evidence enters the transaction and sidecars are discarded, its superseded storage is released before corrective rendering. The corrective pass retains exact original incoming state and evidence but no initial PCM or ending-state owner; a failed/cancelled correction refuses. Released storage access is an internal ownership error, never fabricated continuation or fallback. Scoped observations verify release and native/owned-child PCM, transaction and state parity without allocation-admission authority.",
+        "A synchronous render retaining an actual initial candidate contributes its physical numeric snapshot to one conditional corrective-overlap maximum with original observedPhase; larger later child maxima cannot hide it. No second inventory, count increment or PCM retention; both slots fail closed under the unchanged32-phase limit.",
+        "Synchronous helper-working observations join actual caller buses/workspace/typed state with echo delay/reverse, spatial-dust dual delays and regenerated memory-source PCM. One shared local inventory excludes inout outputs before the borrow; callee registers actual outputs. Bounded physical per-phase counts preserve coverage under existing32-phase maxima and conditional overlap without double-counting. Native exact PCM/evidence and exhausted fallback controls remain partial allocation evidence, with unchanged resource and qualification authority. AudioSlice registers the actual copied source window, source and borrowed destination in the same helper scope; no mutable destination alias is retained. Canonical cut/granular recall controls at8k/44100/48000 require whole RenderedBar/typed state replay and exhausted equivalence, actual memory/window geometry and unchanged original whole-render phase coverage. Partial allocation authority and ceilings remain unchanged.",
+        "The existing rumble routine is package-visible for canonical source-support controls. Candidate audio-safety admission binds its 0.68-second natural window to the score onset and original destination frame count, allowing end-of-bar clipping but rejecting shorter source evidence even when terminal de-clicking is complete. Independent rational support fixtures test the same predicate. Existing PCM, evidence encoding, continuation, other-voice duration contracts and callback work remain unchanged; this does not establish a nonlinear full-mix truncation counterfactual.",
+        "The same detached source-support predicate also binds kick's 0.32-second natural duration to the score onset and original bar boundary. Shared kick/rumble full-phrase tests use independent rational support oracles; actual canonical kick truncation must refuse prepared admission. Existing PCM, state, fallback and callback work remain unchanged."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AlienAnalogVoice.swift",
@@ -520,7 +555,9 @@
         "Sources/AutoTechnoDSP/UpperPercussionTailDSP.swift",
         "Sources/AutoTechnoDSP/UpperSpectralRevealDSP.swift",
         "Sources/AutoTechnoDSP/VoiceRenderer.swift",
-        "Sources/AutoTechnoDSP/ModalPercussionMeasurementContinuity.swift"
+        "Sources/AutoTechnoDSP/ModalPercussionMeasurementContinuity.swift",
+        "Sources/AutoTechnoDSP/DiagnosticRoleStemCapture.swift",
+        "Sources/AutoTechnoDSP/PreparationNumericStorage.swift"
       ],
       "testPaths": [
         "Tests/AutoTechnoCoreTests/KickSourceDynamicsTests.swift",
@@ -530,7 +567,9 @@
         "Tests/AutoTechnoCoreTests/SpatialDustTests.swift",
         "Tests/AutoTechnoCoreTests/UpperPercussionTailDSPTests.swift",
         "Tests/AutoTechnoCoreTests/UpperSpectralRevealDSPTests.swift",
-        "Tests/AutoTechnoCoreTests/UpperTimbreDSPTests.swift"
+        "Tests/AutoTechnoCoreTests/UpperTimbreDSPTests.swift",
+        "Tests/AutoTechnoCoreTests/TonalEnvelopeBoundaryTests.swift",
+        "Tests/AutoTechnoCoreTests/DiagnosticRoleStemStreamingTests.swift"
       ],
       "contracts": [
         "docs/SYNTH_TRACK_RENDERING_MATRIX.md",
@@ -550,7 +589,7 @@
     {
       "id": "graph-effects-routing-and-mix",
       "name": "Graph, effects, routing, and mix control",
-      "responsibility": "Plan and render the bounded target-directed effect-world graph morph with one held carrier and post-graph upper pump, protected routing, FDN spatial field, automatic kick/foundation balance, nonlinear core, independently qualified repeat-hold DJ-deck chains with full-mix filtering and target-specific loop memories, and read-only waveform envelopes.",
+      "responsibility": "Plan and render the bounded target-directed effect-world graph morph with one held carrier and post-graph upper pump, protected routing, FDN spatial field, automatic kick/foundation balance, nonlinear core, independently qualified repeat-hold DJ-deck chains with full-mix filtering and target-specific loop memories, and read-only waveform envelopes. Keep the canonical finalizer as the only prepared-product constructor. For an evaluator requiring detached prepared validation, retain a private commit-ineligible prospective source, call its validation once, and admit only actual source-bound continuous evidence with the exact final quality identity. Reuse source PCM, render attempts and hold sidecars; cache identity and required-support checks before admission. Missing or foreign proof is unavailable, changed acceptance metadata and cancellation cannot escape preparation. This unactivated foundation adds no shipping policy or successor producer. Privately suspend prepared validation and resolve through the same canonical finalizer after detached rendering unwinds; retain exact presentation/diagnostic capture and reject missing, foreign or cancelled proofs. A suspended source needing its measured child releases repeat PCM; a naturally closed leaf keeps exact existing repeat sidecars. Selected source PCM and sealed identity stay unchanged.",
       "targets": [
         "AutoTechnoDSP"
       ],
@@ -562,12 +601,39 @@
         {
           "symbol": "AutomaticMixBalancer",
           "path": "Sources/AutoTechnoDSP/AutomaticMixBalancer.swift"
+        },
+        {
+          "symbol": "AutonomousPhrasePreparer",
+          "path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift"
+        },
+        {
+          "symbol": "PreparedAutonomousPhrase",
+          "path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift"
+        },
+        {
+          "symbol": "AutonomousCandidatePreparedPreview",
+          "path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift"
+        },
+        {
+          "symbol": "AutonomousCandidatePreparedValidation",
+          "path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift"
+        },
+        {
+          "symbol": "AutonomousPendingPreparedValidation",
+          "path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift"
+        },
+        {
+          "symbol": "PhraseAudioPreflight",
+          "path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift"
         }
       ],
       "state": [
         "GeneratedDSPContinuationState",
         "AutomaticMixState",
-        "FeedbackDelayNetworkState"
+        "FeedbackDelayNetworkState",
+        "private prospective prepared candidate, typed continuous validation proof with retained qualified successor for unfinished source windows and cached admission binding; no persistent policy state",
+        "immutable pending prepared-validation closure and private prospective source; no accepted-state advancement",
+        "Opt-in attempt-owned streamed diagnostic draft on the private candidate; superseded initial cleanup before correction, selected draft retained through pending proof, staged only for the actual final commit-eligible object. No mutable capture owner enters scheduled products."
       ],
       "inputs": [
         "resolved phrase",
@@ -587,7 +653,10 @@
         "requested and realized effect-world evidence",
         "protected routing reconstruction",
         "RepeatHoldEvolutionEvidence including full-mix routing, spectral consequence, target-specific capture, shortest grid slice, and exact replay provenance",
-        "mix and spatial evidence"
+        "mix and spatial evidence",
+        "Selected streamed drafts bind actual attempt and exact finalized object under unchanged PCM/vector/transaction/continuation; rejection and failure leave no publishable capture. Full capture reservation and runtime qualification remain separate.",
+        "The canonical current and retiring node dictionaries are mutated through direct slot borrows, avoiding a temporary node copy and repeated delay-buffer COW for uniquely owned continuation. Default-off node-return observations register the completed canonical slot plus an aliasing readonly projection, mixed branches and output. Native nil-observer controls require owned buffer reuse and retained-input detachment; existing exact PCM/state/retirement controls retain actual incoming continuation and all68 observations/eight phases. Outer phrase owners remain synchronous; no host, callback, admission, policy, reservation or full-capacity authority changes.",
+        "Existing PhraseAudioPreflight in GeneratedDSPGraph.swift forwards the optional synchronous analyzer-storage scope from the same private preparer to actual whole and per-bar measurements, with real render-product and ending continuation ownership confined to the call. No state, source ownership, finalizer or playback authority is reassigned."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AutomaticMixBalancer.swift",
@@ -604,7 +673,10 @@
         "Tests/AutoTechnoCoreTests/LongHorizonMaterialWorldTests.swift",
         "Tests/AutoTechnoCoreTests/RepeatHoldEvolutionTests.swift",
         "Tests/AutoTechnoCoreTests/SpatialProtectedRoutingRegressionTests.swift",
-        "Tests/AutoTechnoCoreTests/TPTAntialiasedNonlinearCoreTests.swift"
+        "Tests/AutoTechnoCoreTests/TPTAntialiasedNonlinearCoreTests.swift",
+        "Tests/AutoTechnoCoreTests/ModalSuccessorReportJoinTests.swift",
+        "Tests/AutoTechnoCoreTests/PhrasePreparationReplayIdentityTests.swift",
+        "Tests/AutoTechnoCoreTests/DiagnosticRoleStemStreamingTests.swift"
       ],
       "contracts": [
         "docs/SPATIAL_ENGINE.md",
@@ -622,7 +694,7 @@
     {
       "id": "evidence-calibration-and-primary-evaluation",
       "name": "Evidence, calibration, and primary evaluation",
-      "responsibility": "Construct complete candidate evidence, stream bounded perceptual analysis, validate exact artifacts and offline tolerance-aware PCM, signal, spectral, stereo-compatibility, collision, transient/envelope, rhythmic, and score-declared section-boundary reports, run the single calibrated primary evaluator with explicit relationship coverage and candidate-level calibration support/confidence-estimate status, and bind atomic commit provenance; deterministic synthetic signal fixtures used by analyzer evidence tests. Apply pad-rhythmic filter, amplitude-gate, and spatial-consequence means only when validated score evidence shows the three-step-pulse relation active, treating an absent relation as unavailable rather than a zero consequence; require that relation in the corresponding major-break adversarial baseline. Record per-trajectory conditional comparison support in the calibration profile; preserve absent measurements without fitting numeric zeros, and report applicable unsupported relationships as unavailable while retaining independent failures. Derive versioned descriptive per-bar kick/foundation and bar/role-pair/band masking feature reports from complete source reports without changing calibrated verdicts. Bound complete calibration corpora to 48 trajectories; select and freeze separate score-only four-bar major-break development and holdout windows in the existing test harness, and require exact frozen candidate geometry for fresh and cached report banks before any refit or promotion. Share versioned modal window applicability across extraction, calibration fitting, local verdicts and trajectory/rate assessment; preserve required unavailable dimensions and independent numeric failures. Keep the v22 observation/v31 profile foundation unavailable for production activation while the installed v21/v30 path remains unchanged. Join descriptive original modal windows only to the actual immediate successor through bounded report-bound receipts, exact incoming render/DSP, quality, graph, live-master, route and measurement continuation; do not transfer successor score ownership or activate policy. Derive explicit continuous v23 observations/v32 profiles from full canonical original-report identity and validated actual-successor receipts; share finite scope/version selection, required support and fitting rules while retaining original-bank trajectory membership and installed v21/v30 authority. Ordinary observation decoding stays rejected; canonical continuous reconstruction requires expected typed sources. The reduced one-bank analysis uses the existing corpus fitter and cannot claim diverse calibration. Extend the existing test-only full persistent journey producer with exact frozen score replay before preparation and selected-score checks after preparation; retain actual quality/live/render/DSP/graph progression through intervening phrases and source-bound immediate-successor receipts before closing the final original checkpoint. The opt-in continuous native cohort executor authenticates the unchanged frozen cohort and all score/geometry rows before PCM, requires published foundation evidence plus a separate clean execution-source binding, retains every original report and actual successor, and records complete offline fitting or reason-coded refusal without activation. The existing shared test-only live producer retains actual attenuation/clean-hold/recovery prepared products and prepares one real recovery successor for source-bound continuous live fixture reports; preserve all applicable checkpoint labels, fixed fixture membership and installed authority. Preserve original observation scope and source/support provenance through detached hard-gate, silence and fixed unsupported-rate challenges. The foreign-rate corruption changes only the outer claim; bound scopes remain incomplete and cannot reconstruct, decode or fit authoritative measurements. Keep legacy challenge serialization unchanged. Extend detached adversarial and disjoint holdout reports with exact continuous scope/version identities through the existing owners. Reconstruct every applicable fixed live-chain label from original reports and actual immediate successors before requiring profile acceptance; retain complete diverse corpus, relationship, adversarial and disjoint holdout gates. Preserve omitted scope metadata and exact serialization for legacy reports. Explicitly keep the installed primary evaluator limited to legacy report scope; diagnostic continuous report decoding cannot authorize runtime activation. The same clean-source fresh native cohort executor can opt into a separately frozen qualification protocol, reducing its freshly reconstructed typed 40/6 corpora into continuous adversarial and disjoint holdout reports with the unchanged fixed live chain and preserved profile/source-bank identity. Record reason-coded refusal or offline success without activation; verify protocol and accepted source before and throughout execution, and never import prior diagnostic archives. The large detached actual-successor test runs on the main actor to avoid the hosted test-worker stack guard; fixed rates, source/successor joins, forged-input rejection and every assertion remain unchanged. This test-only scheduling has no production callback, render or controller effect. Continuous metric range challenges require an applicable measured source, preserve its original/successor identity and derive the attack from its own checkpoint bounds; absent or unavailable dimensions refuse instead of producing no-op attacks.",
+      "responsibility": "Construct complete candidate evidence, stream bounded perceptual analysis, validate exact artifacts and offline tolerance-aware PCM, signal, spectral, stereo-compatibility, collision, transient/envelope, rhythmic, and score-declared section-boundary reports, run the single calibrated primary evaluator with explicit relationship coverage and candidate-level calibration support/confidence-estimate status, and bind atomic commit provenance; deterministic synthetic signal fixtures used by analyzer evidence tests. Apply pad-rhythmic filter, amplitude-gate, and spatial-consequence means only when validated score evidence shows the three-step-pulse relation active, treating an absent relation as unavailable rather than a zero consequence; require that relation in the corresponding major-break adversarial baseline. Record per-trajectory conditional comparison support in the calibration profile; preserve absent measurements without fitting numeric zeros, and report applicable unsupported relationships as unavailable while retaining independent failures. Derive versioned descriptive per-bar kick/foundation and bar/role-pair/band masking feature reports from complete source reports without changing calibrated verdicts. Bound complete calibration corpora to 48 trajectories; select and freeze separate score-only four-bar major-break development and holdout windows in the existing test harness, and require exact frozen candidate geometry for fresh and cached report banks before any refit or promotion. Share versioned modal window applicability across extraction, calibration fitting, local verdicts and trajectory/rate assessment; preserve required unavailable dimensions and independent numeric failures. Keep the v22 observation/v31 profile foundation unavailable for production activation while historical v21/v30 artifacts retain their original scope. Join descriptive original modal windows only to the actual immediate successor through bounded report-bound receipts, exact incoming render/DSP, quality, graph, live-master and route identities plus actual same-pass outgoing/incoming modal voice state and measurement continuation; do not transfer successor score ownership or activate policy. Derive explicit continuous v23 observations/v33 profiles from full canonical original-report identity and validated actual-successor receipts; share finite scope/version selection, required support and fitting rules while retaining original-bank trajectory membership and historical v21/v30 provenance. Ordinary observation decoding stays rejected; canonical continuous reconstruction requires expected typed sources. The reduced one-bank analysis uses the existing corpus fitter and cannot claim diverse calibration. Extend the existing test-only full persistent journey producer with exact frozen score replay before preparation and selected-score checks after preparation; retain actual quality/live/render/DSP/graph progression through intervening phrases and source-bound immediate-successor receipts before closing the final original checkpoint. The opt-in continuous native cohort executor authenticates the unchanged frozen cohort and all score/geometry rows before PCM, requires published foundation evidence plus a separate clean execution-source binding, retains every original report and actual successor, and records complete offline fitting or reason-coded refusal without activation. The existing shared test-only live producer retains actual attenuation/clean-hold/recovery prepared products and prepares one real recovery successor for source-bound continuous live fixture reports; preserve all applicable checkpoint labels, fixed fixture membership and installed authority. Preserve original observation scope and source/support provenance through detached hard-gate, silence and fixed unsupported-rate challenges. The foreign-rate corruption changes only the outer claim; bound scopes remain incomplete and cannot reconstruct, decode or fit authoritative measurements. Keep legacy challenge serialization unchanged. Extend detached adversarial and disjoint holdout reports with exact continuous scope/version identities through the existing owners. Reconstruct every applicable fixed live-chain label from original reports and actual immediate successors before requiring profile acceptance; retain complete diverse corpus, relationship, adversarial and disjoint holdout gates. Preserve omitted scope metadata and exact serialization for legacy reports. Historical primary v30 used legacy report scope; current primary v32 requires actual prepared continuous scope and diagnostic decoding alone cannot authorize runtime activation. The same clean-source fresh native cohort executor can opt into a separately frozen qualification protocol, reducing its freshly reconstructed typed 40/6 corpora into continuous adversarial and disjoint holdout reports with the unchanged fixed live chain and preserved profile/source-bank identity. Record reason-coded refusal or offline success without activation; verify protocol and accepted source before and throughout execution, and never import prior diagnostic archives. The large detached actual-successor test runs on the main actor to avoid the hosted test-worker stack guard; fixed rates, source/successor joins, forged-input rejection and every assertion remain unchanged. This test-only scheduling has no production callback, render or controller effect. Continuous metric range challenges require an applicable measured source, preserve its original/successor identity and derive the attack from its own checkpoint bounds; absent or unavailable dimensions refuse instead of producing no-op attacks. RMS trajectory windows share the -120 dB numerical floor for exact silence and positive sub-floor PCM; v4 analyzer/v30 evidence rejects retired measurements rather than manufacturing large onset deltas. This detached measurement changes no PCM or callback work; profile artifacts must be regenerated before activation. Preserve bounded upper-percussion source and foreground-clearance event support in candidate, continuous and adversarial observation copies. Shared fitting and relationship applicability excludes absent score populations, while natural-body clearance ratio zero remains measured; no PCM, continuation, callback or quality-bound widening occurs. The same offline qualification executor freezes a separate corrected-measurement protocol and exact fresh profile/source-bank identities for v30 RMS-floor and score-tail support. It retains historical failed bindings, requires the correction source ancestor, and rerenders typed native corpora without archive import or activation. Construct detached continuous runtime observations directly from immutable prepared source/successor products through the same receipt validation and modal ledger; bind each prepared product identity without manufacturing fixture reports, reuse the primary Core checkpoint population mapping, and preserve required-unavailable suffixes. This preparation observation seam adds no state, scheduling or activation authority. Preserve the fixed public one-bank construction fixture as an explicit missing-upper-tail-population fitting refusal; select one genuine score-supported counterpart before PCM under the same seed and 128-phrase bound, retain real source/successor receipts, and keep both below diverse-calibration and runtime-activation authority. Wire reconstruction controls preserve score support metadata. Reconstruct stored actual-prepared observations and successor receipts only from their expected immutable source/successor products and exact canonical bytes. Reject journey/prepared scope substitution, altered metrics, noncanonical encoding, missing suffix support and oversized inputs without granting runtime authority. Delegate required prepared validation through the existing route-local evaluator and single canonical finalizer. Construct sealed validation from actual prepared continuous observations; required unavailable windows suppress assessor invocation and acceptance. The sole primary evaluator v32 requires sealed prepared validation and exact continuous observation v23/profile v33 scope. Prospective acceptance cannot admit PCM alone; actual continuous observation owns calibrated verdict, recovery and diagnostics. Mixed-scope artifacts and vector-only or legacy observations fail closed. Historical bundled v30 resources stay ineligible; retained-model native admission controls do not activate runtime or qualify current artifacts. Capture the route-local caller replay origin once in prospective and final immutable prepared identity; actual-source receipts and proof cache bind it without adding a transaction cycle or PCM algorithm. Reuse the complete typed continuation inventory to count actual retained numeric storage, including Float buffer capacity and conservative field metadata, without changing replay hashes; unknown or oversized counts refuse. Reserve active per-pass workspace plus retained suspended-source numeric storage under the existing ceiling before initial or corrective PCM, including optional selected-source diagnostic capture. Release render-local workspace and parent hold variants when exact measured child consumption is mandatory; a closed leaf preserves existing repeat variants. Delegate actual admitted child validation through the same route-local calibrated evaluator; numeric reservation does not qualify process memory, deadlines or soak. Retain the completed corrected-source primary v31/profile v32 identities as historical evidence; completed current primary v33 offline seals bind full native Long Horizon preparation while absent qualified Long Horizon v18 seals and paired resources preserve production unavailability. Historical v30 constructor rejection remains an explicit test fixture independent of current resource names. Primary v32/profile v33 uses the existing conditional calibrated-active checkpoint union for dotted foundation activity and crest only at exact all-zero continuous checkpoint envelopes; preserve neutral, measured-local, missing-active and extreme controls, historical scope and unchanged observation v23 source ownership. Retired continuous profile v32 cannot construct current authority; current v33 seals bind the completed d1259f3 native 40/6 study with 34 adversarial cases and 84/84 disjoint holdout; paired resources and qualified Long Horizon v18 seals remain absent. The cold 40/6 native executor authenticates the separate frozen dotted-rule input protocol and derives output identities only from its fresh typed products, retaining every relationship, adversarial and holdout gate. The live-target artifact gate shares the continuous scope schema owner and exact seals rather than legacy defaults. Bind the same-pass natural bass support digest to unchanged score-assigned duration and destination geometry through existing foundation admission; preserve authorized pre-kick release, exact PCM and fail-closed source truncation refusal without new buffers or persistent state.",
       "targets": [
         "AutoTechnoDSP"
       ],
@@ -698,6 +770,22 @@
         {
           "symbol": "ProfessionalQualityHoldoutQualification",
           "path": "Sources/AutoTechnoDSP/ProfessionalQualityHoldoutQualification.swift"
+        },
+        {
+          "symbol": "AutonomousPreparationChainResourceBudget",
+          "path": "Sources/AutoTechnoDSP/AutonomousPreparationResourceBudget.swift"
+        },
+        {
+          "symbol": "MusicalQualityMetrics",
+          "path": "Sources/AutoTechnoDSP/MusicalQualityMetrics.swift"
+        },
+        {
+          "symbol": "BS1770LoudnessMeasurement",
+          "path": "Sources/AutoTechnoDSP/BS1770AudioEvidence.swift"
+        },
+        {
+          "symbol": "StreamingPerceptualEvidenceAnalyzer",
+          "path": "Sources/AutoTechnoDSP/StreamingPerceptualEvidence.swift"
         }
       ],
       "state": [
@@ -715,7 +803,10 @@
         "ephemeral bounded original-event ledger and validated immediate-successor receipts; no persistent policy state",
         "explicit continuous observation scope and non-reconstructable original-report/actual-successor provenance; original-bank membership independent of receipt coverage",
         "test-only bounded pending original checkpoint reports and actual successor receipts; frozen planning quality labels remain distinct from accepted execution continuation",
-        "separate local accepted continuous-execution source/contract/input-object binding and immutable historical planning context; per-root completion and unavailable-support records"
+        "separate local accepted continuous-execution source/contract/input-object binding and immutable historical planning context; per-root completion and unavailable-support records",
+        "sole primary v32 requires actual prepared continuous v23/profile v33 validation; historical bundled v30 resources ineligible",
+        "optional shared preparation replay origin in immutable actual-prepared v2 identity; v1 exact bytes when absent",
+        "immutable aggregate preparation-chain reservation, source count and maximum render passes; v2 includes the allocated root incoming continuation before any render"
       ],
       "inputs": [
         "planned structure",
@@ -733,7 +824,7 @@
         "report-bound descriptive cross-phrase modal ratios without retargeted score ownership",
         "version-bound continuous observations and offline profile reductions; canonical-byte source reconstruction and required unavailable support, no policy activation",
         "continuous full-journey original reports and actual-successor receipts without importing legacy caches or adding successor checkpoint membership",
-        "local 40/6 continuous native corpora and complete offline v32 fit or retained refusal; mandatory replacement primary/adversarial/holdout and long-horizon qualification remains unavailable",
+        "fresh typed 40/6 native corpora and completed v33 primary/adversarial/holdout offline qualification; retained engine-v48 seals are historical; engine v49 has no registered primary seals and requires complete fresh native qualification, with production resources and full runtime qualification unavailable",
         "scope-bound detached continuous adversarial and disjoint holdout reports from complete typed corpora and actual fixed live-chain source products; no installed authority or runtime activation",
         "prospective protocol-bound fresh typed continuous adversarial/holdout reduction, per-stage refusals and explicit offline-only qualification summary"
       ],
@@ -760,11 +851,22 @@
         "public reduced persistent execution control proves final-successor closure, real quality revision and typed receipt reconstruction; mutated frozen planning identity and insufficient successor bounds fail before PCM",
         "actual fixed live attenuation/recovery canonical reports, immutable prepared commits and immediate successor quality/render/DSP/route bindings; wrong-successor rejection without profile acceptance or activation",
         "rate-only detached identity corruption at both native source rates; continuous/bar-local source preservation, profile rejection, validated-decode and fitting refusal, and exact legacy challenge bytes",
-        "all-label actual live-source binding and fixed preserved-profile acceptance diagnostics; mixed-scope metadata and continuous primary-authority rejection controls; unchanged installed artifact fingerprints",
+        "all-label actual live-source binding and fixed preserved-profile acceptance diagnostics; mixed-scope metadata and historical primary-authority rejection controls; unchanged installed artifact fingerprints",
+        "mechanical three-rate private prepared admission and exact replay; missing/foreign proof, unfinished suffix, quality rebinding, cancellation and adjusted-transaction refusal/acceptance controls; not runtime qualification",
+        "explicit retained-model native-rate calibrated admission mechanics; mixed-scope artifact, vector-only, legacy observation, altered metric, unsupported-rate and missing/unfinished proof refusal; no current artifact qualification",
+        "Default-off post-study actual attenuation/recovery rerender verifies both current frozen-study live baseline fingerprints and constructs its exact offline primary artifacts; no corpus import, installed activation, long-horizon or final-source qualification. Historical scope-attack fixtures cannot load as current primary artifacts; capture checkpoints and adjacent context refuse ineligible products before canonical advancement or PCM export.",
+        "One canonical preparationBoundaryRejection preserves ordered transaction identity and candidate hard-gate refusal before terminal route/prospective checks; independently testable without installed artifacts, nil never grants calibrated acceptance or prepared admission.",
+        "Default-off synchronous canonical preflight observations join actual source/ending continuation, incoming and suspended parents and corrective initial owners with BS.1770 Double rings/emitted energies/values/gates, fixed FIR history, perceptual FFT workspace/evidence values and per-bar movement arrays. Shared bounded metadata maxima retain no PCM or callback authority; native whole-report, chain admission/refusal and exhausted-observer controls preserve exact canonical outcomes. Standard-library internal scratch, other transients, heap/encoding/writer storage, RSS and deadlines remain unqualified; no resource charge or quality promotion changes.",
         "opt-in local exporter witness observes actual loaded test image, initialization, process inputs and immutable manifest; driver-controlled fresh build and probe receipts are non-authoritative until cold family validation and native PCM parity adoption; trusted local-root aliases normalize before per-component symlink refusal and corpus identity comparison",
         "registered offline whole/role producer driver requires absent isolated outputs, real native image witnesses, original cold family validation, exact transitive fresh bindings and separate witness-disabled whole/role PCM and typed-evidence parity; no artifact-currency or qualification authority",
         "Independent detached completed-capture reader rechecks original Git source envelopes, actual loaded-image and private-initialization witnesses, registered successful producer/cold-validator logs, complete fresh upstream bindings, and exact witness-disabled whole/role PCM and foundation behavior; no current currency or promotion authority.",
-        "Explicit retained whole/role proof revalidates immutable original envelopes through current dependency assessment, live compiler/SDK/image checks and a fresh registered native initialization probe, then preserves cold PCM/content checks; unknown or changed producers recapture and other lifecycle families retain their guards. Original capture identities and current verification identities remain separate."
+        "Explicit retained whole/role proof revalidates immutable original envelopes through current dependency assessment, live compiler/SDK/image checks and a fresh registered native initialization probe, then preserves cold PCM/content checks; unknown or changed producers recapture and other lifecycle families retain their guards. Original capture identities and current verification identities remain separate.",
+        "UpperTimbreEvidenceAnalyzer reads sanitized single/mono/side Double values from bounded immutable Float PCM views; exact actual-source array oracle covers all reduced fields/fingerprint/JSON, invalid inputs and native bar capacity removal without lower resource reservations",
+        "Current-source score-only v2 freezer authenticates fixed outcome-blind ordinal quotas, both native geometries, clean six-object source and contract bindings before planning; protocol identity/claim mutations refuse, no PCM or quality admission authority.",
+        "The existing continuous study executor authenticates current v2 score/launch protocols, immutable parsed bytes, exact source/contract and externally fresh-fetched published ref before native PCM; rechecks between routes and fits only fresh typed complete 40/6 corpora with actual successors. No archive import, old output seals or runtime activation.",
+        "The current continuous executor exclusively claims its private output leaf; a bounded no-PCM competing-writer control preserves existing output bytes and rejects repeated claims.",
+        "The existing current-study artifact emitter drains temporary Foundation JSON objects in a detached platform-local scope; actual source/successor diagnostic bytes and typed-construction/JSON-parsing errors remain exact. Typed corpora, file claims and qualification ownership remain unchanged.",
+        "Render-state and combined-continuation typed v5 share ordinary/cancellable field encoding; completed identity parity and partial-digest cancellation refusal."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AudioQualityReport.swift",
@@ -834,7 +936,12 @@
         "Tests/AutoTechnoCoreTests/TransientEnvelopeBaselineIntegrationTests.swift",
         "Tests/AutoTechnoCoreTests/UpperTimbreIntegrationTests.swift",
         "Tests/AutoTechnoCoreTests/ModalSuccessorReportJoinTests.swift",
-        "Tests/AutoTechnoCoreTests/BaselineProducerWitnessTests.swift"
+        "Tests/AutoTechnoCoreTests/ContinuousPrimaryPreparedAdmissionTests.swift",
+        "Tests/AutoTechnoCoreTests/DiagnosticRoleStemStreamingTests.swift",
+        "Tests/AutoTechnoCoreTests/PhrasePreparationReplayIdentityTests.swift",
+        "Tests/AutoTechnoCoreTests/BaselineProducerWitnessTests.swift",
+        "Tests/AutoTechnoCoreTests/UpperTimbreBorrowedAnalysisTests.swift",
+        "Tests/AutoTechnoCoreTests/RenderFingerprintParityTests.swift"
       ],
       "contracts": [
         "docs/SOUND_QUALITY.md",
@@ -866,7 +973,7 @@
     {
       "id": "long-horizon-signal-and-future-adaptation",
       "name": "Long-horizon signal analysis and future adaptation",
-      "responsibility": "Accumulate realized signal and effect-dose trajectories, apply the calibrated long-horizon policy, and emit one bounded preserve, recover, or one-per-world material-reframe decision for an eligible unscheduled future phrase.",
+      "responsibility": "Accumulate realized signal and effect-dose trajectories, apply the calibrated long-horizon policy, and emit one bounded preserve, recover, or one-per-world material-reframe decision for an eligible unscheduled future phrase. Current observation/corpus v4 and policy v18 consume full accepted semantic/signal/effect-dose evidence at both native rates, bind count geometry and preserve worst physical effects without averaging; sparse historical v16 resources cannot activate pending v18 seals.",
       "targets": [
         "AutoTechnoDSP"
       ],
@@ -874,27 +981,45 @@
         {
           "symbol": "LongHorizonFutureAdaptationState",
           "path": "Sources/AutoTechnoDSP/LongHorizonFutureAdaptation.swift"
+        },
+        {
+          "symbol": "LongHorizonProspectiveAdaptation",
+          "path": "Sources/AutoTechnoDSP/LongHorizonFutureAdaptation.swift"
+        },
+        {
+          "symbol": "LongHorizonSignalTrajectoryReportSchema",
+          "path": "Sources/AutoTechnoDSP/LongHorizonSignalTrajectory.swift"
         }
       ],
       "state": [
         "LongHorizonFutureAdaptationState",
         "last material-reframe generation",
         "signal trajectory accumulator",
-        "effect-dose accumulator"
+        "effect-dose accumulator",
+        "sealed transient prospective adaptation; source, incoming session/adaptation and policy binding; never accepted before exact source admission",
+        "Absent current v18 qualification fingerprint seals keep bundled production artifacts unavailable; historical v16 resources remain fixtures",
+        "Report interpretation v2 retains the pending episode through neutral conservative fallback; a different bound episode alone closes it; same-pass phrase evidence remains v1"
       ],
       "inputs": [
         "committed semantic trajectory",
         "realized render evidence",
-        "versioned long-horizon artifacts"
+        "versioned long-horizon artifacts",
+        "private prepared source preview for detached prospective reduction",
+        "Independent complete native-route runtime observations from actual accepted products; identical semantic/effect geometry and dense signal counts required"
       ],
       "outputs": [
         "LongHorizonFutureAdaptationUpdate",
-        "qualified preserve, recover, or material-reframe observation"
+        "qualified preserve, recover, or material-reframe observation",
+        "LongHorizonProspectiveAdaptation (tentative)"
       ],
       "evidence": [
         "LongHorizonSignalTrajectory",
         "LongHorizonEffectDoseReport",
-        "calibrated professional-policy verdict"
+        "calibrated professional-policy verdict",
+        "Full-journey native bootstrap through the shared detached preparation owner with every accepted phrase observed, protected exact child consumption, closed-leaf and operator-coverage bounds, fixed 7/2 disjoint roots and unchanged clean source/model binding; a prefix probe is traversal evidence only.",
+        "Native bootstrap recovery uses actual Core retryable decisions and retained accepted repeat PCM; accepted-only count geometry remains unchanged under current observation v4. Receipt-v2 separately binds offline presentation and frozen continuation, with a short recovery probe supplying traversal evidence only.",
+        "Core/DSP neutral debt fallback retains the pending episode and excludes fallback operator attribution; actual completed-episode reentry and changed pending operator still refuse transactionally. Runtime observation/adaptation v3 and Long observation/corpus v4/profile v18 bind current report v2; old interpretation authority is refused. The eight-hour structural trace hashes the v2 report identifier and preserves fixed capacities; actual full native qualification remains pending.",
+        "Native non-retryable candidate-incomplete refusal exposes the existing typed completeness failure count and at most eight named codes within the existing 24-detail bound; no new predicate, retry authorization, state or PCM. The f5dfce0 full native route refused after153 accepted phrases/1652 bars; full v18 qualification remains pending. Exact selected refused instrument vectors are retained as local-only canonical JSON witnesses with fixed output/write failures and no overwriting, import, accepted evidence or promotion authority."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/LongHorizonEffectDose.swift",
@@ -910,7 +1035,8 @@
         "Tests/AutoTechnoCoreTests/LongHorizonEffectDoseTests.swift",
         "Tests/AutoTechnoCoreTests/LongHorizonPolicyCalibrationIntegrationTests.swift",
         "Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift",
-        "Tests/AutoTechnoCoreTests/LongHorizonSignalTrajectoryTests.swift"
+        "Tests/AutoTechnoCoreTests/LongHorizonSignalTrajectoryTests.swift",
+        "Tests/AutoTechnoCoreTests/ModalSuccessorReportJoinTests.swift"
       ],
       "contracts": [
         "docs/LONG_HORIZON_PERFORMANCE_MAP.md",
@@ -930,7 +1056,7 @@
     {
       "id": "shared-detached-preparation",
       "name": "Shared detached preparation",
-      "responsibility": "Own the platform-neutral request, cancellation, candidate preparation, immutable waveform derivation, success/failure envelope used by both hosts, and the default-off selected-candidate diagnostic capture requested only by local evidence exporters.",
+      "responsibility": "Own the platform-neutral request, cancellation, candidate preparation, immutable waveform derivation, success/failure envelope used by both hosts, and the default-off selected-candidate diagnostic capture requested only by local evidence exporters. Derive one source-bound prospective successor request from the exact replay origin, canonical Core advance and long-horizon projection; no early scheduling or accepted-state mutation. Prepare actual successors iteratively, resolve all children before parents, enforce exact request/proof child ownership, and discard the entire tentative chain on child refusal or resource/cancellation failure. Preserve canonical root calibrated recovery, including a rejected source measured with a child; release no retained transport list. Own the shared protected continuation boundary, exact accepted-state/route/live sample admission and flat remaining-child promotion; a missing measured child cannot become repeat or replacement authority. Whole-mix, score-motif, kick-collision, and section-boundary local exporters consume the same qualified child at checked cumulative sample boundaries before fresh preparation; section context retains the exact immediate child and each consumed phrase advances canonical state once. Load production primary and long-horizon artifacts as one immutable matched pair; either load or exact primary-policy/engine/sample-rate binding failure leaves both hosts unavailable. Validate malformed root request identity before entering the large generic frame and reuse the same validation for every child. The Long Horizon calibration harness uses this owner with a qualified primary-only offline bootstrap and exact protected child traversal; production still requires its matched pair. Before evaluator creation or PCM, reuse the canonical DSP continuation guard and reserve the actual typed allocated root continuation once for the whole chain; invalid or over-ceiling capacity refuses without preparation.",
       "targets": [
         "AutoTechnoTransport"
       ],
@@ -942,12 +1068,32 @@
         {
           "symbol": "PhrasePreparationReplayIdentity",
           "path": "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift"
+        },
+        {
+          "symbol": "ProspectivePerformanceContinuation",
+          "path": "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift"
+        },
+        {
+          "symbol": "PreparedPerformancePhrase",
+          "path": "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift"
+        },
+        {
+          "symbol": "AutonomousPerformanceArtifactSet",
+          "path": "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift"
         }
       ],
       "state": [
         "PhrasePreparationKey",
         "PhrasePreparationReplayIdentity",
-        "incoming render, graph, quality, live-master, and long-horizon state"
+        "incoming render, graph, quality, live-master, and long-horizon state",
+        "transient exact-source/request prospective continuation seal and optional known live successor sample boundary",
+        "bounded transient pending source frames under aggregate resource reservation",
+        "flat ordered admitted child products consumed through the same protected host boundary",
+        "one immutable matched production primary/long-horizon artifact pair; no partial production readiness",
+        "Opt-in single-writer diagnostic session: fresh/collecting/sealed/discarded; private draft directories and staged actual source aliases, then only reduced selected-source/child bindings and independently owned files after whole-chain admission.",
+        "Optional synchronous ChainStorageOwners immutable reference holds root/active request and suspended-frame borrows only during prepare; no observer enters pending finalizers, prepared products or callbacks. Non-inlined request borrowing avoids large nested cooperative-stack copies without changing worker stack size or observed owners.",
+        "Immutable v2 chain reservation retains the root incoming allocated continuation charge across all passes and suspended sources; each child incoming aliases already retained parent state.",
+        "PhrasePreparationRequest is one immutable Sendable reference retaining the exact typed input snapshot. Host tasks, pending frames and admitted products share it instead of embedding large continuation values in worker stack frames; replay identity, numeric reservations and all future-boundary checks remain unchanged."
       ],
       "inputs": [
         "PhrasePreparationRequest",
@@ -961,24 +1107,52 @@
         "deterministic preparation replay identity",
         "read-only waveform envelopes",
         "score-behavior coverage sidecar bound to the exact accepted plan and whole-mix PCM",
-        "explicit one-shot versioned local capture namespaces with the Phase-1 v1 default preserved"
+        "explicit one-shot versioned local capture namespaces with the Phase-1 v1 default preserved",
+        "prospective successor request released only after exact source and long-horizon admission",
+        "one admitted root with exact flat retained continuation ownership or bounded chain refusal",
+        "Optional sealed same-pass 32-channel root/owned-child diagnostic bindings, absent from normal hosts and callback paths."
       ],
       "evidence": [
         "preparation diagnostics",
         "release-only detached planning, render/evaluate, presentation, complete-preparation, and process-high-water observations",
         "exact seed, continuation, route, recovery, and sample-boundary fingerprints",
         "commit-eligible prepared transaction",
-        "resolved foundation-behavior bar counts tied to exact whole-mix, role-stem, and replay manifests"
+        "resolved foundation-behavior bar counts tied to exact whole-mix, role-stem, and replay manifests",
+        "fixed three-rate actual rendered successor context, replay-origin refusal and live proposal applied once; synthetic mechanics, not runtime/resource qualification",
+        "actual detached-thread iterative preparation, deferred-finalizer exact PCM/capture parity, aggregate reservation and child refusal/cancellation controls; no runtime/resource qualification",
+        "exact measured-child consumption at three rates; stale Core/long-horizon/route and applied live target boundary refusal; no physical-output or sustained resource qualification",
+        "default-off frozen Release calibrated chain diagnostics with exact source/model/fixture bindings, actual accepted or refused outcomes, numeric reservation, complete preparation time and whole-process high-water; retained-model controls are not current artifact, long-horizon, deadline or output qualification",
+        "Default-off current shared-owner baseline matrix with exact journey child traversal, full-chain PCM/replay/render/graph/quality/long-horizon identity and explicit refusals; new local schema preserves historical phase timings and does not establish min/max two-pass, rebuild, lifecycle or physical-output qualification.",
+        "scripts/current_shared_preparation_envelope_report.py and scripts/test_current_shared_preparation_envelope_report.py own descriptive shared-envelope verification and synthetic metadata refusal controls: frozen matrix, all four continuation links, repeat-trial reference identity, aggregate reservation and scope checks; they supply no typed calibration, PCM proof or promotion authority.",
+        "Actual full native Long Horizon journey producer and default-off four-phrase bootstrap probe; transactional semantic/signal/effect accumulation, source/model binding and bounded refusal do not establish runtime activation or full qualification by themselves.",
+        "The test-only full-journey driver suspends before each fresh detached shared preparation and forwards cancellation, matching host scheduling without retaining route/controller temporaries beneath the preparation stack; exact owned children still bypass fresh preparation.",
+        "Full-journey refusal records separate prepared quality/commit rejection from protected ownership, replay, numeric-budget and semantic/signal/effect accumulator failures; rejected products never advance accepted state or supply calibration evidence.",
+        "Rejected full native journey inspection binds the actual request/Core and score-interest fields to the existing Core retry transition, zero-repeat scheduling and one score-only next proposal; no new preparation, accepted PCM, presented repeat, opened wave or canonical advance is authorized.",
+        "The test-only full native producer retains accepted closed-leaf PCM through actual rejection, applies the existing Core finite recovery/scheduling and qualified repeat-selection policies, and records receipt-v2 rejected identities, selected PCM/sample boundaries and accepted frames separately. Frozen Core/render/graph origin, protected-child consumption, combined step/repeat-bar bounds and per-preparation reservation remain required; combined held-source memory and device scheduling remain unqualified. Actual repeat-selection/foreign-origin controls and default-off36-phrase two-native recovery traversal retain full7/2 corpus qualification gates.",
+        "Leaf-to-root proof and exact child-object ownership gate streamed publication after complete packaging; all rejected/cancelled/unavailable/resource-refused chains clean private files. Initial/corrected mechanical controls preserve ordinary PCM/evidence/state, while native16 full-capture charge still refuses and capacity/RSS/deadlines remain unqualified.",
+        "Default-off single-writer numeric probe observes root/active incoming requests, actual suspended previews and leaf-to-root reduced prepared sources through the shared DSP inventory. Scoped observers unwind before frames mutate; live aliases deduplicate per snapshot. Native ordinary/observed initial chains preserve exact PCM, holds, states, identities and reservations; forced-correction native calls preserve the exact aggregate refusal and render trace; actual8k corrected streams preserve exact products; complete memory and native selected capture remain unqualified.",
+        "Incoming-capacity reservation and unused-capacity overflow controls plus native admitted PCM/proof/state/child-ownership parity; full capacity/RSS/deadline qualification remains open.",
+        "Native test-process allocator statistics and separate RSS high-water accompany sixteen-bar all-tap and initial/corrected owned-child controls; current zone peaks exclude destroyed zones/non-malloc VM and do not establish complete numeric attribution or admission.",
+        "Initial/corrected actual chain observations verify that initial PCM/state leave ownership before the corrective pass; original transaction, all selected taps, exact child and route/continuation facts remain unchanged. No preparation reservation is reduced from partial measurements.",
+        "A matched ordinary-only native four-case process control reuses the observed test's detached reference construction and emits only reduced PCM/proof/state identities, public reservation fields and refusal outcomes. The observed test cold-compares full products/reservation and emits the same compact reference for external parity. Whole-process footprint contrasts isolate diagnostic scope; neither control qualifies allocated storage, RSS/deadlines, selected native capture or runtime activation.",
+        "Installed-evaluator detached preparation at 8 kHz must complete and match an independently reconstructed synchronous request in PCM, holds, quality, replay and outgoing continuation; the original input remains fingerprint-identical. This is a worker-stack regression control, not native resource or runtime qualification."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift"
       ],
       "testPaths": [
+        "Tests/AutoTechnoAppTests/TechnoEngineLiveFeedbackTests.swift",
         "Tests/AutoTechnoCoreTests/AutonomousPhrasePreparationDiagnosticsTests.swift",
+        "Tests/AutoTechnoCoreTests/BaselineRenderIntegrationTests.swift",
+        "Tests/AutoTechnoCoreTests/ContinuousPrimaryPreparedAdmissionTests.swift",
         "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift",
+        "Tests/AutoTechnoCoreTests/KickFoundationCollisionIntegrationTests.swift",
         "Tests/AutoTechnoCoreTests/PerformanceEnvelopeIntegrationTests.swift",
         "Tests/AutoTechnoCoreTests/PhrasePreparationReplayIdentityTests.swift",
-        "Tests/AutoTechnoCoreTests/StemCaptureIntegrationTests.swift"
+        "Tests/AutoTechnoCoreTests/ScoreMotifBaselineIntegrationTests.swift",
+        "Tests/AutoTechnoCoreTests/SectionBoundaryBaselineIntegrationTests.swift",
+        "Tests/AutoTechnoCoreTests/StemCaptureIntegrationTests.swift",
+        "Tests/AutoTechnoCoreTests/LongHorizonPolicyCalibrationIntegrationTests.swift"
       ],
       "contracts": [
         "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
@@ -991,7 +1165,8 @@
         "evidence-calibration-and-primary-evaluation",
         "graph-effects-routing-and-mix",
         "session-director-and-score",
-        "voice-and-phrase-rendering"
+        "voice-and-phrase-rendering",
+        "long-horizon-signal-and-future-adaptation"
       ],
       "boundaries": [
         "detached-preparation",
@@ -1053,7 +1228,7 @@
     {
       "id": "macos-transport-and-session-lifecycle",
       "name": "macOS transport and session lifecycle",
-      "responsibility": "Own the active session seed, detached preparation tasks, stale-work epochs, commit-eligible AVAudioPlayerNode buffer admission and AVAudioEngine scheduling, pause/resume, route recovery, New Set, atomic continuation commit, persistent finite-wave successor recovery, accepted-PCM hold behavior, and boundary-only repeat-hold pattern-family playback.",
+      "responsibility": "Own the active session seed, detached preparation tasks, stale-work epochs, commit-eligible AVAudioPlayerNode buffer admission and AVAudioEngine scheduling, pause/resume, route recovery, New Set, atomic continuation commit, persistent finite-wave successor recovery, accepted-PCM hold behavior, and boundary-only repeat-hold pattern-family playback. Preserve detached flat inspector projections and promote the exact measured child before cache/live/repeat policy, with shared ownership admission and existing route rebuild on refusal. Protect already owned future children from live proposal authorization.",
       "targets": [
         "AutoTechnoApp"
       ],
@@ -1069,6 +1244,14 @@
         {
           "symbol": "AppOwnedPCMBufferScheduleAdmission",
           "path": "Sources/AutoTechnoApp/TechnoEngine.swift"
+        },
+        {
+          "symbol": "PreparedPhrase",
+          "path": "Sources/AutoTechnoApp/TechnoEngine.swift"
+        },
+        {
+          "symbol": "AppPerformancePreparer",
+          "path": "Sources/AutoTechnoApp/TechnoEngine.swift"
         }
       ],
       "state": [
@@ -1077,7 +1260,8 @@
         "NextPhraseProgress",
         "RepeatHoldEvolutionPlaybackMode",
         "AutonomousQualityRecoveryContext",
-        "playing-time sample clock"
+        "playing-time sample clock",
+        "flat shared measured-child ownership and aligned detached inspector projections"
       ],
       "inputs": [
         "user transport action",
@@ -1096,7 +1280,8 @@
         "route/preparation generations",
         "recovery wave, ordinal, presented-repeat bars, and fixed-domain recovery intent",
         "hold pattern-family or exact-fallback status and successor-preparation logs",
-        "playing-time state"
+        "playing-time state",
+        "exact shared child/presentation promotion; protected targets excluded before live authorization"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoApp/AutonomousSessionSeedSource.swift",
@@ -1258,7 +1443,7 @@
     {
       "id": "windows-transport-and-waveout",
       "name": "Windows transport and waveOut output",
-      "responsibility": "Reuse canonical detached preparation and immutable primary or qualified repeat-hold pattern-family PCM while owning Win32 presentation, lookahead scheduling, waveOut conversion/queueing, device recovery, and fixed-work completion accounting.",
+      "responsibility": "Reuse canonical detached preparation and immutable primary or qualified repeat-hold pattern-family PCM while owning Win32 presentation, lookahead scheduling, waveOut conversion/queueing, device recovery, and fixed-work completion accounting. Consume the same exact measured child before ordinary cache/repeat policy, suppress independent successor replacement while required, and recover the route on shared boundary refusal. Consume diagnosed rejection decisions through the shared Core retry/wave transition, bind recovery context into exact requests, retain accepted PCM and fail closed for safety or unavailable provenance.",
       "targets": [
         "AutoTechnoWindows",
         "AutoTechnoWindowsPlatform"
@@ -1277,7 +1462,9 @@
         "WindowsAutoTechnoController transport state",
         "WindowsRecoveryContext",
         "RepeatHoldEvolutionPlaybackMode",
-        "waveOut queue and completion counters"
+        "waveOut queue and completion counters",
+        "flat shared measured-child ownership preserved across pause and discarded on route recovery",
+        "AutonomousQualityRetryContinuation and fail-closed preparation status confined to the Windows state queue"
       ],
       "inputs": [
         "PreparedPerformancePhrase",
@@ -1291,7 +1478,9 @@
       ],
       "evidence": [
         "atomic completion counters",
-        "prepared-key and route-generation checks"
+        "prepared-key and route-generation checks",
+        "Core-owned ordinal/wave/direction/presented-repeat context bound into preparation replay identity",
+        "Serial preparation releases rejected PCM before the next render; asynchronous host control receives a bounded rejection decision or eligible immutable accepted product only."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoWindows/main.swift",
@@ -1299,7 +1488,10 @@
         "Sources/AutoTechnoWindowsPlatform/include/AutoTechnoWindowsPlatform.h"
       ],
       "testPaths": [
-        "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift"
+        "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift",
+        "Tests/AutoTechnoCoreTests/PhrasePreparationReplayIdentityTests.swift",
+        "Tests/AutoTechnoAppTests/TechnoEngineLiveFeedbackTests.swift",
+        "Tests/AutoTechnoCoreTests/AutonomousQualityRecoveryHostPolicyTests.swift"
       ],
       "contracts": [
         "docs/WINDOWS_DISTRIBUTION.md",
@@ -1308,7 +1500,8 @@
       ],
       "dependsOn": [
         "session-director-and-score",
-        "shared-detached-preparation"
+        "shared-detached-preparation",
+        "quality-and-feedback-contracts"
       ],
       "boundaries": [
         "detached-preparation",
@@ -1372,7 +1565,7 @@
       "symbol": "AutonomousQualityRetryContinuation",
       "path": "Sources/AutoTechnoCore/QualityQualification.swift",
       "scope": "host-control",
-      "pcmRelationship": "Coordinates bounded detached retries while rejected PCM remains uncommitted."
+      "pcmRelationship": "Both hosts reuse the same finite calibrated rejection transition for detached future proposals; rejected PCM never commits, and accepted presentation alone opens successor waves."
     },
     {
       "id": "long-horizon-adaptation-state",
@@ -1490,6 +1683,15 @@
       "path": "Sources/AutoTechnoDSP/ModalPercussionMeasurementContinuity.swift",
       "scope": "canonical-phrase",
       "pcmRelationship": "Carries at most eight actual source-separated observation accumulators under RenderState; no retained PCM or changed synthesis. Missing successor, gap, reset or overflow remains unavailable; only accepted prepared state advances."
+    },
+    {
+      "id": "prepared-performance-child-ownership",
+      "name": "Protected immutable measured-child ownership",
+      "ownerComponent": "shared-detached-preparation",
+      "symbol": "PreparedPerformancePhrase",
+      "path": "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift",
+      "scope": "host-control",
+      "pcmRelationship": "Flat transient admitted PCM/request ownership; each physical-window source retains its exact measured child and hosts consume the same object before replacement or repeat. Pause preserves it; route rebuilding or New Set discards it. No serialized or new Core musical state."
     }
   ],
   "transitions": [
@@ -1615,9 +1817,9 @@
         "quality-continuation",
         "live-master-continuation"
       ],
-      "artifact": "candidate vector, verdict, and atomic commit provenance; bounded same-pass modal observation continuation and source-bound descriptive windows",
+      "artifact": "candidate vector, verdict, and atomic commit provenance; bounded same-pass modal observation continuation and source-bound descriptive windows; optional required detached validation of a private prospective source, actual continuous observation proof, retained qualified successor for unfinished source windows and cached final source identity",
       "pcmConsequence": "qualifies-without-changing-pcm",
-      "failureBehavior": "Reject or report qualification unavailable; never weaken a hard gate."
+      "failureBehavior": "Reject or report qualification unavailable; never weaken a hard gate. Required validation missing or unsupported stays unavailable; mismatched accepted source identity or cancellation cannot produce an admitted product. Installed policy remains unchanged."
     },
     {
       "id": "evaluator-to-prepared-product",
@@ -1639,11 +1841,12 @@
         "graph-state",
         "quality-continuation",
         "live-master-continuation",
-        "long-horizon-adaptation-state"
+        "long-horizon-adaptation-state",
+        "prepared-performance-child-ownership"
       ],
-      "artifact": "PreparedPerformancePhrase with immutable qualified PCM",
+      "artifact": "PreparedPerformancePhrase with immutable qualified PCM; iterative pending source reduction, exact flat admitted child ownership and aggregate numeric reservation",
       "pcmConsequence": "qualifies-without-changing-pcm",
-      "failureBehavior": "Return no commit-eligible product when any identity or evidence binding fails."
+      "failureBehavior": "Return no commit-eligible product when any identity or evidence binding fails. Child rejection, required unavailable support, reservation refusal or cancellation discards every tentative parent; shared protected host consumption requires exact state/route/live-boundary ownership; physical output and full resource/deadline qualification remain separate activation gates."
     },
     {
       "id": "prepared-product-to-macos-commit",
@@ -1659,7 +1862,8 @@
         "graph-state",
         "quality-continuation",
         "live-master-continuation",
-        "long-horizon-adaptation-state"
+        "long-horizon-adaptation-state",
+        "prepared-performance-child-ownership"
       ],
       "producesState": [
         "autonomous-session-state",
@@ -1671,9 +1875,9 @@
         "repeat-hold-playback-state",
         "next-phrase-progress"
       ],
-      "artifact": "accepted PreparedPerformancePhrase and advanced canonical state",
+      "artifact": "accepted immutable prepared source with exact flat measured-child ownership, advanced canonical state and protected child promotion before ordinary cache/live/repeat",
       "pcmConsequence": "commits-immutable-pcm",
-      "failureBehavior": "Discard stale or unqualified work and preserve accepted PCM/fallback state."
+      "failureBehavior": "Discard stale/unqualified work. Missing or stale measured-child ownership stops/rebuilds through the existing route recovery owner; it cannot authorize a substitute or incomplete-source repeat. A naturally complete leaf retains ordinary accepted PCM/fallback policy."
     },
     {
       "id": "prepared-product-to-windows-commit",
@@ -1689,7 +1893,8 @@
         "graph-state",
         "quality-continuation",
         "live-master-continuation",
-        "long-horizon-adaptation-state"
+        "long-horizon-adaptation-state",
+        "prepared-performance-child-ownership"
       ],
       "producesState": [
         "autonomous-session-state",
@@ -1700,9 +1905,9 @@
         "long-horizon-adaptation-state",
         "repeat-hold-playback-state"
       ],
-      "artifact": "accepted PreparedPerformancePhrase and advanced canonical state",
+      "artifact": "accepted immutable prepared source with exact flat measured-child ownership, advanced canonical state and protected child promotion before ordinary cache/live/repeat",
       "pcmConsequence": "commits-immutable-pcm",
-      "failureBehavior": "Discard stale or unqualified work and keep the last accepted host state."
+      "failureBehavior": "Discard stale/unqualified work. Missing or stale measured-child ownership stops/rebuilds through the existing route recovery owner; it cannot authorize a substitute or incomplete-source repeat. A naturally complete leaf retains ordinary accepted PCM/fallback policy."
     },
     {
       "id": "macos-schedule-to-realtime-capture",
@@ -1864,9 +2069,9 @@
       "producesState": [
         "long-horizon-adaptation-state"
       ],
-      "artifact": "semantic, signal, and effect-dose trajectory observation",
+      "artifact": "semantic, signal, and effect-dose trajectory observation; same canonical reduction for a sealed private prospective source projection",
       "pcmConsequence": "observes-without-changing-pcm",
-      "failureBehavior": "Preserve prior adaptation state when evidence is incomplete or discontinuous."
+      "failureBehavior": "Preserve prior adaptation state when evidence is incomplete or discontinuous. A tentative projection can become an admitted update only for the exact accepted source, incoming session/adaptation fingerprints and complete policy identity."
     },
     {
       "id": "long-horizon-decision-to-session",
@@ -2399,9 +2604,9 @@
       "name": "Offline calibration coverage freeze",
       "ownerComponent": "evidence-calibration-and-primary-evaluation",
       "executionContext": "Opt-in test-owned bounded canonical score planning on accepted clean source before new-root PCM.",
-      "allowedWork": "Select disjoint ordinal partitions with fixed counts and inherited score quotas; freeze complete checkpoint identities and predicted modal window geometry.",
+      "allowedWork": "Select disjoint ordinal partitions with fixed counts and inherited score quotas; freeze complete checkpoint identities and predicted modal window geometry. Authenticate a private current-engine protocol against exact clean Git input objects and coherent contract before planning; retain its blob and immutable v2 cohort source bindings. Independently replay all322 frozen checkpoints and exact per-event native modal geometry without rendering musical PCM. Bind protocol and cohort Git blobs to the actual immutable parsed Data buffers, retaining final path rechecks. Share complete current score replay with the existing continuous study launch validator; authenticate the exact published current source and full native/qualification matrix before PCM.",
       "forbiddenWork": "Outcome-based root selection, dropping incomplete events, interpreting predicted support as measured energy or quality, overwriting frozen cohorts, runtime mutation or callback work.",
-      "failureBehavior": "Fail closed on insufficient score coverage, changed accepted inputs, invalid output location or an existing destination; preserve earlier cohorts and installed policies.",
+      "failureBehavior": "Fail closed on insufficient score coverage, changed accepted inputs, invalid output location or an existing destination; preserve earlier cohorts and installed policies. Missing, changed, foreign-source, historical-engine or unknown-field protocols refuse before planning; earlier cohorts and seals remain historical. Stale publication refs, partial execution matrices, wrong protocol bytes, existing/aliased outputs and archive/promotion claims fail closed. An exclusive private output claim refuses a competing writer before PCM and preserves that writer\u2019s existing manifest.",
       "tests": [
         "Tests/AutoTechnoCoreTests/CanonicalJourneyQualificationHarness.swift",
         "Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationIntegrationTests.swift"

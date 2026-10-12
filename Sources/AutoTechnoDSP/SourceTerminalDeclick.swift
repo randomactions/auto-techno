@@ -161,6 +161,27 @@ package struct SourceTerminalDeclickRenderEvidence: Equatable, Sendable {
                 .allSatisfy(\.isFinite)
     }
 
+    /// Candidate admission binds kick and rumble to their natural source support.
+    /// Neither voice has swing: their 0.32/0.68-second windows are clipped only
+    /// by the original destination boundary. A valid terminal fade alone cannot
+    /// authorize a shorter source. Other voices retain their articulation bounds.
+    package func isComplete(sampleRate: Double, destinationFrameCount: Int) -> Bool {
+        guard sampleRate.isFinite,
+              (QualityQualificationContract.minimumSupportedSampleRate...QualityQualificationContract.maximumSupportedSampleRate)
+                .contains(sampleRate),
+              destinationFrameCount > 0,
+              isComplete(sampleRate: sampleRate) else { return false }
+        let duration: Double
+        switch voice {
+        case .kick: duration = 0.32
+        case .rumble: duration = 0.68
+        default: return true
+        }
+        let startFrame = Int((Double(step) * Double(destinationFrameCount) / 16).rounded())
+        let expectedFrames = min(Int(sampleRate * duration), destinationFrameCount - startFrame)
+        return expectedFrames > 0 && renderedFrameCount == expectedFrames
+    }
+
     private static func isFingerprint(_ value: String) -> Bool {
         value.utf8.count == 16 && value.utf8.allSatisfy { byte in
             (48...57).contains(byte) || (97...102).contains(byte)

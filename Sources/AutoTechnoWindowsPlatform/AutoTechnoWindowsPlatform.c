@@ -2,13 +2,18 @@
 
 #ifdef _WIN32
 
+#ifndef UNICODE
+#define UNICODE
+#endif
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <mmsystem.h>
+#include <mmreg.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 
 #define AT_WINDOW_CLASS L"AutoTechnoWindowClass"
 #define AT_WINDOW_TITLE L"Auto Techno"

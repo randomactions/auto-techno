@@ -1,20 +1,47 @@
-name: Windows Source Validation
+name: Native Source Validation
 
 on:
   workflow_dispatch:
+    inputs:
+      validation:
+        description: Validation scope (component runs do not replace full CI)
+        type: choice
+        required: true
+        default: windows
+        options:
+          - windows
+          - windows-diagnostics
+          - windows-recovery-build
+          - windows-planning-probe
+          - windows-planning-math
+          - windows-full-banks
+          - modal-continuation
+          - prepared-admission
+          - rumble-duration
+          - rumble-support
+          - foundation-timing
+          - full-phrase-bass
+          - full-phrase-foundation
+          - full-phrase-bass-behaviors
 
 permissions:
   contents: read
 
 concurrency:
-  group: windows-source-validation-${{ github.ref }}
+  group: native-source-validation-${{ github.ref }}-${{ inputs.validation }}
   cancel-in-progress: false
 
 jobs:
   validate-windows-source:
-    name: Windows x64 source validation
+    if: inputs.validation == 'windows' || inputs.validation == 'windows-diagnostics' || inputs.validation == 'windows-recovery-build' || inputs.validation == 'windows-full-banks' || inputs.validation == 'windows-planning-probe' || inputs.validation == 'windows-planning-math' || inputs.validation == ''
+    name: Windows x64 source validation (${{ matrix.test-library }})
     runs-on: windows-2025
-    timeout-minutes: 60
+    timeout-minutes: ${{ inputs.validation == 'windows-full-banks' && 360 || inputs.validation == 'windows-recovery-build' && 90 || 60 }}
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        test-library: ${{ fromJSON(inputs.validation == 'windows-diagnostics' && '["xctest","swift-testing"]' || inputs.validation == 'windows-planning-math' && '["math"]' || inputs.validation == 'windows-planning-probe' && '["planning"]' || inputs.validation == 'windows-recovery-build' && '["recovery"]' || inputs.validation == 'windows-full-banks' && '["bank-0","bank-1","bank-2","bank-3","bank-4","bank-5","bank-6","bank-7"]' || '["all"]') }}
 
     steps:
       - name: Check out source
@@ -26,16 +53,400 @@ jobs:
         shell: pwsh
         run: |
           winget install --id Swift.Toolchain --exact --version 6.3.3 --source winget --accept-package-agreements --accept-source-agreements
-          $swift = Get-ChildItem @("$env:ProgramFiles\Swift", "$env:LocalAppData\Programs\Swift") -Filter swift.exe -Recurse -ErrorAction SilentlyContinue |
-            Where-Object { $_.DirectoryName -match "usr\\bin$" } |
-            Select-Object -First 1
-          if ($null -eq $swift) { throw "Unable to locate swift.exe after installation." }
-          $swift.DirectoryName | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          if ($LASTEXITCODE -ne 0) { throw "Swift installation failed with exit code $LASTEXITCODE." }
+          # The running Actions worker predates installation. Carry registered
+          # runtime and toolchain paths into later steps, not only swift.exe's bin.
+          $registeredPaths = foreach ($scope in @("Machine", "User")) {
+            [Environment]::GetEnvironmentVariable("Path", $scope) -split ";" |
+              Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+          }
+          $registeredPaths | Select-Object -Unique |
+            Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          $sdkRoot = [Environment]::GetEnvironmentVariable("SDKROOT", "User")
+          if ([string]::IsNullOrWhiteSpace($sdkRoot)) {
+            $sdkRoot = [Environment]::GetEnvironmentVariable("SDKROOT", "Machine")
+          }
+          if (-not [string]::IsNullOrWhiteSpace($sdkRoot)) {
+            "SDKROOT=$sdkRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
 
       - name: Show toolchain
         shell: pwsh
-        run: swift --version
+        run: |
+          $swift = Get-Command swift -CommandType Application -ErrorAction Stop
+          Write-Host "Swift executable: $($swift.Source)"
+          $versionOutput = & $swift.Source --version 2>&1
+          $swiftExit = $LASTEXITCODE
+          $versionOutput | Write-Output
+          if ($swiftExit -ne 0) { throw "Swift startup failed with exit code $swiftExit." }
+          if (($versionOutput -join "`n") -notmatch 'Swift version 6\.3\.3(?:\s|$)') {
+            throw "The selected Swift executable does not match the pinned 6.3.3 toolchain."
+          }
+
+      # Swift's registered environment may put the WindowsApps python alias
+      # ahead of runner tools. Install/select Python after that PATH update.
+      - name: Set up Python for complete Windows banks
+        if: startsWith(matrix.test-library, 'bank-')
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+
+      - name: Verify bank planner before compiling tests
+        if: startsWith(matrix.test-library, 'bank-')
+        shell: pwsh
+        run: |
+          python --version
+          if ($LASTEXITCODE -ne 0) { throw "Python startup failed." }
+          python -c "import sys; assert sys.version_info[:2] == (3, 13)"
+          if ($LASTEXITCODE -ne 0) { throw "Unexpected Python runtime." }
+          python -m unittest discover -s scripts -p test_windows_test_plan.py
+          if ($LASTEXITCODE -ne 0) { throw "Bank-plan regression tests failed." }
 
       - name: Build and test without distribution
+        if: matrix.test-library == 'all'
         shell: pwsh
         run: .\scripts\build-windows.ps1
+
+      # Diagnostic scopes do not replace the full source-validation command.
+      # Separate framework discovery from compilation and a single execution so
+      # a silent aggregate run cannot hide which boundary is still active.
+      - name: Probe native planning scalar arithmetic
+        if: matrix.test-library == 'math'
+        timeout-minutes: 5
+        shell: pwsh
+        run: |
+          swiftc -Onone scripts/native-planning-math-probe.swift -o planning-math-debug.exe
+          if ($LASTEXITCODE -ne 0) { throw "Debug scalar probe compilation failed." }
+          .\planning-math-debug.exe debug
+          if ($LASTEXITCODE -ne 0) { throw "Debug scalar probe execution failed." }
+          swiftc -O scripts/native-planning-math-probe.swift -o planning-math-release.exe
+          if ($LASTEXITCODE -ne 0) { throw "Optimized scalar probe compilation failed." }
+          .\planning-math-release.exe release
+          if ($LASTEXITCODE -ne 0) { throw "Optimized scalar probe execution failed." }
+
+      - name: Build diagnostic test executable
+        if: matrix.test-library != 'all' && matrix.test-library != 'math'
+        timeout-minutes: 30
+        shell: pwsh
+        run: |
+          swift build --build-tests --build-path .build-windows
+          if ($LASTEXITCODE -ne 0) { throw "Diagnostic test build failed." }
+
+      - name: Discover selected test library
+        if: matrix.test-library == 'xctest' || matrix.test-library == 'swift-testing'
+        timeout-minutes: 5
+        shell: pwsh
+        env:
+          TEST_LIBRARY: ${{ matrix.test-library }}
+        run: |
+          $libraryArguments = if ($env:TEST_LIBRARY -eq "xctest") {
+            @("--enable-xctest", "--disable-swift-testing")
+          } else {
+            @("--disable-xctest", "--enable-swift-testing")
+          }
+          swift test --build-path .build-windows list --skip-build @libraryArguments |
+            Tee-Object -FilePath "test-discovery-$env:TEST_LIBRARY.txt"
+          if ($LASTEXITCODE -ne 0) { throw "Test-library discovery failed." }
+          $probe = if ($env:TEST_LIBRARY -eq "xctest") {
+            'LiveMasterTrimFingerprintTests[/.]testTrimIsFingerprintBound'
+          } else {
+            'DeterministicSignalFixturesTests[/.]musicalRoleFixtureProperties'
+          }
+          if (-not (Select-String -Path "test-discovery-$env:TEST_LIBRARY.txt" -Pattern $probe -Quiet)) {
+            throw "The declared diagnostic probe was not discovered."
+          }
+
+      - name: Execute discovered diagnostic probe
+        if: matrix.test-library == 'xctest' || matrix.test-library == 'swift-testing'
+        timeout-minutes: 5
+        shell: pwsh
+        env:
+          TEST_LIBRARY: ${{ matrix.test-library }}
+        run: |
+          $libraryArguments = if ($env:TEST_LIBRARY -eq "xctest") {
+            @("--enable-xctest", "--disable-swift-testing", "--filter", "LiveMasterTrimFingerprintTests.testTrimIsFingerprintBound")
+          } else {
+            @("--disable-xctest", "--enable-swift-testing", "--filter", "DeterministicSignalFixturesTests.musicalRoleFixtureProperties")
+          }
+          swift test --build-path .build-windows --skip-build --no-parallel @libraryArguments
+          if ($LASTEXITCODE -ne 0) { throw "The discovered diagnostic probe failed." }
+          Write-Host "Diagnostic probe only; full Windows validation remains required."
+
+      # This focused recovery/build scope is independent of the full Windows
+      # suite. Each selected test owner must exist in native discovery first.
+      - name: Verify Windows recovery, fingerprint and storage contracts
+        if: matrix.test-library == 'recovery'
+        timeout-minutes: 15
+        shell: pwsh
+        run: |
+          $discovered = @(swift test --build-path .build-windows list --skip-build --disable-xctest --enable-swift-testing)
+          if ($LASTEXITCODE -ne 0) { throw "Native Swift Testing discovery failed." }
+          $owners = @("AutonomousQualityRecoveryHostPolicyTests", "RenderFingerprintParityTests")
+          foreach ($owner in $owners) {
+            $pattern = 'AutoTechnoCoreTests\.' + [regex]::Escape($owner) + '/'
+            if (-not ($discovered | Select-String -Pattern $pattern -Quiet)) {
+              throw "Required test owner was not discovered: $owner"
+            }
+          }
+          $discovered | Where-Object { $_ -match '(AutonomousQualityRecoveryHostPolicyTests|RenderFingerprintParityTests)/' } | Write-Output
+          $storageTest = 'DiagnosticRoleStemStreamingTests/typedStorageIdentity'
+          if (-not ($discovered | Select-String -SimpleMatch $storageTest -Quiet)) {
+            throw "Required continuation storage test was not discovered."
+          }
+          swift test --build-path .build-windows --skip-build --no-parallel --disable-xctest --enable-swift-testing --filter '(AutonomousQualityRecoveryHostPolicyTests|RenderFingerprintParityTests|DiagnosticRoleStemStreamingTests/typedStorageIdentity)'
+          if ($LASTEXITCODE -ne 0) { throw "Windows recovery/fingerprint/storage contracts failed." }
+
+      - name: Verify Windows calibration launch provenance
+        if: matrix.test-library == 'recovery'
+        timeout-minutes: 15
+        shell: pwsh
+        run: |
+          $discovered = @(swift test --build-path .build-windows list --skip-build --disable-xctest --enable-swift-testing)
+          if ($LASTEXITCODE -ne 0) { throw "Native calibration discovery failed." }
+          $required = @('ProfessionalQualityCalibrationIntegrationTests/currentContinuousExecutionProtocolRefusesMutation',
+            'ProfessionalQualityCalibrationIntegrationTests/currentContinuousPublishedRefBinding',
+            'ProfessionalQualityCalibrationIntegrationTests/currentContinuousOutputClaimRefusesCompetingWriter',
+            'ProfessionalQualityCalibrationIntegrationTests/currentCoverageSelectionProtocolRefusesMutation',
+            'ProfessionalQualityCalibrationIntegrationTests/currentCoverageParsedByteBindingRejectsPathMutation',
+            'ProfessionalQualityCalibrationIntegrationTests/freshCoverageSelectionIsOutcomeBlind')
+          foreach ($test in $required) {
+            if (-not ($discovered | Select-String -SimpleMatch $test -Quiet)) {
+              throw "Calibration provenance test was not discovered: $test"
+            }
+          }
+          swift test --build-path .build-windows --skip-build --no-parallel --disable-xctest --enable-swift-testing --filter 'ProfessionalQualityCalibrationIntegrationTests/(currentContinuousExecutionProtocolRefusesMutation|currentContinuousPublishedRefBinding|currentContinuousOutputClaimRefusesCompetingWriter|currentCoverageSelectionProtocolRefusesMutation|currentCoverageParsedByteBindingRejectsPathMutation|freshCoverageSelectionIsOutcomeBlind)'
+          if ($LASTEXITCODE -ne 0) { throw "Native calibration provenance controls failed." }
+
+      - name: Diagnose native planning baseline fields
+        if: matrix.test-library == 'planning'
+        timeout-minutes: 10
+        shell: pwsh
+        env:
+          AUTOTECHNO_TRACE_PLANNING_BASELINE: '1'
+        run: |
+          $discovered = @(swift test --build-path .build-windows list --skip-build --disable-xctest --enable-swift-testing)
+          if ($LASTEXITCODE -ne 0) { throw "Native planning discovery failed." }
+          $required = @('LongHorizonTrajectoryBaselineTests/frozenFourHourPlanningBaseline',
+            'LongHorizonTrajectoryBaselineTests/canonicalLockCurve',
+            'AutonomousCandidateEvaluationTests/exactStateFingerprints',
+            'LongHorizonSemanticTrajectoryTests/canonicalFourHourTrajectory',
+            'LongHorizonSignalTrajectoryTests/eightHourTrajectoryIsBounded')
+          foreach ($test in $required) {
+            if (-not ($discovered | Select-String -SimpleMatch $test -Quiet)) {
+              throw "The native regression was not discovered: $test"
+            }
+          }
+          swift test --build-path .build-windows --skip-build --no-parallel --disable-xctest --enable-swift-testing --filter '(LongHorizonTrajectoryBaselineTests|AutonomousCandidateEvaluationTests/exactStateFingerprints|LongHorizonSemanticTrajectoryTests/canonicalFourHourTrajectory|LongHorizonSignalTrajectoryTests/eightHourTrajectoryIsBounded)'
+          if ($LASTEXITCODE -ne 0) { throw "Native planning/fingerprint regression failed; original assertions remain required." }
+
+      - name: Verify Windows live-master fingerprint parity
+        if: matrix.test-library == 'recovery'
+        timeout-minutes: 5
+        shell: pwsh
+        run: |
+          $discovered = @(swift test --build-path .build-windows list --skip-build --enable-xctest --disable-swift-testing)
+          if ($LASTEXITCODE -ne 0) { throw "Native XCTest discovery failed." }
+          if (-not ($discovered | Select-String -Pattern 'LiveMasterTrimFingerprintTests/testTrimIsFingerprintBound' -Quiet)) {
+            throw "Required live-master fingerprint test was not discovered."
+          }
+          swift test --build-path .build-windows --skip-build --no-parallel --enable-xctest --disable-swift-testing --filter LiveMasterTrimFingerprintTests.testTrimIsFingerprintBound
+          if ($LASTEXITCODE -ne 0) { throw "Windows live-master fingerprint parity failed." }
+
+      - name: Build Windows release app after focused recovery validation
+        if: matrix.test-library == 'recovery'
+        timeout-minutes: 30
+        shell: pwsh
+        run: |
+          .\scripts\build-windows.ps1 -SkipTests
+          Write-Host "Focused recovery contracts and release compilation only; full Windows tests and device/runtime qualification remain required."
+
+      - name: Execute every discovered suite in assigned Windows bank
+        if: startsWith(matrix.test-library, 'bank-')
+        shell: pwsh
+        env:
+          TEST_BANK: ${{ matrix.test-library }}
+        run: |
+          $bank = [int]($env:TEST_BANK -replace '^bank-', '')
+          .\scripts\test-windows-bank.ps1 -Bank $bank -Banks 8
+
+      - name: Build release app in full Windows validation
+        if: matrix.test-library == 'bank-0'
+        timeout-minutes: 30
+        shell: pwsh
+        run: .\scripts\build-windows.ps1 -SkipTests
+
+      - name: Record diagnostic process state
+        if: always() && matrix.test-library != 'all'
+        shell: pwsh
+        run: |
+          Get-Process | Where-Object { $_.ProcessName -match 'swift|AutoTechno' } |
+            Select-Object Id, ProcessName, CPU, WorkingSet64
+
+
+  modal-continuation:
+    if: inputs.validation == 'modal-continuation'
+    name: Native modal continuation component
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Record candidate and toolchain
+        run: |
+          git rev-parse HEAD
+          swift --version
+      # Focused research evidence only. This manual workflow neither supplies
+      # the required swift-test check nor replaces the complete Swift CI banks.
+      - name: Verify canonical continuation and fault controls
+        run: >-
+          swift test --no-parallel
+          --build-path "$RUNNER_TEMP/auto-techno-component"
+          --filter '(algorithmicModalContinuationFaults|continuousModalWindowMatrix|continuousModalInterruptionAndBounds)'
+
+  rumble-duration:
+    if: inputs.validation == 'rumble-duration'
+    name: Native rumble duration component
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Record candidate and toolchain
+        run: |
+          git rev-parse HEAD
+          swift --version
+      - name: Verify canonical rumble duration and terminal controls
+        run: >-
+          swift test --no-parallel
+          --build-path "$RUNNER_TEMP/auto-techno-component"
+          --filter SourceTerminalDeclickTests
+      - name: Verify semantic codebase map
+        run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/auto-techno-component"
+
+  foundation-timing:
+    if: inputs.validation == 'foundation-timing'
+    name: Native independent foundation timing component
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Record candidate and toolchain
+        run: |
+          git rev-parse HEAD
+          swift --version
+      - name: Verify independent native bass timing and score faults
+        run: >-
+          swift test --no-parallel
+          --build-path "$RUNNER_TEMP/auto-techno-component"
+          --filter algorithmicFoundationBassFaults
+      - name: Verify semantic codebase map
+        run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/auto-techno-component"
+
+  full-phrase-bass:
+    if: inputs.validation == 'full-phrase-bass' || inputs.validation == 'full-phrase-foundation' || inputs.validation == 'full-phrase-bass-behaviors'
+    name: Native full-phrase foundation transaction faults
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Record candidate and toolchain
+        run: |
+          git rev-parse HEAD
+          swift --version
+      # Optimized DSP keeps the complete native-rate matrix bounded. The
+      # integration banks retain Debug coverage; this changes no test oracle.
+      - name: Verify full-phrase foundation render and transaction binding
+        run: >-
+          swift test -c release --no-parallel
+          --build-path "$RUNNER_TEMP/auto-techno-component"
+          --filter '(RenderFingerprintParityTests|RepeatHoldEvolutionTests|algorithmicFullPhrase${{ inputs.validation == 'full-phrase-bass-behaviors' && 'BassBehavior' || inputs.validation == 'full-phrase-foundation' && '(Bass|Companion|OutputFrame)' || 'Bass' }}Faults)'
+      - name: Verify semantic codebase map
+        run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/auto-techno-component"
+
+  prepared-admission:
+    if: inputs.validation == 'prepared-admission'
+    name: Native prepared admission fault matrix
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Record candidate and toolchain
+        run: |
+          git rev-parse HEAD
+          swift --version
+      - name: Verify native-rate prepared admission faults
+        run: >-
+          swift test -c release --no-parallel
+          --build-path "$RUNNER_TEMP/auto-techno-component"
+          --filter '(nativePrepared(Admission|SuccessorBinding)FaultMatrix|nativeRenderedModalVoiceBoundary|nativeBassNaturalSupport|algorithmicKickFullPhraseSupport|sourceSupportGeometry|RenderFingerprintParityTests|ProfessionalQualityCalibrationIntegrationTests/(currentContinuousExecutionProtocolRefusesMutation|currentContinuousPublishedRefBinding|currentContinuousOutputClaimRefusesCompetingWriter|currentCoverageSelectionProtocolRefusesMutation|currentCoverageParsedByteBindingRejectsPathMutation|freshCoverageSelectionIsOutcomeBlind))'
+      - name: Generate and validate semantic codebase map
+        run: |
+          python3 scripts/codebase_map.py generate --build-path "$RUNNER_TEMP/auto-techno-component"
+          python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/auto-techno-component"
+      # Transport the exact generated text when the local command-line SDK
+      # lacks XCTest. No source or generated document is edited by this step.
+      - name: Emit source-bound generated map
+        run: |
+          python3 - <<'PYMAP'
+          import base64, hashlib, json, pathlib, subprocess
+          raw = pathlib.Path('docs/CODEBASE_MAP.md').read_bytes()
+          source = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          encoded = base64.b64encode(raw).decode('ascii')
+          chunks = [encoded[i:i+8192] for i in range(0, len(encoded), 8192)]
+          for index, chunk in enumerate(chunks):
+              print(json.dumps(dict(schema='autotechno-generated-map-chunk.v1', source=source,
+                  sha256=hashlib.sha256(raw).hexdigest(), bytes=len(raw), index=index,
+                  chunks=len(chunks), payload=chunk), sort_keys=True))
+          PYMAP
+
+  rumble-support:
+    if: inputs.validation == 'rumble-support'
+    name: Native rumble support and map generation
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Record candidate and toolchain
+        run: |
+          git rev-parse HEAD
+          swift --version
+      - name: Verify rumble support and full-phrase controls
+        run: >-
+          swift test -c release --no-parallel
+          --build-path "$RUNNER_TEMP/auto-techno-component"
+          --filter '(SourceTerminalDeclickTests|RenderFingerprintParityTests|RepeatHoldEvolutionTests|algorithmicFullPhrase(Bass|Companion|BassBehavior|OutputFrame)Faults|nativePrepared(Admission|SuccessorBinding)FaultMatrix)'
+      - name: Generate and validate semantic codebase map
+        run: |
+          python3 scripts/codebase_map.py generate --build-path "$RUNNER_TEMP/auto-techno-component"
+          python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/auto-techno-component"
+      # Transport the exact generated text when the local command-line SDK
+      # lacks XCTest. No source or generated document is edited by this step.
+      - name: Emit source-bound generated map
+        run: |
+          python3 - <<'PYMAP'
+          import base64, hashlib, json, pathlib, subprocess
+          raw = pathlib.Path('docs/CODEBASE_MAP.md').read_bytes()
+          source = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          encoded = base64.b64encode(raw).decode('ascii')
+          chunks = [encoded[i:i+8192] for i in range(0, len(encoded), 8192)]
+          for index, chunk in enumerate(chunks):
+              print(json.dumps(dict(schema='autotechno-generated-map-chunk.v1', source=source,
+                  sha256=hashlib.sha256(raw).hexdigest(), bytes=len(raw), index=index,
+                  chunks=len(chunks), payload=chunk), sort_keys=True))
+          PYMAP

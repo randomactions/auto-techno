@@ -1,8 +1,8 @@
 {
   "schema": "autotechno-roadmap-contract-baseline.v1",
-  "snapshotVersion": 85,
+  "snapshotVersion": 162,
   "digestAlgorithm": "sha256",
-  "snapshotFingerprint": "0f3e8dbb4335270e65272b793a71465397d7f7c8438c919a3a1e27da81e8c6e5",
+  "snapshotFingerprint": "eaddf570e964ad6aa168c732c4be297e1f81966e7b6dd92ea220fa04d038630b",
   "documents": [
     {
       "role": "repository-guidance",
@@ -19,32 +19,32 @@
     {
       "role": "product-contract",
       "path": "docs/PRODUCT.md",
-      "byteCount": 30360,
-      "sha256": "b5eb3fd501ae39a9eb7afd838f2555302cba8a2b03782f2f9dc6804a38cff47d"
+      "byteCount": 30925,
+      "sha256": "839a63c0f6e9fc8cc1405ffd0f802b74286d5c09be0414f4017be4ad16c30a64"
     },
     {
       "role": "sound-quality-contract",
       "path": "docs/SOUND_QUALITY.md",
-      "byteCount": 73503,
-      "sha256": "f32912536f2892426a4b5ea1b62dcd1dfce5adda488009151f0e47b4d6c03fc3"
+      "byteCount": 111961,
+      "sha256": "8f67a4932743ef4ccc25cd37d7136a0f3b98063f4c51f378ed8dfe38b2022ccd"
     },
     {
       "role": "runtime-provenance-contract",
       "path": "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
-      "byteCount": 103554,
-      "sha256": "30d3aa0548827df2343f004546f4cb21c4dc5f9d9d0feda0e54ff25cdaac0e89"
+      "byteCount": 182744,
+      "sha256": "97cc1224807ee2f34a7638f59da626e395aae58eb617a7d80bb52c782fba9a5b"
     },
     {
       "role": "component-license-asset-manifest-source",
       "path": "docs/COMPONENT_LICENSE_ASSET_MANIFEST.json",
-      "byteCount": 20335,
-      "sha256": "25a3497c5dae2b8e2950c41dea19f8890713217fc86fc229c2db9fb181858f2b"
+      "byteCount": 21878,
+      "sha256": "40c748ab3d6c5382f151d520ba1b6374a864ac0cc00ff7f492bc02564500bc9a"
     },
     {
       "role": "component-license-asset-manifest-rendering",
       "path": "docs/COMPONENT_LICENSE_ASSET_MANIFEST.md",
-      "byteCount": 13722,
-      "sha256": "2cf3d20cc59e83719ace714a44bf389207b56cee0b52b002581ac46f61d06a5a"
+      "byteCount": 14906,
+      "sha256": "caad8e2a2c8ace01b1d4c23b202896dddcc01a632b84c7d4eb454831d755827c"
     },
     {
       "role": "result-status-vocabulary-source",
@@ -139,14 +139,14 @@
     {
       "role": "pcm-spectral-baseline-contract",
       "path": "docs/PCM_SPECTRAL_BASELINE.md",
-      "byteCount": 6823,
-      "sha256": "19b0f2b700ad23f3996ad9a80065a726d8bd3e2a445d007365bd733eb53eb572"
+      "byteCount": 12697,
+      "sha256": "ae3ff25a43c487721f8bac9bf3cc607481be43d1f52b3f2f096f329c78272e88"
     },
     {
       "role": "kick-foundation-collision-baseline-contract",
       "path": "docs/KICK_FOUNDATION_COLLISION_BASELINE.md",
-      "byteCount": 10065,
-      "sha256": "3ebf6d7d02f79b1f0be2e46dc5c2b2a2f020359285a7ce1a6dc97505efd97cfd"
+      "byteCount": 26382,
+      "sha256": "2dd299d8f378818c2916d061e3ea29d97d6a7a294ee4477fe179c713903b3f8a"
     },
     {
       "role": "pcm-transient-envelope-baseline-contract",
@@ -163,14 +163,14 @@
     {
       "role": "semantic-codebase-map-source",
       "path": "docs/codebase-map.json",
-      "byteCount": 117497,
-      "sha256": "25e95cb156a2b594e652d94768592e37c6bf710ef0d260b5436d50555538a880"
+      "byteCount": 158114,
+      "sha256": "2baa90f9bd6ac4d6d842ca031f169d873c79b0020ed817d508bec309140e93b3"
     },
     {
       "role": "semantic-codebase-map-rendering",
       "path": "docs/CODEBASE_MAP.md",
-      "byteCount": 283746,
-      "sha256": "cde489509ebcc74279163251a92a0978ed65b949851de8fa0dda6e2b5f7f04f5"
+      "byteCount": 344875,
+      "sha256": "326dfda05d31a2d9a5ef4a4062845eb6dba058ee49dfdb062ba675d25d01da71"
     }
   ]
 }

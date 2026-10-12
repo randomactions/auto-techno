@@ -5,6 +5,20 @@ import Testing
 
 @Suite("Modal successor report join", .serialized)
 struct ModalSuccessorReportJoinTests {
+    @Test("Previous v32 native study cannot authorize the new dotted-rhythm policy",
+        .enabled(if: ProcessInfo.processInfo.environment["AUTOTECHNO_VERIFY_EA5_NATIVE_LIVE_BASELINES"] == "1"))
+    func verifyFreshNativePrimaryAndLiveReproducibility() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+        let study = root.appendingPathComponent("docs/local/reports/rms-trajectory-floor/fresh-qualification-ea5ea53")
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPrimaryArtifacts(
+                profileData: Data(contentsOf: study.appendingPathComponent("offline-profile.json")),
+                adversarialSuiteData: Data(contentsOf: study.appendingPathComponent("continuous-adversarial-suite.json")),
+                holdoutQualificationData: Data(contentsOf: study.appendingPathComponent("continuous-holdout-qualification.json")))
+        }
+    }
+
     @Test("Continuous live challenge sources bind actual attenuation/recovery products and immediate successors")
     func continuousLiveAdversarialSourceBinding() throws {
         let products = try LiveFeedbackTestSupport.renderContinuousLiveSourceProducts()
@@ -72,15 +86,51 @@ struct ModalSuccessorReportJoinTests {
         }
     }
 
-    @Test("Continuous qualification metadata cannot change installed legacy authority")
+    private func historicalLegacyArtifacts() throws -> (
+        profile: ProfessionalQualityCalibrationProfile,
+        adversarialSuite: ProfessionalQualityAdversarialSuiteReport,
+        holdoutQualification: ProfessionalQualityHoldoutQualification
+    ) {
+        let directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Sources/AutoTechnoDSP/Resources")
+        func data(_ name: String) throws -> Data {
+            let resource = try Data(contentsOf: directory.appendingPathComponent(name + ".json"))
+            return resource.last == 0x0A ? Data(resource.dropLast()) : resource
+        }
+        let profileData = try data("professional-quality-primary-profile-v30")
+        let suiteData = try data("professional-quality-primary-adversarial-suite-v30")
+        let holdoutData = try data("professional-quality-primary-holdout-v30")
+        // Explicit historical fixtures remain readable for attacks on scope
+        // bindings, but cannot become a current primary evaluator.
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPrimaryArtifacts(profileData: profileData,
+                adversarialSuiteData: suiteData, holdoutQualificationData: holdoutData)
+        }
+        let profile = try JSONDecoder().decode(ProfessionalQualityCalibrationProfile.self, from: profileData)
+        let suite = try JSONDecoder().decode(ProfessionalQualityAdversarialSuiteReport.self, from: suiteData)
+        let holdout = try JSONDecoder().decode(ProfessionalQualityHoldoutQualification.self, from: holdoutData)
+        #expect(profile.fingerprint == "45d94400c298892e")
+        #expect(profile.measurementScope == .legacy && !profile.isComplete)
+        #expect(!holdout.qualified)
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityCalibrationProfile.decodeDeterministicJSON(profileData)
+        }
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityHoldoutQualification.decodeDeterministicJSON(holdoutData)
+        }
+        return (profile, suite, holdout)
+    }
+
+    @Test("Continuous metadata cannot relabel rejected historical legacy artifacts")
     func continuousQualificationScopeControls() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+        let artifacts = try historicalLegacyArtifacts()
         let suite = artifacts.adversarialSuite
         let holdout = artifacts.holdoutQualification
         #expect(suite.measurementScope == .legacy && suite.sourceObservationVersion == nil)
         #expect(holdout.measurementScope == .legacy && holdout.sourceObservationVersion == nil)
-        #expect(suite.fingerprint == ProfessionalQualityPrimaryArtifacts.expectedAdversarialSuiteFingerprint)
-        #expect(holdout.fingerprint == ProfessionalQualityPrimaryArtifacts.expectedHoldoutQualificationFingerprint)
+        #expect(suite.fingerprint == "a5070b55dd992655")
+        #expect(holdout.fingerprint == "7169407cd746c0b6")
         #expect(suite.isBound(to: artifacts.profile))
 
         func changed(_ data: Data, values: [String: Any]) throws -> Data {
@@ -108,7 +158,7 @@ struct ModalSuccessorReportJoinTests {
             try ProfessionalQualityHoldoutQualification.decodeDeterministicJSON(mixedHoldoutData)
         }
 
-        // A coherent diagnostic envelope still cannot bind to the installed
+        // A coherent diagnostic envelope still cannot bind to the historical
         // legacy profile or authorize the primary runtime evaluator.
         let retiredSuiteData = try changed(suite.deterministicJSON(), values: [
             "sourceObservationVersion": continuousVersion, "schemaVersion": 23,
@@ -133,9 +183,9 @@ struct ModalSuccessorReportJoinTests {
         }
     }
 
-    @Test("Continuous holdout diagnostics cannot enter the installed primary evaluator")
+    @Test("Continuous holdout metadata cannot authorize a historical legacy profile")
     func continuousHoldoutPrimaryScopeRejection() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+        let artifacts = try historicalLegacyArtifacts()
         var object = try #require(JSONSerialization.jsonObject(
             with: artifacts.holdoutQualification.deterministicJSON()) as? [String: Any])
         object["schemaVersion"] = 21
@@ -144,8 +194,11 @@ struct ModalSuccessorReportJoinTests {
         object["sourceObservationVersion"] = ProfessionalQualityMeasurementScope.continuousModalWindow.observationVersion
         let data = try JSONSerialization.data(withJSONObject: object,
             options: [.sortedKeys, .withoutEscapingSlashes])
-        let diagnostic = try ProfessionalQualityHoldoutQualification.decodeDeterministicJSON(data)
-        #expect(diagnostic.measurementScope == .continuousModalWindow && diagnostic.qualified)
+        let diagnostic = try JSONDecoder().decode(ProfessionalQualityHoldoutQualification.self, from: data)
+        #expect(diagnostic.measurementScope == .continuousModalWindow && !diagnostic.qualified)
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityHoldoutQualification.decodeDeterministicJSON(data)
+        }
         #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
             try ProfessionalQualityPrimaryEvaluator(profile: artifacts.profile,
                 adversarialSuite: artifacts.adversarialSuite, holdoutQualification: diagnostic)
@@ -268,6 +321,98 @@ struct ModalSuccessorReportJoinTests {
             #expect(continuousObservation.continuousModalSource?.sourceIdentityFingerprint ==
                 ProfessionalQualityModalSuccessorEvidence.identity(source))
             #expect(continuousObservation.modalWindowSupport == nil)
+            // Runtime products share the original ledger and extraction path,
+            // but retain their own identity instead of manufacturing fixtures.
+            let preparedBefore = try ProfessionalQualityObservation(continuousPrepared: origin)
+            let preparedObservation = try ProfessionalQualityObservation(
+                continuousPrepared: origin, successor: next)
+            let preparedReceipt = try ProfessionalQualityModalSuccessorEvidence(
+                sourcePrepared: origin, successor: next)
+            #expect(preparedObservation.isComplete)
+            #expect(preparedObservation.measurementScope == .continuousModalWindow)
+            #expect(preparedObservation.checkpoint == ProfessionalQualityObservation.primaryCheckpoint(
+                for: origin.selectedCandidateEvidence))
+            #expect(preparedBefore.measurementApplicability(.modalPercussionTailToBodyDBMean) == .unavailable)
+            #expect(preparedObservation.continuousModalSource?.projection.tailBodySupport == joined.tailBodySupport)
+            #expect(preparedObservation.continuousModalSource?.projection.attackBodySupport == joined.attackBodySupport)
+            #expect(preparedObservation.continuousModalSource?.sourceIdentityFingerprint ==
+                ProfessionalQualityModalSuccessorEvidence.identity(origin))
+            #expect(preparedObservation.continuousModalSource?.sourceIdentityFingerprint !=
+                continuousObservation.continuousModalSource?.sourceIdentityFingerprint)
+            #expect(preparedReceipt.matches(origin) && !preparedReceipt.matches(source))
+            #expect(receipt.matches(source) && !receipt.matches(origin))
+            #expect(try ProfessionalQualityObservation(continuousPrepared: origin, successor: next) == preparedObservation)
+            let preparedData = try preparedObservation.deterministicJSON()
+            let preparedReceiptData = try preparedReceipt.deterministicJSON()
+            #expect(try ProfessionalQualityObservation.decodeValidated(preparedData,
+                prepared: origin, successor: next) == preparedObservation)
+            #expect(try ProfessionalQualityModalSuccessorEvidence.decodeValidated(preparedReceiptData,
+                sourcePrepared: origin, successor: next) == preparedReceipt)
+            #expect(try ProfessionalQualityObservation.decodeValidated(preparedBefore.deterministicJSON(),
+                prepared: origin) == preparedBefore)
+            #expect(throws: (any Error).self) {
+                try JSONDecoder().decode(ProfessionalQualityObservation.self, from: preparedData)
+            }
+            // Missing suffix coverage, substituted products, scope swaps,
+            // noncanonical bytes, and changed metrics never reconstruct.
+            for data in [preparedData, try continuousObservation.deterministicJSON(),
+                         try preparedObservation.replacing(.maximumBoundaryDelta, with: 100).deterministicJSON(),
+                         preparedData + Data([0x0a])] {
+                #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                    try ProfessionalQualityObservation.decodeValidated(data, prepared: origin)
+                }
+            }
+            for data in [try continuousObservation.deterministicJSON(),
+                         try preparedObservation.replacing(.maximumBoundaryDelta, with: 100).deterministicJSON(),
+                         preparedData + Data([0x0a])] {
+                #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                    try ProfessionalQualityObservation.decodeValidated(data, prepared: origin, successor: next)
+                }
+            }
+            for data in [try receipt.deterministicJSON(), preparedReceiptData + Data([0x0a])] {
+                #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                    try ProfessionalQualityModalSuccessorEvidence.decodeValidated(data,
+                        sourcePrepared: origin, successor: next)
+                }
+            }
+            #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                try ProfessionalQualityObservation.decodeValidated(preparedData, prepared: next, successor: next)
+            }
+            #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                try ProfessionalQualityModalSuccessorEvidence.decodeValidated(preparedReceiptData,
+                    sourcePrepared: next, successor: next)
+            }
+            #expect(throws: ProfessionalEvidenceReportBankError.invalidBounds) {
+                try ProfessionalQualityObservation.decodeValidated(
+                    Data(repeating: 0, count: ProfessionalEvidenceReportBank.maximumEncodedBytes + 1),
+                    prepared: origin, successor: next)
+            }
+            #expect(throws: ProfessionalEvidenceReportBankError.invalidBounds) {
+                try ProfessionalQualityModalSuccessorEvidence.decodeValidated(
+                    Data(repeating: 0, count: ProfessionalQualityModalSuccessorEvidence.maximumEncodedBytes + 1),
+                    sourcePrepared: origin, successor: next)
+            }
+            #expect(preparedObservation.liveMaster == continuousObservation.liveMaster)
+            #expect(preparedObservation.upperPercussionTailSupport == continuousObservation.upperPercussionTailSupport)
+            for metric in ProfessionalQualityMetric.allCases {
+                #expect(preparedObservation[metric] == continuousObservation[metric])
+            }
+            #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                try ProfessionalQualityObservation(continuousPrepared: origin, successor: origin)
+            }
+            #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                try ProfessionalQualityContinuousModalWindowEvidence(prepared: origin, successor: receipt)
+            }
+            #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                try ProfessionalQualityContinuousModalWindowEvidence(report: source, successor: preparedReceipt)
+            }
+            if let otherRate = lowRateSuccessor, otherRate !== next {
+                #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                    try ProfessionalQualityObservation(continuousPrepared: origin, successor: otherRate)
+                }
+            }
+            #expect(!origin.commitEligible && !next.commitEligible)
+
             #expect(incompleteObservation.measurementApplicability(.modalPercussionTailToBodyDBMean) == .unavailable)
             #expect(incompleteObservation[.modalPercussionTailToBodyDBMean] == nil)
             for metric in ProfessionalQualityMetric.allCases where
@@ -402,6 +547,9 @@ struct ModalSuccessorReportJoinTests {
                         #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
                             try ProfessionalQualityModalSuccessorEvidence(source: source, successor: wrong)
                         }
+                        #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                            try ProfessionalQualityObservation(continuousPrepared: origin, successor: wrong)
+                        }
                     } else { #expect(outcome.failure != nil) }
                 }
                 // Real score checkpoints at one low-cost supported rate test bank
@@ -423,12 +571,661 @@ struct ModalSuccessorReportJoinTests {
                 "afterTailPartial": joined.tailBodySupport.partialWindowEventCount,
                 "afterTailMissing": joined.tailBodySupport.missingWindowEventCount,
                 "undefinedBodyEvents": joined.tailBodySupport.undefinedBodyEventCount,
-                "receiptFingerprint": receipt.fingerprint, "qualification": "unavailable-not-activated"])
+                "receiptFingerprint": receipt.fingerprint,
+                "preparedReceiptFingerprint": preparedReceipt.fingerprint,
+                "preparedSourceIdentityFingerprint": ProfessionalQualityModalSuccessorEvidence.identity(origin),
+                "preparedMeasurementsEqualReportMeasurements": preparedObservation.metrics == continuousObservation.metrics,
+                "preparedCanonicalReconstructionPassed": true,
+                "preparedTailMeasuredEventCount": preparedObservation.continuousModalSource!.projection.tailBodySupport.measuredEventCount,
+                "qualification": "unavailable-not-activated"])
         }
         FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject:
             ["fixture": "modal-successor-report-join.v1", "publicSeed": initial.rootSeed,
              "phraseIndex": plan.phraseIndex, "startBar": plan.startBar, "rows": rows], options: [.sortedKeys]))
         FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
+    @Test("Private prospective source admission requires actual complete and identity-bound successor evidence")
+    @MainActor
+    func preparedValidationAdmission() throws {
+        let director = AutonomousSessionDirector(rootSeed: 48_300)
+        var state = director.initialState()
+        for _ in 0..<21 { state.advancePlanning(using: director.plan(from: state)) }
+        let plan = director.plan(from: state)
+        #expect(plan.phraseIndex == 21 && plan.startBar == 225)
+        let originalState = state
+        var rows: [[String: Any]] = []
+        var cachedProof: AutonomousCandidatePreparedValidation?
+        for rate in [8_000.0, 44_100.0, 48_000.0] {
+            let control = PreparedValidationControl()
+            let evaluator = PreparedValidationTestEvaluator(
+                startingState: state, control: control, mode: .actualSuccessor)
+            let first = try #require(prepareValidationSource(
+                state: state, plan: plan, rate: rate, evaluator: evaluator).preparedPhrase)
+            #expect(first.preparedValidationRequired && first.commitEligible)
+            let proof = try #require(first.preparedValidation)
+            #expect(proof.hasRequiredMeasurements && proof.hasQualifiedContinuation)
+            #expect(proof.requiresQualifiedSuccessor)
+            let successor = try #require(proof.qualifiedSuccessor)
+            #expect(successor.commitEligible && successor.preparedValidationRequired)
+            #expect(successor.preparedValidation?.requiresQualifiedSuccessor == false)
+            #expect(successor.preparedValidation?.qualifiedSuccessor == nil)
+            #expect(successor.plan.phraseIndex == first.plan.phraseIndex + 1)
+            #expect(successor.incomingQualityState == first.qualityContinuationState)
+            #expect(successor.selectedCandidateEvidence.routeContinuation.incomingRenderDSPFingerprint ==
+                first.commitProvenance.outgoingRenderDSPFingerprint)
+            #expect(try ProfessionalQualityObservation(continuousPrepared: first,
+                successor: successor) == proof.observation)
+            // Replaying accepted first-bar PCM does not continue the last bar's
+            // unfinished source records. Never relabel that historical evidence.
+            let sourceBars = try first.selectedCandidateEvidence.modalPercussion.map {
+                try #require($0.continuousWindows)
+            }
+            let sourceLastBar = try #require(sourceBars.last)
+            let repeatedFirstBar = try #require(sourceBars.first)
+            #expect(!sourceLastBar.pending.isEmpty)
+            #expect(repeatedFirstBar.incomingStateFingerprint != sourceLastBar.outgoingStateFingerprint)
+            let repeatedIdentities = Set((repeatedFirstBar.completed + repeatedFirstBar.pending).map(\.identity))
+            #expect(sourceLastBar.pending.allSatisfy { !repeatedIdentities.contains($0.identity) })
+            #expect(throws: ProfessionalEvidenceReportBankError.incompleteEvidence) {
+                var ledger = try ModalPercussionObservationLedger(bars: sourceBars)
+                try ledger.append(repeatedFirstBar)
+            }
+            #expect(proof.sourceIdentityFingerprint == ProfessionalQualityModalSuccessorEvidence.identity(first))
+            #expect(proof.observation.continuousModalSource?.projection.tailBodySupport.partialWindowEventCount == 0)
+            #expect(first.qualityContinuationState.acceptanceProvenanceComplete)
+            #expect(first.qualityContinuationState.revision == state.quality.revision + 1)
+            #expect(first.candidateEvaluation.attempts.count == 1 && first.correctionRenderCount == 0)
+            #expect(control.snapshot.calls == 1 && control.snapshot.probes == 1)
+            #expect(control.snapshot.probeWasCommitEligible == true)
+            #expect(control.snapshot.assessments == 1)
+            let repeatControl = PreparedValidationControl()
+            let repeated = try #require(prepareValidationSource(state: state, plan: plan, rate: rate,
+                evaluator: PreparedValidationTestEvaluator(startingState: state,
+                    control: repeatControl, mode: .actualSuccessor)).preparedPhrase)
+            #expect(repeated.commitEligible)
+            #expect(repeated.audioPreflight.quality.sampleHash == first.audioPreflight.quality.sampleHash)
+            #expect(repeated.qualityContinuationState == first.qualityContinuationState)
+            #expect(repeated.commitProvenance == first.commitProvenance)
+            #expect(repeated.preparedValidation?.observation == proof.observation)
+            #expect(repeated.preparedValidation?.sourceIdentityFingerprint == proof.sourceIdentityFingerprint)
+            #expect(repeated.preparedValidation?.qualifiedSuccessor?.audioPreflight.quality.sampleHash ==
+                successor.audioPreflight.quality.sampleHash)
+            #expect(repeated.preparedValidation?.qualifiedSuccessor?.qualityContinuationState ==
+                successor.qualityContinuationState)
+            let advanced = state.advance(using: first.plan, quality: first.qualityContinuationState,
+                liveMasterHeadroom: first.liveMasterHeadroomContinuationState)
+            #expect(advanced.phraseIndex == state.phraseIndex + 1)
+            #expect(advanced.quality == first.qualityContinuationState)
+            #expect(state == originalState)
+            if rate == 8_000 { cachedProof = proof }
+            rows.append(["sampleRate": rate, "sourceIdentity": proof.sourceIdentityFingerprint,
+                "sampleHash": first.audioPreflight.quality.sampleHash,
+                "validationCalls": control.snapshot.calls, "probeRenders": control.snapshot.probes,
+                "probeCommitEligible": control.snapshot.probeWasCommitEligible,
+                "sourceCommitEligible": first.commitEligible, "qualification": "mechanical-only-not-installed"])
+        }
+        for mode in [PreparedValidationTestEvaluator.Mode.missingProof, .missingSuccessor, .unacceptedSuccessor, .reject] {
+            let control = PreparedValidationControl()
+            let source = try #require(prepareValidationSource(state: state, plan: plan, rate: 8_000,
+                evaluator: PreparedValidationTestEvaluator(startingState: state,
+                    control: control, mode: mode)).preparedPhrase)
+            #expect(!source.commitEligible)
+            #expect(source.qualityContinuationState.acceptedEvidenceFingerprint == state.quality.acceptedEvidenceFingerprint)
+            #expect(!source.qualityDecision.isAcceptanceOutcome)
+            #expect(control.snapshot.calls == 1)
+            if mode == .unacceptedSuccessor {
+                let proof = try #require(source.preparedValidation)
+                #expect(proof.hasRequiredMeasurements && proof.requiresQualifiedSuccessor)
+                #expect(!proof.hasQualifiedContinuation && proof.qualifiedSuccessor == nil)
+                #expect(source.qualityDiagnosticDetails == ["prepared-validation=qualified-continuation-unavailable"])
+                #expect(control.snapshot.assessments == 0 && control.snapshot.probes == 1)
+                #expect(!control.snapshot.probeWasCommitEligible)
+            }
+            if mode == .missingSuccessor {
+                #expect(control.snapshot.assessments == 0 && control.snapshot.probes == 0)
+                #expect(source.preparedValidation?.hasRequiredMeasurements == false)
+            }
+        }
+        let changed = prepareValidationSource(state: state, plan: plan, rate: 8_000,
+            evaluator: PreparedValidationTestEvaluator(startingState: state,
+                control: PreparedValidationControl(), mode: .changedAcceptedReason))
+        #expect(changed.preparedPhrase == nil)
+        #expect(changed.failure?.code == .preparedValidationMismatch)
+        #expect(changed.failure?.details.contains("prepared-validation-source") == true)
+        let foreign = try #require(prepareValidationSource(state: state, plan: plan, rate: 8_000,
+            evaluator: PreparedValidationTestEvaluator(startingState: state,
+                control: PreparedValidationControl(cached: cachedProof), mode: .foreignProof),
+            routeGeneration: 1).preparedPhrase)
+        #expect(!foreign.commitEligible && foreign.preparedValidation == nil)
+        #expect(foreign.qualityDiagnosticDetails == ["prepared-validation=source-mismatch"])
+        let cancelledControl = PreparedValidationControl()
+        let cancelled = prepareValidationSource(state: state, plan: plan, rate: 8_000,
+            evaluator: PreparedValidationTestEvaluator(startingState: state,
+                control: cancelledControl, mode: .cancel))
+        #expect(cancelled.preparedPhrase == nil && cancelled.failure?.code == .cancelled)
+        #expect(cancelledControl.snapshot.calls == 1)
+        let correctedControl = PreparedValidationControl()
+        let corrected = try #require(prepareValidationSource(state: state, plan: plan, rate: 8_000,
+            evaluator: PreparedValidationTestEvaluator(startingState: state,
+                control: correctedControl, mode: .actualSuccessor, correct: true)).preparedPhrase)
+        #expect(corrected.commitEligible && corrected.qualityDecision.outcome == .adjusted)
+        #expect(corrected.candidateEvaluation.attempts.count == 2 && corrected.correctionRenderCount == 1)
+        #expect(correctedControl.snapshot.calls == 1 && correctedControl.snapshot.probes == 1)
+        let wire: [String: Any] = ["fixture": "private-prepared-validation-admission.v1",
+            "rows": rows, "requiredProofMissingRefused": true, "sourceOnlySuffixRefused": true,
+            "foreignProofRefused": true, "unacceptedSuccessorRefused": true,
+            "qualifiedSuccessorRetained": true, "repeatCannotCompleteOriginalLedger": true,
+            "acceptedQualityRebindingRefused": true,
+            "cancelledBeforeAdmission": true, "adjustedTransactionBound": true,
+            "qualification": "mechanical-only-not-installed"]
+        print(String(decoding: try JSONSerialization.data(withJSONObject: wire, options: [.sortedKeys]), as: UTF8.self))
+    }
+
+    @Test("Private long-horizon projection uses the accepted reducer and seals exact source admission")
+    @MainActor
+    func preparedValidationLongHorizonProjection() throws {
+        let rates = [8_000.0, 44_100.0, 48_000.0]
+        let artifacts = try qualifiedArtifacts(sampleRates: rates)
+        let policy = try LongHorizonProfessionalPolicy(profile: artifacts.profile,
+            adversarial: artifacts.adversarial, holdout: artifacts.holdout)
+        let director = AutonomousSessionDirector(rootSeed: 48_300)
+        var state = director.initialState()
+        for _ in 0..<21 { state.advancePlanning(using: director.plan(from: state)) }
+        let plan = director.plan(from: state)
+        let incoming = try #require(LongHorizonFutureAdaptationState(startingState: state, policy: policy))
+        let incomingFingerprint = incoming.fingerprint
+        var rows: [[String: Any]] = []
+        var captured: LongHorizonProspectiveAdaptation?
+        for rate in rates {
+            let control = PreparedValidationControl()
+            let source = try #require(prepareValidationSource(state: state, plan: plan, rate: rate,
+                evaluator: PreparedValidationTestEvaluator(startingState: state, control: control,
+                    mode: .actualSuccessor, longHorizonState: incoming, longHorizonPolicy: policy)).preparedPhrase)
+            #expect(source.commitEligible)
+            let projection = try #require(control.snapshot.projection)
+            let admitted = try #require(projection.admittedUpdate(for: source,
+                incomingState: state, incomingAdaptation: incoming, policy: policy))
+            let observed = try #require(incoming.observing(prepared: source, incomingState: state, policy: policy))
+            #expect(admitted.state.fingerprint == observed.state.fingerprint)
+            #expect(admitted.decision == observed.decision)
+            #expect(projection.sourceIdentityFingerprint == ProfessionalQualityModalSuccessorEvidence.identity(source))
+            #expect(control.snapshot.signal == LongHorizonSignalPhraseEvidence.make(prepared: source))
+            #expect(projection.projectedState.expectedPhraseIndex == state.phraseIndex + 1)
+            #expect(projection.projectedState.expectedBar == plan.startBar + plan.barCount)
+            #expect(incoming.fingerprint == incomingFingerprint)
+            let successor = try #require(source.preparedValidation?.qualifiedSuccessor)
+            let acceptedFuture = state.advance(using: source.plan, quality: source.qualityContinuationState,
+                liveMasterHeadroom: source.liveMasterHeadroomContinuationState,
+                longHorizonDecision: observed.decision)
+            #expect(successor.plan == director.plan(from: acceptedFuture))
+            if rate == 8_000 { captured = projection }
+            rows.append(["sampleRate": rate, "sourceIdentity": projection.sourceIdentityFingerprint,
+                "projectedStateFingerprint": projection.projectedState.fingerprint,
+                "admittedMatchesObserved": true, "canonicalSuccessorPlanMatches": true])
+        }
+        let seal = try #require(captured)
+        for mode in [PreparedValidationTestEvaluator.Mode.missingProof, .unacceptedSuccessor, .reject] {
+            let source = try #require(prepareValidationSource(state: state, plan: plan, rate: 8_000,
+                evaluator: PreparedValidationTestEvaluator(startingState: state,
+                    control: PreparedValidationControl(), mode: mode)).preparedPhrase)
+            #expect(!source.commitEligible && seal.admittedUpdate(for: source,
+                incomingState: state, incomingAdaptation: incoming, policy: policy) == nil)
+        }
+        let otherRoute = try #require(prepareValidationSource(state: state, plan: plan, rate: 8_000,
+            evaluator: PreparedValidationTestEvaluator(startingState: state,
+                control: PreparedValidationControl(), mode: .actualSuccessor), routeGeneration: 1).preparedPhrase)
+        #expect(otherRoute.commitEligible && seal.admittedUpdate(for: otherRoute,
+            incomingState: state, incomingAdaptation: incoming, policy: policy) == nil)
+        let wrongState = try #require(LongHorizonFutureAdaptationState(
+            startingState: AutonomousSessionDirector(rootSeed: 90_909).initialState(), policy: policy))
+        let sameSource = try #require(prepareValidationSource(state: state, plan: plan, rate: 8_000,
+            evaluator: PreparedValidationTestEvaluator(startingState: state,
+                control: PreparedValidationControl(), mode: .actualSuccessor)).preparedPhrase)
+        #expect(sameSource.commitEligible)
+        #expect(seal.admittedUpdate(for: sameSource, incomingState: state,
+            incomingAdaptation: wrongState, policy: policy) == nil)
+        #expect(seal.admittedUpdate(for: sameSource, incomingState: director.initialState(),
+            incomingAdaptation: incoming, policy: policy) == nil)
+        let otherArtifacts = try qualifiedArtifacts()
+        let otherPolicy = try LongHorizonProfessionalPolicy(profile: otherArtifacts.profile,
+            adversarial: otherArtifacts.adversarial, holdout: otherArtifacts.holdout)
+        #expect(seal.admittedUpdate(for: sameSource, incomingState: state,
+            incomingAdaptation: incoming, policy: otherPolicy) == nil)
+        let wrongControl = PreparedValidationControl()
+        let wrong = try #require(prepareValidationSource(state: state, plan: plan, rate: 8_000,
+            evaluator: PreparedValidationTestEvaluator(startingState: state, control: wrongControl,
+                mode: .actualSuccessor, longHorizonState: wrongState, longHorizonPolicy: policy)).preparedPhrase)
+        #expect(!wrong.commitEligible && wrongControl.snapshot.projection == nil)
+        #expect(wrongControl.snapshot.probes == 0)
+        print(String(decoding: try JSONSerialization.data(withJSONObject:
+            ["fixture": "private-long-horizon-projection.v1", "rows": rows,
+             "unadmittedAndForeignSourcesRefused": true, "wrongIncomingStateRefused": true,
+             "incomingStateUnchanged": true, "foreignSessionAdaptationAndPolicyRefused": true,
+             "qualification": "mechanical-only-not-installed"],
+            options: [.sortedKeys]), as: UTF8.self))
+    }
+
+    @Test("Prepared admission faults refuse at both native sample rates", arguments: [44_100.0, 48_000.0])
+    @MainActor
+    func nativePreparedAdmissionFaultMatrix(rate: Double) throws {
+        // Reuse the frozen score-only source/successor pair. These are paired
+        // mechanical controls, not new calibration families or quality labels.
+        let director = AutonomousSessionDirector(rootSeed: 48_300)
+        var state = director.initialState()
+        for _ in 0..<21 { state.advancePlanning(using: director.plan(from: state)) }
+        let plan = director.plan(from: state)
+        try #require(plan.phraseIndex == 21 && plan.startBar == 225)
+        let originalState = state
+        let positiveControl = PreparedValidationControl()
+        let positive = try #require(prepareValidationSource(state: state, plan: plan, rate: rate,
+            evaluator: PreparedValidationTestEvaluator(startingState: state,
+                control: positiveControl, mode: .actualSuccessor)).preparedPhrase)
+        try #require(positive.commitEligible)
+        let proof = try #require(positive.preparedValidation)
+        try #require(proof.hasRequiredMeasurements && proof.hasQualifiedContinuation)
+        try #require(proof.requiresQualifiedSuccessor && proof.qualifiedSuccessor?.commitEligible == true)
+        struct Row: Encodable {
+            let scenario: String
+            let commitEligible: Bool
+            let preparedProductPresent: Bool
+            let sourcePCMUnchanged: Bool?
+            let acceptedEvidenceUnchanged: Bool
+            let validationCalls: Int
+            let successorRenders: Int
+            let failureCode: String?
+            let diagnostics: [String]
+        }
+        #expect(positiveControl.snapshot.calls == 1 && positiveControl.snapshot.probes == 1)
+        let positiveRetainsOldAcceptance = positive.qualityContinuationState.acceptedEvidenceFingerprint ==
+            state.quality.acceptedEvidenceFingerprint
+        #expect(!positiveRetainsOldAcceptance)
+        var rows = [Row(scenario: "unaltered", commitEligible: positive.commitEligible, preparedProductPresent: true,
+            sourcePCMUnchanged: true, acceptedEvidenceUnchanged: positiveRetainsOldAcceptance,
+            validationCalls: positiveControl.snapshot.calls, successorRenders: positiveControl.snapshot.probes,
+            failureCode: nil, diagnostics: positive.commitFailureDiagnostics)]
+        let faults: [(String, PreparedValidationTestEvaluator.Mode)] = [
+            ("missing-proof", .missingProof), ("missing-successor", .missingSuccessor),
+            ("unaccepted-successor", .unacceptedSuccessor), ("rejected-assessment", .reject),
+            ("changed-accepted-reason", .changedAcceptedReason), ("foreign-route-proof", .foreignProof),
+            ("cancelled-validation", .cancel)]
+        for (name, mode) in faults {
+            let control = PreparedValidationControl(cached: mode == .foreignProof ? proof : nil)
+            let result = prepareValidationSource(state: state, plan: plan, rate: rate,
+                evaluator: PreparedValidationTestEvaluator(startingState: state, control: control, mode: mode),
+                routeGeneration: mode == .foreignProof ? 1 : 0)
+            #expect(control.snapshot.calls == 1)
+            #expect(result.preparedPhrase?.commitEligible != true)
+            var pcmUnchanged: Bool?
+            if mode == .changedAcceptedReason || mode == .cancel {
+                #expect(result.preparedPhrase == nil)
+                #expect(result.failure?.code == (mode == .cancel ? .cancelled : .preparedValidationMismatch))
+                if mode == .changedAcceptedReason {
+                    #expect(result.failure?.details.contains("prepared-validation-source") == true)
+                }
+            } else {
+                let refused = try #require(result.preparedPhrase)
+                #expect(!refused.qualityDecision.isAcceptanceOutcome)
+                #expect(refused.qualityContinuationState.acceptedEvidenceFingerprint ==
+                    state.quality.acceptedEvidenceFingerprint)
+                pcmUnchanged = refused.audioPreflight.quality.sampleHash == positive.audioPreflight.quality.sampleHash
+                #expect(pcmUnchanged == true)
+                if mode == .missingProof || mode == .foreignProof {
+                    #expect(refused.preparedValidation == nil)
+                    #expect(refused.qualityDiagnosticDetails == [mode == .missingProof
+                        ? "prepared-validation=missing" : "prepared-validation=source-mismatch"])
+                }
+                if mode == .missingSuccessor {
+                    #expect(refused.preparedValidation?.hasRequiredMeasurements == false)
+                    #expect(control.snapshot.probes == 0 && control.snapshot.assessments == 0)
+                }
+                if mode == .unacceptedSuccessor {
+                    #expect(refused.preparedValidation?.hasRequiredMeasurements == true)
+                    #expect(refused.preparedValidation?.hasQualifiedContinuation == false)
+                    #expect(control.snapshot.probes == 1 && control.snapshot.assessments == 0)
+                }
+                if mode == .reject {
+                    #expect(refused.qualityDecision.outcome == .rejected)
+                    #expect(control.snapshot.probes == 1 && control.snapshot.assessments == 1)
+                }
+            }
+            #expect(state == originalState)
+            rows.append(Row(scenario: name, commitEligible: result.preparedPhrase?.commitEligible ?? false,
+                preparedProductPresent: result.preparedPhrase != nil, sourcePCMUnchanged: pcmUnchanged,
+                acceptedEvidenceUnchanged: result.preparedPhrase.map {
+                    $0.qualityContinuationState.acceptedEvidenceFingerprint == state.quality.acceptedEvidenceFingerprint
+                } ?? true, validationCalls: control.snapshot.calls, successorRenders: control.snapshot.probes,
+                failureCode: result.failure?.code.rawValue,
+                diagnostics: result.failure?.details ?? result.preparedPhrase?.qualityDiagnosticDetails ?? []))
+        }
+        let replay = try #require(prepareValidationSource(state: state, plan: plan, rate: rate,
+            evaluator: PreparedValidationTestEvaluator(startingState: state,
+                control: PreparedValidationControl(), mode: .actualSuccessor)).preparedPhrase)
+        let exactReplay = replay.commitEligible && replay.blocks == positive.blocks &&
+            replay.commitProvenance == positive.commitProvenance &&
+            replay.qualityContinuationState == positive.qualityContinuationState &&
+            replay.preparedValidation?.observation == proof.observation &&
+            replay.preparedValidation?.qualifiedSuccessor?.blocks == proof.qualifiedSuccessor?.blocks
+        #expect(exactReplay && state == originalState)
+        struct Report: Encodable {
+            let schema = "autotechno-native-prepared-admission-faults.v1"
+            let rootSeed: UInt64
+            let phraseIndex: Int
+            let sampleRate: Int
+            let sourceIdentity: String
+            let sampleHash: String
+            let exactControlReplay: Bool
+            let rows: [Row]
+            let qualification = "mechanical-only-not-installed"
+            let unavailable = ["full-supported-prepared-fault-matrix", "production-calibration",
+                "perceptual-quality", "runtime-resource-lifecycle-physical-qualification"]
+        }
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        FileHandle.standardOutput.write(try encoder.encode(Report(rootSeed: state.rootSeed,
+            phraseIndex: plan.phraseIndex, sampleRate: Int(rate), sourceIdentity: proof.sourceIdentityFingerprint,
+            sampleHash: positive.audioPreflight.quality.sampleHash, exactControlReplay: exactReplay, rows: rows)))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
+    @Test("Actual modal voice state binds the native successor independently of its measurement ledger",
+          arguments: [44_100.0, 48_000.0])
+    @MainActor
+    func nativeRenderedModalVoiceBoundary(rate: Double) throws {
+        // Known canonical mechanical fixture, not an unseen calibration family.
+        // The existing receipt owner guards actual rendered state before a child
+        // can authorize its parent; no callback, score or new policy is added.
+        let director = AutonomousSessionDirector(rootSeed: 48_300)
+        var state = director.initialState()
+        for _ in 0..<21 { state.advancePlanning(using: director.plan(from: state)) }
+        let plan = director.plan(from: state)
+        try #require(plan.phraseIndex == 21 && plan.startBar == 225)
+        let control = PreparedValidationControl()
+        let source = try #require(prepareValidationSource(state: state, plan: plan, rate: rate,
+            evaluator: PreparedValidationTestEvaluator(startingState: state,
+                control: control, mode: .actualSuccessor)).preparedPhrase)
+        let successor = try #require(source.preparedValidation?.qualifiedSuccessor)
+        try #require(source.commitEligible && successor.commitEligible)
+        let last = try #require(source.selectedCandidateEvidence.modalPercussion.last)
+        let first = try #require(successor.selectedCandidateEvidence.modalPercussion.first)
+        try #require(last.activeOutgoingVoiceCount > 0)
+        #expect(ProfessionalQualityModalSuccessorEvidence.renderedModalBoundaryIsContinuous(last, first))
+        let data = try JSONEncoder().encode(first)
+        for fault in ["lost-voice-state", "bar-gap"] {
+            var wire = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            if fault == "lost-voice-state" { wire["incomingStateFingerprint"] = "0000000000000000" }
+            else { wire["bar"] = first.bar + 1 }
+            let altered = try JSONDecoder().decode(AutonomousModalPercussionBarEvidence.self,
+                from: JSONSerialization.data(withJSONObject: wire, options: [.sortedKeys]))
+            #expect(altered.continuousWindows == first.continuousWindows)
+            #expect(!ProfessionalQualityModalSuccessorEvidence.renderedModalBoundaryIsContinuous(last, altered))
+        }
+        #expect(!ProfessionalQualityModalSuccessorEvidence.renderedModalBoundaryIsContinuous(first, last))
+        #expect(state.quality.acceptedEvidenceFingerprint == director.initialState().quality.acceptedEvidenceFingerprint)
+    }
+
+    @Test("Actual successor input mismatches refuse native prepared admission", arguments: [44_100.0, 48_000.0])
+    @MainActor
+    func nativePreparedSuccessorBindingFaultMatrix(rate: Double) throws {
+        // Same frozen mechanical source as the original admission matrix.
+        // Mutate only actual successor inputs; never fabricate a report/proof.
+        let director = AutonomousSessionDirector(rootSeed: 48_300)
+        var state = director.initialState()
+        for _ in 0..<21 { state.advancePlanning(using: director.plan(from: state)) }
+        let plan = director.plan(from: state)
+        try #require(plan.phraseIndex == 21 && plan.startBar == 225)
+        let originalState = state
+        struct Row: Encodable {
+            let scenario: String
+            let changedInputs: [String]
+            let sourceActiveModalVoices: Int
+            let modalMeasurementPreserved: Bool
+            let successorPresent: Bool
+            let successorCommitEligible: Bool
+            let successorInputIdentityMatchesRequest: Bool
+            let sourceProductPresent: Bool
+            let sourcePCMUnchanged: Bool
+            let sourceCommitEligible: Bool
+            let callerStateUnchanged: Bool
+            let validationCalls: Int
+            let successorRenders: Int
+            let assessmentCalls: Int
+            let refusal: String?
+        }
+        let scenarios: [(String, PreparedValidationTestEvaluator.Mode, [String])] = [
+            ("unaltered", .actualSuccessor, []),
+            ("wrong-successor-rate", .wrongSuccessorRate, ["sample-rate"]),
+            ("wrong-successor-route", .wrongSuccessorRoute, ["route-generation"]),
+            ("wrong-successor-quality", .wrongSuccessorQuality, ["quality-state"]),
+            ("lost-successor-modal-state", .lostSuccessorModalState, ["render-dsp-state"]),
+            ("lost-successor-modal-voices", .lostSuccessorModalVoices, ["render-dsp-state"])]
+        var rows: [Row] = []
+        var baseline: PreparedAutonomousPhrase?
+        for (name, mode, expectedChanges) in scenarios {
+            let control = PreparedValidationControl()
+            let outcome = prepareValidationSource(state: state, plan: plan, rate: rate,
+                evaluator: PreparedValidationTestEvaluator(startingState: state, control: control, mode: mode))
+            let product = try #require(outcome.preparedPhrase)
+            let observed = control.snapshot
+            #expect(observed.successorInputChanges == expectedChanges)
+            #expect(observed.sourceActiveModalVoices > 0)
+            #expect(observed.calls == 1 && observed.probes == 1)
+            #expect(observed.successorInputIdentityMatchesRequest)
+            #expect(observed.successorPresent)
+            if mode == .actualSuccessor {
+                try #require(product.commitEligible)
+                try #require(product.preparedValidation?.qualifiedSuccessor?.commitEligible == true)
+                #expect(observed.assessments == 1 && observed.successorRefusal == nil)
+                baseline = product
+            } else {
+                #expect(!product.commitEligible && product.preparedValidation == nil)
+                #expect(!product.qualityDecision.isAcceptanceOutcome)
+                #expect(product.qualityContinuationState.acceptedEvidenceFingerprint == state.quality.acceptedEvidenceFingerprint)
+                #expect(observed.assessments == 0 && observed.successorRefusal != nil)
+            }
+            let original = try #require(baseline)
+            let samePCM = product.blocks == original.blocks
+            #expect(samePCM && state == originalState)
+            #expect(observed.modalMeasurementPreserved == (mode != .lostSuccessorModalState))
+            rows.append(Row(scenario: name, changedInputs: observed.successorInputChanges,
+                sourceActiveModalVoices: observed.sourceActiveModalVoices,
+                modalMeasurementPreserved: observed.modalMeasurementPreserved,
+                successorPresent: observed.successorPresent,
+                successorCommitEligible: observed.probeWasCommitEligible,
+                successorInputIdentityMatchesRequest: observed.successorInputIdentityMatchesRequest,
+                sourceProductPresent: true, sourcePCMUnchanged: samePCM,
+                sourceCommitEligible: product.commitEligible, callerStateUnchanged: state == originalState,
+                validationCalls: observed.calls, successorRenders: observed.probes,
+                assessmentCalls: observed.assessments, refusal: observed.successorRefusal))
+        }
+        let original = try #require(baseline)
+        let replay = try #require(prepareValidationSource(state: state, plan: plan, rate: rate,
+            evaluator: PreparedValidationTestEvaluator(startingState: state,
+                control: PreparedValidationControl(), mode: .actualSuccessor)).preparedPhrase)
+        let exactReplay = replay.commitEligible && replay.blocks == original.blocks &&
+            replay.commitProvenance == original.commitProvenance &&
+            replay.qualityContinuationState == original.qualityContinuationState &&
+            replay.preparedValidation?.observation == original.preparedValidation?.observation &&
+            replay.preparedValidation?.qualifiedSuccessor?.blocks == original.preparedValidation?.qualifiedSuccessor?.blocks
+        #expect(exactReplay && state == originalState)
+        struct Report: Encodable {
+            let schema = "autotechno-native-successor-binding-faults.v1"
+            let rootSeed: UInt64
+            let phraseIndex: Int
+            let sampleRate: Int
+            let sampleHash: String
+            let exactControlReplay: Bool
+            let rows: [Row]
+            let qualification = "mechanical-only-not-installed"
+        }
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        FileHandle.standardOutput.write(try encoder.encode(Report(rootSeed: state.rootSeed,
+            phraseIndex: plan.phraseIndex, sampleRate: Int(rate), sampleHash: original.audioPreflight.quality.sampleHash,
+            exactControlReplay: exactReplay, rows: rows)))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
+    private func prepareValidationSource(state: AutonomousSessionState,
+        plan: AutonomousPhrasePlan, rate: Double,
+        evaluator: PreparedValidationTestEvaluator,
+        routeGeneration: Int = 0) -> AutonomousPhrasePreparationOutcome {
+        AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(
+            plan: plan, sessionSeed: state.rootSeed, memory: state.memory, sampleRate: rate,
+            incomingRenderState: Self.incomingControlState(startBar: plan.startBar),
+            incomingGraphState: GeneratedDSPContinuationState(), previousGraph: nil,
+            incomingQualityState: state.quality, routeGeneration: routeGeneration,
+            evaluator: evaluator, cancellationRequested: { evaluator.control.snapshot.cancelled })
+    }
+
+    private final class PreparedValidationControl: @unchecked Sendable {
+        struct Snapshot {
+            var calls = 0; var probes = 0; var assessments = 0
+            var probeWasCommitEligible = false; var cancelled = false
+            var successorInputChanges: [String] = []
+            var sourceActiveModalVoices = 0
+            var modalMeasurementPreserved = true
+            var successorPresent = false
+            var successorInputIdentityMatchesRequest = false
+            var successorRefusal: String?
+            var projection: LongHorizonProspectiveAdaptation?
+            var signal: LongHorizonSignalPhraseEvidence?
+        }
+        private let lock = NSLock()
+        private var state = Snapshot()
+        let cached: AutonomousCandidatePreparedValidation?
+        init(cached: AutonomousCandidatePreparedValidation? = nil) { self.cached = cached }
+        var snapshot: Snapshot { lock.lock(); defer { lock.unlock() }; return state }
+        func update(_ change: (inout Snapshot) -> Void) {
+            lock.lock(); defer { lock.unlock() }; change(&state)
+        }
+    }
+
+    private struct PreparedValidationTestEvaluator: AutonomousCandidateEvaluating {
+        enum Mode: Equatable { case actualSuccessor, missingProof, missingSuccessor, unacceptedSuccessor, reject,
+            changedAcceptedReason, foreignProof, cancel,
+            wrongSuccessorRate, wrongSuccessorRoute, wrongSuccessorQuality,
+            lostSuccessorModalState, lostSuccessorModalVoices }
+        let startingState: AutonomousSessionState
+        let control: PreparedValidationControl
+        let mode: Mode
+        var correct = false
+        var longHorizonState: LongHorizonFutureAdaptationState? = nil
+        var longHorizonPolicy: LongHorizonProfessionalPolicy? = nil
+        let policyVersion = "test-primary-calibrated.v1"
+        let evaluatorVersion = "test-prepared-validation.v1"
+        var requiresPreparedValidation: Bool { true }
+        func requestsHomeUpperTimbreCorrection(for candidate: AutonomousCandidateEvaluationVector) -> Bool { correct }
+        func terminalVerdict(selected: AutonomousCandidateEvaluationVector,
+            transaction: AutonomousCandidateEvaluationTransaction) -> AutonomousCandidatePolicyVerdict {
+            Self.accepted(transaction)
+        }
+        static func accepted(_ transaction: AutonomousCandidateEvaluationTransaction,
+            extraReason: Bool = false) -> AutonomousCandidatePolicyVerdict {
+            AutonomousCandidatePolicyVerdict(outcome: transaction.correctionCount == 0 ? .qualified : .adjusted,
+                decisionBasis: .calibratedQuality,
+                reasonCodes: [transaction.correctionCount == 0 ? .candidateQualifiedV1 : .candidateAdjustedV1] +
+                    (extraReason ? [.routeRecoveryV1] : []))
+        }
+        func preparedValidation(for preview: AutonomousCandidatePreparedPreview) -> AutonomousCandidatePreparedValidation? {
+            control.update { $0.calls += 1 }
+            if mode == .missingProof { return nil }
+            if mode == .foreignProof { return control.cached }
+            if mode == .cancel { control.update { $0.cancelled = true }; return nil }
+            var projection: LongHorizonProspectiveAdaptation?
+            if let longHorizonState, let longHorizonPolicy {
+                projection = longHorizonState.projecting(preview: preview,
+                    incomingState: startingState, policy: longHorizonPolicy)
+                control.update {
+                    $0.projection = projection
+                    $0.signal = LongHorizonSignalPhraseEvidence.make(preview: preview)
+                }
+                guard projection != nil else { return nil }
+            }
+            var successor: PreparedAutonomousPhrase?
+            if mode != .missingSuccessor {
+                let next = startingState.advance(using: preview.plan, quality: preview.prospectiveQualityState,
+                    liveMasterHeadroom: preview.prospectiveLiveMasterState,
+                    longHorizonDecision: projection?.decision)
+                let director = AutonomousSessionDirector(rootSeed: next.rootSeed)
+                let expectedRate = preview.selectedCandidateEvidence.routeContinuation.sampleRate
+                let expectedRoute = preview.selectedCandidateEvidence.routeContinuation.routeGeneration
+                let successorRate = mode == .wrongSuccessorRate ? (expectedRate == 44_100 ? 48_000.0 : 44_100.0) : expectedRate
+                let successorRoute = mode == .wrongSuccessorRoute ? expectedRoute + 1 : expectedRoute
+                let successorQuality = mode == .wrongSuccessorQuality ? QualityContinuationState() : next.quality
+                var successorState = preview.endingRenderState
+                if mode == .lostSuccessorModalState { successorState.modalPercussionState = ModalPercussionVoiceState() }
+                if mode == .lostSuccessorModalVoices {
+                    successorState.modalPercussionState.slot0 = ModalPercussionVoiceSlotState()
+                    successorState.modalPercussionState.slot1 = ModalPercussionVoiceSlotState()
+                    successorState.modalPercussionState.slot2 = ModalPercussionVoiceSlotState()
+                    successorState.modalPercussionState.slot3 = ModalPercussionVoiceSlotState()
+                }
+                let expectedDSP = AutonomousCandidateFingerprint.renderDSPContinuation(
+                    renderState: preview.endingRenderState, generatedDSPState: preview.endingGraphState)
+                let requestedDSP = AutonomousCandidateFingerprint.renderDSPContinuation(
+                    renderState: successorState, generatedDSPState: preview.endingGraphState)
+                control.update {
+                    $0.probes += 1
+                    if successorRate != expectedRate { $0.successorInputChanges.append("sample-rate") }
+                    if successorRoute != expectedRoute { $0.successorInputChanges.append("route-generation") }
+                    if successorQuality != next.quality { $0.successorInputChanges.append("quality-state") }
+                    if requestedDSP != expectedDSP { $0.successorInputChanges.append("render-dsp-state") }
+                    let modal = preview.endingRenderState.modalPercussionState
+                    $0.sourceActiveModalVoices = [modal.slot0, modal.slot1, modal.slot2, modal.slot3].filter(\.active).count
+                    $0.modalMeasurementPreserved = successorState.modalPercussionState.measurement == modal.measurement
+                }
+                successor = AutonomousPhrasePreparer.prepareIfNotCancelled(
+                    plan: director.plan(from: next), sessionSeed: next.rootSeed, memory: next.memory,
+                    sampleRate: successorRate,
+                    incomingRenderState: successorState, incomingGraphState: preview.endingGraphState,
+                    previousGraph: preview.graph, incomingQualityState: successorQuality,
+                    routeGeneration: successorRoute,
+                    evaluator: ValidationProbeTestEvaluator(policyVersion: policyVersion, evaluatorVersion: evaluatorVersion,
+                        allowAcceptance: mode != .unacceptedSuccessor),
+                    cancellationRequested: { false })
+                control.update {
+                    $0.probeWasCommitEligible = successor?.commitEligible ?? false
+                    $0.successorPresent = successor != nil
+                    $0.successorInputIdentityMatchesRequest = successor.map {
+                        $0.selectedCandidateEvidence.routeContinuation.incomingRenderDSPFingerprint == requestedDSP &&
+                        $0.selectedCandidateEvidence.routeContinuation.sampleRate == successorRate &&
+                        $0.selectedCandidateEvidence.routeContinuation.routeGeneration == successorRoute &&
+                        $0.incomingQualityState == successorQuality
+                    } ?? false
+                }
+                if successor == nil { return nil }
+            }
+            do {
+                return try preview.assessingContinuous(successor: successor) { _ in
+                    control.update { $0.assessments += 1 }
+                    return mode == .reject ? AutonomousCandidatePolicyVerdict(outcome: .rejected,
+                        decisionBasis: .calibratedQuality, reasonCodes: [.guardrailRegressionV1]) :
+                        Self.accepted(preview.transaction, extraReason: mode == .changedAcceptedReason)
+                }
+            } catch {
+                control.update { $0.successorRefusal = String(describing: error) }
+                return nil
+            }
+        }
+    }
+
+    private struct ValidationProbeTestEvaluator: AutonomousCandidateEvaluating {
+        let policyVersion: String; let evaluatorVersion: String
+        let allowAcceptance: Bool
+        var requiresPreparedValidation: Bool { true }
+        func requestsHomeUpperTimbreCorrection(for candidate: AutonomousCandidateEvaluationVector) -> Bool { false }
+        func terminalVerdict(selected: AutonomousCandidateEvaluationVector,
+            transaction: AutonomousCandidateEvaluationTransaction) -> AutonomousCandidatePolicyVerdict {
+            allowAcceptance ? PreparedValidationTestEvaluator.accepted(transaction) :
+                AutonomousCandidatePolicyVerdict(outcome: .qualificationUnavailable, decisionBasis: .unavailable,
+                    reasonCodes: [.evaluatorUnavailableV1])
+        }
+        func preparedValidation(for preview: AutonomousCandidatePreparedPreview) -> AutonomousCandidatePreparedValidation? {
+            // The bounded mechanical successor can accept only its own complete
+            // source-local windows. It never recursively manufactures a suffix.
+            try? preview.assessingContinuous { _ in
+                PreparedValidationTestEvaluator.accepted(preview.transaction)
+            }
+        }
     }
 
     @Test("Continuous calibration keeps real bank membership and refuses unsupported fitting")
@@ -490,10 +1287,44 @@ struct ModalSuccessorReportJoinTests {
         #expect(throws: ProfessionalQualityCalibrationError.unavailableMeasurement(unavailable[0])) {
             try ProfessionalQualityCalibrationProfile(continuousBank: bank)
         }
-        let profile = try ProfessionalQualityCalibrationProfile(continuousBank: bank, successors: receipts)
+        let unsupportedTrainingMetrics = ProfessionalQualityMetric.allCases.filter { metric in
+            !complete.observations.contains { $0.measurementIsApplicable(metric) }
+        }
+        FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: [
+            "fixture": "continuous-reduced-corpus-training-support.v1",
+            "sourceBankFingerprint": complete.sourceBankFingerprint,
+            "unsupportedTrainingMetrics": unsupportedTrainingMetrics.map(\.rawValue),
+            "qualification": "diagnostic-not-activated"
+        ], options: [.sortedKeys]))
+        FileHandle.standardOutput.write(Data([0x0A]))
+        // Full report identity includes render continuation fingerprints. The
+        // typed-v5 parity repair changes the earlier v49 digest 05d18c479efe25a3
+        // without changing PCM. Native run38198883431/job114647681016 records
+        // the current value; retain the engine and missing-population checks.
+        // This one-bank fixture cannot qualify or activate a policy.
+        #expect(bank.engineVersion == "autotechno-canonical-engine.v49")
+        // Exact PCM-derived reports are pinned per supported native platform;
+        // Windows run38198830687/job114647439300 records its own native result.
+        #if os(Windows)
+        #expect(complete.sourceBankFingerprint == "965001781665ad18")
+        #else
+        #expect(complete.sourceBankFingerprint == "4e2cb5ddb657fb10")
+        #endif
+        #expect(unsupportedTrainingMetrics == [.upperPercussionTailRenderedTailToAttackDBMean])
+        #expect(throws: ProfessionalQualityCalibrationError.invalidMetricSet) {
+            try ProfessionalQualityCalibrationProfile(continuousBank: bank, successors: receipts)
+        }
+        let supported = try ProfessionalQualityCalibrationTrajectory(
+            continuousBank: fixture.supportedBank, successors: fixture.supportedReceipts)
+        #expect(supported.sourceBankFingerprint != complete.sourceBankFingerprint)
+        #expect(supported.observations.contains {
+            $0.measurementIsApplicable(.upperPercussionTailRenderedTailToAttackDBMean)
+        })
+        let profile = try ProfessionalQualityCalibrationProfile(
+            continuousBank: fixture.supportedBank, successors: fixture.supportedReceipts)
         #expect(profile.isComplete && !profile.usesDiverseCalibration)
         #expect(profile.measurementScope == .continuousModalWindow)
-        #expect(profile.schemaVersion == 24 && profile.profileVersion ==
+        #expect(profile.schemaVersion == ProfessionalQualityMeasurementScope.continuousModalWindow.profileSchema && profile.profileVersion ==
             ProfessionalQualityMeasurementContract.continuousModalProfileVersion)
         #expect(profile.sourceTrajectoryCount == 1)
         let profileRebuilt = try ProfessionalQualityCalibrationProfile.decodeDeterministicJSON(profile.deterministicJSON())
@@ -510,8 +1341,13 @@ struct ModalSuccessorReportJoinTests {
             let claimedRate = try #require(challengedFields.removeValue(
                 forKey: "sampleRate") as? NSNumber)
             originalFields.removeValue(forKey: "sampleRate")
-            let retainedFields = NSDictionary(dictionary: originalFields)
-                .isEqual(to: challengedFields)
+            // Compare the complete JSON value after removing only the rate.
+            // NSDictionary bridging equality differs on Windows Foundation;
+            // sorted serialization preserves nested arrays, numbers and bools.
+            let retainedFields = try JSONSerialization.data(
+                withJSONObject: originalFields, options: [.sortedKeys]) ==
+                JSONSerialization.data(
+                    withJSONObject: challengedFields, options: [.sortedKeys])
             #expect(claimedRate.doubleValue == 96_000)
             #expect(retainedFields)
         }
@@ -566,7 +1402,8 @@ struct ModalSuccessorReportJoinTests {
                 evidenceVersion: legacyObservation.evidenceVersion,
                 checkpoint: legacyObservation.checkpoint, sampleRate: 96_000,
                 hardGatesPassed: legacyObservation.hardGatesPassed,
-                liveMaster: legacyObservation.liveMaster, metrics: legacyObservation.metrics)
+                liveMaster: legacyObservation.liveMaster, metrics: legacyObservation.metrics,
+                upperPercussionTailSupport: legacyObservation.upperPercussionTailSupport)
             #expect(try legacyChallenge.deterministicJSON() == historicalChallenge.deterministicJSON())
         }
         let invalidSources = complete.observations.map { $0.foreignRateChallenge() }
@@ -584,10 +1421,15 @@ struct ModalSuccessorReportJoinTests {
             #expect(verdict.failedMetrics.contains(.modalPercussionTailToBodyDBMean))
             #expect(verdict.failedMetrics.contains(.maximumBoundaryDelta))
         }
-        let installed = try ProfessionalQualityPrimaryArtifacts.load()
-        #expect(installed.profile.profileVersion == ProfessionalQualityCalibrationProfile.profileVersion)
+        // Activation belongs to the existing readiness/artifact controls. A
+        // complete one-bank construction profile remains insufficient and is
+        // within the primary scope but below its required diverse support.
+        #expect(profile.profileVersion == ProfessionalQualityPrimaryEvaluator.requiredProfileVersion)
+        #expect(!profile.usesDiverseCalibration)
         FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: [
-            "fixture": "continuous-modal-observation-foundation.v1",
+            "fixture": "continuous-modal-observation-foundation.v2",
+            "unsupportedOriginalTrainingMetrics": unsupportedTrainingMetrics.map(\.rawValue),
+            "supportedSourceBankFingerprint": supported.sourceBankFingerprint,
             "sourceBankFingerprint": complete.sourceBankFingerprint,
             "observationVersion": profile.observationVersion, "profileVersion": profile.profileVersion,
             "observationCount": complete.observations.count, "sourceTrajectoryCount": profile.sourceTrajectoryCount,
@@ -613,10 +1455,34 @@ struct ModalSuccessorReportJoinTests {
     }
 
     private func continuousBankControl() throws ->
-        (bank: ProfessionalEvidenceReportBank, receipts: [ProfessionalQualityModalSuccessorEvidence]) {
+        (bank: ProfessionalEvidenceReportBank, receipts: [ProfessionalQualityModalSuccessorEvidence],
+         supportedBank: ProfessionalEvidenceReportBank,
+         supportedReceipts: [ProfessionalQualityModalSuccessorEvidence]) {
         let director = AutonomousSessionDirector(rootSeed: 48_300)
         var reports: [CanonicalJourneyQualificationReport] = []
         var receipts: [ProfessionalQualityModalSuccessorEvidence] = []
+        var supportReports: [CanonicalJourneyQualificationReport] = []
+        var supportReceipts: [ProfessionalQualityModalSuccessorEvidence] = []
+        // Declare one positive score population before any PCM. Preserve the
+        // original bank as the missing-population negative control. This is a
+        // mechanical construction fixture, separate from the frozen 40/6 study.
+        var planningState = director.initialState()
+        var supportSelection: (checkpoint: CanonicalJourneyCheckpoint, phraseIndex: Int)?
+        for _ in 0..<128 {
+            let plan = director.plan(from: planningState)
+            let labels = CanonicalJourneyCheckpoint.applicable(
+                phraseIndex: plan.phraseIndex, phraseKind: plan.kind,
+                chapterChanged: false)
+            if let checkpoint = labels.first,
+               plan.resolvedBars.contains(where: { bar in
+                   bar.upperPercussionTailArticulations.contains { $0.role == .foregroundClearance }
+               }) {
+                supportSelection = (checkpoint, plan.phraseIndex)
+                break
+            }
+            planningState.advancePlanning(using: plan)
+        }
+        let supportedSelection = try #require(supportSelection)
         let checkpoints = CanonicalJourneyQualificationHarness(engineVersion: QualityQualificationContract.engineVersion,
             routeFingerprint: "continuous-modal-mechanical-control", routeGeneration: 0)
             .planCheckpoints(director: director)
@@ -628,7 +1494,8 @@ struct ModalSuccessorReportJoinTests {
                     checkpoint.checkpoint == .longContinuation
                         ? plan.phraseIndex == 21 : checkpoint.phraseIndex == plan.phraseIndex
                 }.map(\.checkpoint)
-                if !selected.isEmpty {
+                let isSupportSource = plan.phraseIndex == supportedSelection.phraseIndex
+                if !selected.isEmpty || isSupportSource {
                     let input = Self.incomingControlState(startBar: plan.startBar)
                     let originResult = AutonomousPhrasePreparer.prepareIfNotCancelled(
                         plan: plan, sessionSeed: state.rootSeed, memory: state.memory, sampleRate: rate,
@@ -650,12 +1517,23 @@ struct ModalSuccessorReportJoinTests {
                         reports.append(source)
                         receipts.append(try .init(source: source, successor: next))
                     }
+                    if isSupportSource {
+                        let source = try report(origin, label: "continuous-modal-construction-control",
+                            checkpoint: supportedSelection.checkpoint)
+                        supportReports.append(source)
+                        supportReceipts.append(try .init(source: source, successor: next))
+                    }
                 }
-                if reports.filter({ $0.sampleRate == rate }).count == CanonicalJourneyCheckpoint.allCases.count { break }
+                if reports.filter({ $0.sampleRate == rate }).count == CanonicalJourneyCheckpoint.allCases.count &&
+                    supportReports.contains(where: { $0.sampleRate == rate }) { break }
                 state.advancePlanning(using: plan)
             }
         }
-        return (try ProfessionalEvidenceReportBank(reports: reports), receipts)
+        let retained = reports.filter { $0.checkpoint != supportedSelection.checkpoint }
+        let retainedIdentities = Set(retained.map(ProfessionalQualityModalSuccessorEvidence.identity))
+        let retainedReceipts = receipts.filter { retainedIdentities.contains($0.sourceIdentityFingerprint) }
+        return (try ProfessionalEvidenceReportBank(reports: reports), receipts,
+            try ProfessionalEvidenceReportBank(reports: retained + supportReports), retainedReceipts + supportReceipts)
     }
 
     private func report(_ prepared: PreparedAutonomousPhrase, label: String,

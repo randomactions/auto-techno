@@ -8,7 +8,10 @@ struct LongHorizonTrajectoryBaselineTests {
     func frozenFourHourPlanningBaseline() throws {
         let first = LongHorizonPlanningBaselineProbe.snapshot(
             rootSeed: 48_291,
-            hours: 4
+            hours: 4,
+            traceBarFields: ProcessInfo.processInfo.environment[
+                "AUTOTECHNO_TRACE_PLANNING_BASELINE"
+            ] == "1"
         )
         let replay = LongHorizonPlanningBaselineProbe.snapshot(
             rootSeed: 48_291,
@@ -49,9 +52,39 @@ struct LongHorizonTrajectoryBaselineTests {
         #expect(first.qualificationReason == "no-calibrated-long-horizon-policy")
     }
 
+    @Test("Canonical lock curve is portable, bounded and total")
+    func canonicalLockCurve() throws {
+        var digest: UInt64 = 0xcbf2_9ce4_8422_2325
+        var count = 0
+        for length in 4...16 {
+            for index in 0..<length {
+                let value = try #require(AutonomousSessionDirector.planningLockCycle(
+                    localBar: index, phraseLength: length))
+                #expect(value.isFinite && abs(value) <= 1)
+                let reference = sin(Double(index) / Double(length - 1) * .pi * 2)
+                #expect(abs(value - reference) <= 4 * Double.ulpOfOne)
+                var bits = value.bitPattern.littleEndian
+                withUnsafeBytes(of: &bits) { bytes in
+                    for byte in bytes { digest = (digest ^ UInt64(byte)) &* 0x100_0000_01b3 }
+                }
+                count += 1
+            }
+        }
+        #expect(count == 130)
+        // Frozen independently from the pre-repair v49 diagnostic grid. The
+        // existing four-hour test binds this capability to canonical score/state.
+        #expect(digest == 0x16cd9177f76a8a7a)
+        for length in [Int.min, -1, 0, 1, 3, 17, Int.max] {
+            #expect(AutonomousSessionDirector.planningLockCycle(localBar: 0, phraseLength: length) == nil)
+        }
+        for index in [Int.min, -1, 16, Int.max] {
+            #expect(AutonomousSessionDirector.planningLockCycle(localBar: index, phraseLength: 16) == nil)
+        }
+    }
+
     private static let expectedV3 = LongHorizonPlanningBaselineReport(
         schemaVersion: "long-horizon-planning-baseline.v3",
-        engineVersion: "autotechno-canonical-engine.v48",
+        engineVersion: "autotechno-canonical-engine.v49",
         evidenceClassification: "descriptive-structural-baseline",
         qualificationStatus: "unavailable",
         qualificationReason: "no-calibrated-long-horizon-policy",

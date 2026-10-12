@@ -1,7 +1,7 @@
 {
   "schema": "autotechno-component-license-asset-manifest.v1",
-  "manifestVersion": 1,
-  "accessDate": "2026-08-31",
+  "manifestVersion": 2,
+  "accessDate": "2026-10-12",
   "scopePolicy": "Covers the repository licence, resolved SwiftPM graph, source-level platform imports and linked libraries, CI actions, active Windows build toolchains, explicit Windows distribution isolation, every tracked resource/licence/media/binary asset, and governed local-only research classes. The dormant project-owned Inno Setup template is not invoked by an active script or workflow and is not a build dependency. Ubiquitous host shell, Git, and operating-system utilities are out of scope unless the repository redistributes them or invokes a separately licensed package. Research citations are evidence, not dependencies or copied assets.",
   "components": [
     {
@@ -74,6 +74,28 @@
       ],
       "sourceAnchors": [
         ".github/workflows/swift.yml",
+        ".github/workflows/windows-distribution.yml"
+      ]
+    },
+    {
+      "id": "github-actions-setup-python",
+      "name": "GitHub Actions setup-python",
+      "kind": "ci-action",
+      "version": "v6 exact workflow revision",
+      "revision": "ece7cb06caefa5fff74198d8649806c4678c61a1",
+      "source": "https://github.com/actions/setup-python",
+      "license": "MIT",
+      "licenseSource": "https://github.com/actions/setup-python/blob/ece7cb06caefa5fff74198d8649806c4678c61a1/LICENSE",
+      "notice": "Build-only action; exact-revision licence inspected 2026-10-12; not shipped with Auto Techno",
+      "noticeSource": "https://github.com/actions/setup-python/tree/ece7cb06caefa5fff74198d8649806c4678c61a1",
+      "role": "Select Python 3.13 for native Windows CI test-bank planning",
+      "distribution": "build-only",
+      "provenanceClass": "GREEN-OPEN-SOURCE",
+      "disposition": "retain",
+      "bindings": [
+        "ci-action:actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1"
+      ],
+      "sourceAnchors": [
         ".github/workflows/windows-distribution.yml"
       ]
     },
@@ -413,6 +435,14 @@
       "summary": "Every active GitHub Action binding uses an exact 40-digit revision recorded by this manifest",
       "disposition": "Retain the exact pin and fail manifest validation if a mutable selector is introduced",
       "followUp": "No AT-0008 follow-up; future action upgrades require an explicit reviewed revision change"
+    },
+    {
+      "id": "ci-python-selection-pinned",
+      "severity": "green",
+      "component": "github-actions-setup-python",
+      "summary": "Native Windows bank planning uses the exact MIT-licensed setup-python revision after Swift PATH registration",
+      "disposition": "Retain the exact CI-only pin and declared dependency binding; no playback or shipped-runtime dependency",
+      "followUp": "Future action upgrades require review of the exact replacement revision and licence"
     },
     {
       "id": "windows-installer-tool-isolated",

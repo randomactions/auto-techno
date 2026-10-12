@@ -16,12 +16,15 @@ package struct ProfessionalQualityPreparationEvaluator:
     package let availability: ProfessionalQualityPreparationAvailability
     package let policyVersion: String
     package let evaluatorVersion: String
+    package let preparationReplayFingerprint: String?
     private let calibrated: ProfessionalQualityPrimaryEvaluator?
 
     package init(
         sampleRate: Double,
-        artifacts: ProfessionalQualityPrimaryArtifacts?
+        artifacts: ProfessionalQualityPrimaryArtifacts?,
+        preparationReplayFingerprint: String? = nil
     ) {
+        self.preparationReplayFingerprint = preparationReplayFingerprint
         if let artifacts {
             if sampleRate.isFinite,
                artifacts.profile.sampleRates.contains(sampleRate) {
@@ -45,6 +48,21 @@ package struct ProfessionalQualityPreparationEvaluator:
             evaluatorVersion = QualityQualificationContract
                 .uncalibratedEvaluatorVersion
         }
+    }
+
+    package var requiresPreparedValidation: Bool {
+        calibrated?.requiresPreparedValidation ?? false
+    }
+
+    package func preparedValidation(
+        for preview: AutonomousCandidatePreparedPreview
+    ) -> AutonomousCandidatePreparedValidation? {
+        calibrated?.preparedValidation(for: preview)
+    }
+
+    package func preparedValidation(for preview: AutonomousCandidatePreparedPreview,
+        successor: PreparedAutonomousPhrase?) -> AutonomousCandidatePreparedValidation? {
+        calibrated?.preparedValidation(for: preview, successor: successor)
     }
 
     package func requestsHomeUpperTimbreCorrection(

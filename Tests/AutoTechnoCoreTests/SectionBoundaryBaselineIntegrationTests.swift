@@ -209,6 +209,7 @@ struct SectionBoundaryBaselineIntegrationTests {
         var horizon: LongHorizonFutureAdaptationState?
         var previousChapter: InterlockChapter?
         var previous: PreparedPerformancePhrase?
+        var boundarySample: Int64 = 0
         for _ in 0..<limit {
             let request = makeRequest(
                 state: state,
@@ -218,12 +219,24 @@ struct SectionBoundaryBaselineIntegrationTests {
                 graphState: graphState,
                 previousGraph: previousGraph
             )
-            let current = try #require(AutonomousPerformancePreparer.prepare(
+            let owned: PreparedPerformancePhrase?
+            if let previous {
+                owned = try previous.continuationAtBoundary(
+                    sessionState: state, longHorizonState: horizon,
+                    sampleRate: Double(route.sampleRate),
+                    channelCount: route.channelCount,
+                    routeGeneration: route.routeGeneration,
+                    actualStartSample: boundarySample
+                ).get()
+            } else { owned = nil }
+            let current = try #require(owned ?? AutonomousPerformancePreparer.prepare(
                 request: request,
                 director: director,
                 artifacts: primary,
                 longHorizonArtifacts: longHorizon
             ))
+            guard current.prepared.commitEligible, current.continuationOwnershipIsValid
+            else { throw ExportError.ineligiblePreparation }
             let plan = current.prepared.plan
             let chapters = plan.resolvedBars.map(\.interlockChapter)
             let chapterChanged = zip(chapters, chapters.dropFirst()).contains {
@@ -251,14 +264,30 @@ struct SectionBoundaryBaselineIntegrationTests {
                     graphState: current.prepared.endingGraphState,
                     previousGraph: current.prepared.graph
                 )
+                let phraseFrames = try #require(Int64(exactly:
+                    current.prepared.audioPreflight.quality.analyzedFrameCount
+                ))
+                try #require(phraseFrames > 0)
+                let successorBoundary = boundarySample.addingReportingOverflow(phraseFrames)
+                try #require(!successorBoundary.overflow)
+                let owned = try current.continuationAtBoundary(
+                    sessionState: successorState,
+                    longHorizonState: current.outgoingLongHorizonState,
+                    sampleRate: Double(route.sampleRate),
+                    channelCount: route.channelCount,
+                    routeGeneration: route.routeGeneration,
+                    actualStartSample: successorBoundary.partialValue
+                ).get()
                 let successor = try #require(
-                    AutonomousPerformancePreparer.prepare(
+                    owned ?? AutonomousPerformancePreparer.prepare(
                         request: successorRequest,
                         director: director,
                         artifacts: primary,
                         longHorizonArtifacts: longHorizon
                     )
                 )
+                guard successor.prepared.commitEligible, successor.continuationOwnershipIsValid
+                else { throw ExportError.ineligiblePreparation }
                 let contexts = previous.map { [$0, current, successor] } ??
                     [current, successor]
                 return try write(
@@ -271,6 +300,13 @@ struct SectionBoundaryBaselineIntegrationTests {
                     report: report
                 )
             }
+            let phraseFrames = try #require(Int64(exactly:
+                current.prepared.audioPreflight.quality.analyzedFrameCount
+            ))
+            try #require(phraseFrames > 0)
+            let nextBoundary = boundarySample.addingReportingOverflow(phraseFrames)
+            try #require(!nextBoundary.overflow)
+            boundarySample = nextBoundary.partialValue
             previous = current
             previousChapter = chapters.last ?? previousChapter
             state = state.advance(
@@ -574,6 +610,7 @@ struct SectionBoundaryBaselineIntegrationTests {
     }
 
     private enum ExportError: Error {
+        case ineligiblePreparation
         case missingCheckpoint
         case invalidContext
         case invalidPCM

@@ -404,6 +404,14 @@ quarantined; that successor must still pass primary qualification before it can
 advance the canonical score. No failure can enable an unevaluated substitute. See
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 
+Current continuous prepared admission can require an exact qualified child to
+complete the source's physical measurement windows. That child is already owned
+future audio, even before queueing: both hosts consume it at the canonical
+boundary before ordinary cache, live replacement or repeat policy. Live correction
+eligibility resumes at a naturally complete leaf. A missing or stale child requires
+route rebuilding rather than an incomplete-source hold. This transport mechanism
+remains unactivated until matching current policy and full operational gates pass.
+
 The canonical-capture mixer is upstream of the main output mixer. Live feedback
 and its clock map observe the former; the user-facing monitoring mute/volume
 changes only the latter's output gain on the main actor. Monitoring state is not

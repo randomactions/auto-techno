@@ -19,16 +19,24 @@ if ($null -eq $swift -or $null -eq $swiftc) {
     throw "Swift is not available. Run scripts\setup-windows-build.cmd once, reopen PowerShell, and retry."
 }
 
-$swiftVersion = (& $swift.Source --version | Select-Object -First 1).Trim()
-if ($LASTEXITCODE -ne 0) {
-    throw "Unable to run the installed Swift toolchain."
+# Consume the complete native output before reading its exit status. A
+# Select-Object -First pipeline can stop before PowerShell sets LASTEXITCODE.
+$swiftVersionOutput = & $swift.Source --version
+$swiftVersionExit = $LASTEXITCODE
+if ($swiftVersionExit -ne 0) {
+    throw "Unable to run the installed Swift toolchain (exit $swiftVersionExit)."
+}
+$swiftVersion = ([string]($swiftVersionOutput | Select-Object -First 1)).Trim()
+if ([string]::IsNullOrWhiteSpace($swiftVersion)) {
+    throw "The installed Swift toolchain returned no version."
 }
 Write-Host "Validating Auto Techno source with $swiftVersion"
 
 Push-Location $repositoryRoot
 try {
     if (-not $SkipTests) {
-        & $swift.Source test --build-path $buildDirectory
+        # Prepared DSP fixtures share a bounded host; match the serial macOS gate.
+        & $swift.Source test --no-parallel --build-path $buildDirectory
         if ($LASTEXITCODE -ne 0) {
             throw "Swift tests failed."
         }
