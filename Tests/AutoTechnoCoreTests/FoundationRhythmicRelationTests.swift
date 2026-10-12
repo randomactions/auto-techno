@@ -697,6 +697,7 @@ struct FoundationRhythmicRelationTests {
             let companionVoice: String?
             let originalCompanionEvents: Int?
             let renderedCompanionEvents: Int?
+            let companionMatchesOriginal: Bool?
             let frameCount: Int
             let differenceRMS: Double
             let foundationComplete: Bool
@@ -887,6 +888,14 @@ struct FoundationRhythmicRelationTests {
                     #expect(vector.isComplete == valid)
                     #expect(transaction.isComplete == valid)
                     #expect(blocks.count == prepared.blocks.count)
+                    let companionMatchesOriginal: Bool? = voice == .bass ? nil : zip(blocks, prepared.blocks).allSatisfy { actual, expected in
+                        if voice == .rumble {
+                            return actual.sourceTerminalDeclickRenderEvidence.filter { $0.voice == .rumble }
+                                == expected.sourceTerminalDeclickRenderEvidence.filter { $0.voice == .rumble }
+                        }
+                        return actual.modalPercussionRenderEvidence == expected.modalPercussionRenderEvidence
+                    }
+                    if let companionMatchesOriginal { #expect(companionMatchesOriginal == valid) }
                     var errorEnergy = 0.0
                     var sampleCount = 0
                     for (actual, expected) in zip(blocks, prepared.blocks) {
@@ -922,6 +931,7 @@ struct FoundationRhythmicRelationTests {
                         companionVoice: voice == .bass ? nil : voice.rawValue,
                         originalCompanionEvents: voice == .bass ? nil : originalEvents,
                         renderedCompanionEvents: voice == .bass ? nil : renderedEventCount,
+                        companionMatchesOriginal: companionMatchesOriginal,
                         frameCount: sampleCount / 2, differenceRMS: difference,
                         foundationComplete: foundationComplete, vectorComplete: vector.isComplete,
                         transactionComplete: transaction.isComplete, exactReplay: exactReplay))
