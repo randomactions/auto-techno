@@ -2669,3 +2669,31 @@ compare empty and populated reverb/live-master continuation through both APIs,
 exercise scalar/storage mutations, and cancel at each observed checkpoint. The
 full-phrase unaltered control fails immediately on any PCM/vector mismatch before
 claiming a fault-matrix result.
+
+### Portable canonical lock-phrase tension arithmetic
+
+`AutonomousSessionDirector` retains the v49 lock tension curve and its existing
+resolved-score/continuation ownership. Its legal phrase lengths are 4...16 bars,
+so the cycle term has exactly 130 reachable length/local-bar coordinates. These
+pre-existing canonical binary64 values are now fixed in one shared lookup;
+native math-library `sin` rounding can no longer choose a different tension bit.
+All hosts use the same table. This adds no engine, profile, parameter, musical
+state, renderer, quality threshold, or runtime selector.
+
+The native diagnostic found eight sine-grid differences between macOS and
+Windows. Thirteen bars of the frozen root 48291 four-hour journey differed by
+one tension ULP; activity, density, repetition and discrete fields matched.
+The repair preserves the original canonical macOS v49 curve exactly and repairs
+Windows realization of that curve. Engine v49 remains the canonical behavior
+identity; the exact source/build witness still changes and old failed Windows
+receipts are never admitted or translated. The original frozen planning oracle
+remains required, as do fresh native tests and all separate qualification gates.
+
+The lookup is bounded and runs in detached planning. Invalid coordinates return
+unavailable and the existing director uses the neutral zero-cycle contribution.
+The resulting tension follows the unchanged PerformanceBar, resolved score,
+render/evidence and bounded future-continuation path. Tests bind the full 130-
+position checksum to the pre-repair grid, check numeric bounds and malformed
+coordinates, and retain exact four-hour score/state replay. Existing baseline
+and director ownership, module dependencies, persistence and boundary flows are
+unchanged; the semantic map has no navigation change for this arithmetic repair.

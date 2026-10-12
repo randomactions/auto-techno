@@ -197,10 +197,17 @@ jobs:
         run: |
           $discovered = @(swift test --build-path .build-windows list --skip-build --disable-xctest --enable-swift-testing)
           if ($LASTEXITCODE -ne 0) { throw "Native planning discovery failed." }
-          if (-not ($discovered | Select-String -Pattern 'LongHorizonTrajectoryBaselineTests/frozenFourHourPlanningBaseline' -Quiet)) {
-            throw "The native planning regression was not discovered."
+          $required = @('LongHorizonTrajectoryBaselineTests/frozenFourHourPlanningBaseline',
+            'LongHorizonTrajectoryBaselineTests/canonicalLockCurve',
+            'AutonomousCandidateEvaluationTests/exactStateFingerprints',
+            'LongHorizonSemanticTrajectoryTests/canonicalFourHourTrajectory',
+            'LongHorizonSignalTrajectoryTests/eightHourTrajectoryIsBounded')
+          foreach ($test in $required) {
+            if (-not ($discovered | Select-String -SimpleMatch $test -Quiet)) {
+              throw "The native regression was not discovered: $test"
+            }
           }
-          swift test --build-path .build-windows --skip-build --no-parallel --disable-xctest --enable-swift-testing --filter '(LongHorizonTrajectoryBaselineTests|AutonomousCandidateEvaluationTests/exactStateFingerprints)'
+          swift test --build-path .build-windows --skip-build --no-parallel --disable-xctest --enable-swift-testing --filter '(LongHorizonTrajectoryBaselineTests|AutonomousCandidateEvaluationTests/exactStateFingerprints|LongHorizonSemanticTrajectoryTests/canonicalFourHourTrajectory|LongHorizonSignalTrajectoryTests/eightHourTrajectoryIsBounded)'
           if ($LASTEXITCODE -ne 0) { throw "Native planning/fingerprint regression failed; original assertions remain required." }
 
       - name: Verify Windows live-master fingerprint parity

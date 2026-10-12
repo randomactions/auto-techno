@@ -1,8 +1,8 @@
 {
   "schema": "autotechno-roadmap-contract-baseline.v1",
-  "snapshotVersion": 149,
+  "snapshotVersion": 151,
   "digestAlgorithm": "sha256",
-  "snapshotFingerprint": "ceb76a392d32f32fe421a33b2d9812ef5a8df3b1dffffd075a229fd240b90c7b",
+  "snapshotFingerprint": "3e56fd0354eb6b90ca7b97fba8fdada9bd507943238fd892c2069f8c813aed9f",
   "documents": [
     {
       "role": "repository-guidance",
@@ -31,8 +31,8 @@
     {
       "role": "runtime-provenance-contract",
       "path": "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
-      "byteCount": 178584,
-      "sha256": "b96648ae39a961385faf7fa5893fd5e995d8b2ddf11b2727942fa90b4bf0dff2"
+      "byteCount": 180429,
+      "sha256": "9bc3a892872d2664756a194c045b98a38b76771eb1f22609aa0c211a84f57d32"
     },
     {
       "role": "component-license-asset-manifest-source",
