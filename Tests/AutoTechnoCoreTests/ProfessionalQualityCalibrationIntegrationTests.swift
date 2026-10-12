@@ -374,16 +374,31 @@ struct ProfessionalQualityCalibrationIntegrationTests {
 
     private static let currentStudyPublishedRef = "refs/remotes/origin/codex/rms-trajectory-floor"
 
+    // Freeze an explicit, unambiguous origin study branch. Ref identity belongs
+    // to launch provenance, not to the renderer or musical policy.
+    private static func validCurrentStudyPublishedRef(_ ref: String) -> Bool {
+        let prefix = "refs/remotes/origin/codex/"
+        guard ref.hasPrefix(prefix), ref.count > prefix.count,
+              ref.utf8.allSatisfy({ (48...57).contains($0) || (65...90).contains($0) ||
+                  (97...122).contains($0) || [45, 46, 47, 95].contains($0) }),
+              !ref.contains(".."), !ref.contains("//"), !ref.hasSuffix("."),
+              !ref.hasSuffix("/") else { return false }
+        return ref.split(separator: "/").allSatisfy {
+            !$0.hasPrefix(".") && !$0.hasSuffix(".lock")
+        }
+    }
+
     private func currentContinuousExecutionProtocol(
         head: String, objects: [String], contract: String,
-        selectionProtocolBlob: String, cohortBlob: String, qualificationRequested: Bool
+        selectionProtocolBlob: String, cohortBlob: String, qualificationRequested: Bool,
+        publishedRef: String
     ) -> [String: Any] {
         let scope = ProfessionalQualityMeasurementScope.continuousModalWindow
-        return ["schema": "autotechno-current-continuous-execution-protocol.v2",
+        return ["schema": "autotechno-current-continuous-execution-protocol.v3",
             "engineVersion": QualityQualificationContract.engineVersion,
             "acceptedExecutionHead": head, "acceptedExecutionInputObjects": objects,
             "contractBaselineFingerprint": contract,
-            "publishedExecutionRef": Self.currentStudyPublishedRef,
+            "publishedExecutionRef": publishedRef,
             "selectionProtocolBlob": selectionProtocolBlob, "cohortBlob": cohortBlob,
             "selectionRule": "ascending-ordinal-complete-score-then-remaining-four-bar.v1",
             "developmentRoots": 40, "holdoutRoots": 6, "planningCheckpoints": 322,
@@ -412,10 +427,11 @@ struct ProfessionalQualityCalibrationIntegrationTests {
 
     private func requireCurrentContinuousExecutionProtocol(
         _ object: [String: Any], head: String, objects: [String], contract: String,
-        selectionProtocolBlob: String, cohortBlob: String, qualificationRequested: Bool
+        selectionProtocolBlob: String, cohortBlob: String, qualificationRequested: Bool,
+        publishedRef: String
     ) throws {
         let identities = [head, selectionProtocolBlob, cohortBlob] + objects
-        guard objects.count == 6,
+        guard Self.validCurrentStudyPublishedRef(publishedRef), objects.count == 6,
               identities.allSatisfy({ $0.count == 40 && $0.allSatisfy({ $0.isHexDigit && !$0.isUppercase }) }),
               contract.count == 64,
               contract.allSatisfy({ $0.isHexDigit && !$0.isUppercase }),
@@ -424,7 +440,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
               try canonicalCacheJSON(object) == canonicalCacheJSON(currentContinuousExecutionProtocol(
                 head: head, objects: objects, contract: contract,
                 selectionProtocolBlob: selectionProtocolBlob, cohortBlob: cohortBlob,
-                qualificationRequested: qualificationRequested)) else {
+                qualificationRequested: qualificationRequested, publishedRef: publishedRef)) else {
             throw ProfessionalQualityCalibrationError.invalidIdentity
         }
     }
@@ -438,11 +454,12 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         let cohort = String(repeating: "d", count: 40)
         let expected = currentContinuousExecutionProtocol(head: head, objects: objects,
             contract: contract, selectionProtocolBlob: selection, cohortBlob: cohort,
-            qualificationRequested: true)
+            qualificationRequested: true, publishedRef: Self.currentStudyPublishedRef)
         try requireCurrentContinuousExecutionProtocol(expected, head: head, objects: objects,
             contract: contract, selectionProtocolBlob: selection, cohortBlob: cohort,
-            qualificationRequested: true)
+            qualificationRequested: true, publishedRef: Self.currentStudyPublishedRef)
         let mutations: [(String, Any)] = [
+            ("schema", "autotechno-current-continuous-execution-protocol.v2"),
             ("engineVersion", "autotechno-canonical-engine.v48"),
             ("acceptedExecutionHead", "HEAD"), ("acceptedExecutionInputObjects", Array(objects.reversed())),
             ("contractBaselineFingerprint", "current"), ("publishedExecutionRef", "refs/heads/main"),
@@ -464,7 +481,35 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             #expect(throws: ProfessionalQualityCalibrationError.self) {
                 try requireCurrentContinuousExecutionProtocol(changed, head: head, objects: objects,
                     contract: contract, selectionProtocolBlob: selection, cohortBlob: cohort,
-                    qualificationRequested: true)
+                    qualificationRequested: true, publishedRef: Self.currentStudyPublishedRef)
+            }
+        }
+    }
+
+    @Test("Current study protocol binds an explicit published ref and refuses aliases")
+    func currentContinuousPublishedRefBinding() throws {
+        let head = String(repeating: "a", count: 40)
+        let objects = (0..<6).map { String(repeating: String($0), count: 40) }
+        let contract = String(repeating: "b", count: 64)
+        let selection = String(repeating: "c", count: 40)
+        let cohort = String(repeating: "d", count: 40)
+        let ref = "refs/remotes/origin/codex/current-calibration"
+        let expected = currentContinuousExecutionProtocol(head: head, objects: objects,
+            contract: contract, selectionProtocolBlob: selection, cohortBlob: cohort,
+            qualificationRequested: true, publishedRef: ref)
+        try requireCurrentContinuousExecutionProtocol(expected, head: head, objects: objects,
+            contract: contract, selectionProtocolBlob: selection, cohortBlob: cohort,
+            qualificationRequested: true, publishedRef: ref)
+        for wrong in [Self.currentStudyPublishedRef, "HEAD", "refs/heads/main",
+            "refs/remotes/origin/main", "refs/remotes/origin/codex/", ref + "^{commit}",
+            ref + "..old", ref + "/.hidden", ref + ".lock", ref + "/", ref + "//next", ref + ".", ref + "\n"] {
+            #expect(throws: ProfessionalQualityCalibrationError.self) {
+                try requireCurrentContinuousExecutionProtocol(expected, head: head, objects: objects,
+                    contract: contract, selectionProtocolBlob: selection, cohortBlob: cohort,
+                    qualificationRequested: true, publishedRef: wrong)
+            }
+            if wrong != Self.currentStudyPublishedRef {
+                #expect(!Self.validCurrentStudyPublishedRef(wrong))
             }
         }
     }
@@ -475,6 +520,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         let protocolBlob: String
         let output: URL
         let qualificationRequested: Bool
+        let publishedRef: String
     }
 
     private func validatedCurrentContinuousLaunch() throws -> CurrentContinuousLaunch {
@@ -505,12 +551,13 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         try requireCoverageGitBlob(data, expected: blob)
         let object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
         let qualification = environment["AUTOTECHNO_RUN_CONTINUOUS_ADVERSARIAL_QUALIFICATION"] == "1"
+        let publishedRef = environment["AUTOTECHNO_CONTINUOUS_EXECUTION_PUBLISHED_REF"] ?? Self.currentStudyPublishedRef
         try requireCurrentContinuousExecutionProtocol(object, head: context.head, objects: context.objects,
             contract: context.contract, selectionProtocolBlob: context.protocolBlob,
-            cohortBlob: inputs.cohortBlob, qualificationRequested: qualification)
+            cohortBlob: inputs.cohortBlob, qualificationRequested: qualification, publishedRef: publishedRef)
         // The external owner fresh-fetches this exact branch immediately before
         // freezing launch inputs. This test never performs network I/O.
-        guard try git(["rev-parse", Self.currentStudyPublishedRef]) == context.head,
+        guard try git(["rev-parse", "--verify", "--end-of-options", publishedRef + "^{commit}"]) == context.head,
               try git(["rev-parse", "HEAD"]) == context.head,
               try git(["status", "--porcelain", "--untracked-files=all"]).isEmpty,
               try Data(contentsOf: repositoryRoot.appendingPathComponent(
@@ -521,7 +568,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             throw ProfessionalQualityCalibrationError.invalidIdentity
         }
         return CurrentContinuousLaunch(inputs: inputs, protocolURL: protocolURL,
-            protocolBlob: blob, output: output, qualificationRequested: qualification)
+            protocolBlob: blob, output: output, qualificationRequested: qualification, publishedRef: publishedRef)
     }
 
     @Test("Authenticate the complete current continuous-study launch without creating output or PCM")
@@ -598,7 +645,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                   try git(["hash-object", launch.inputs.cohortURL.path]) == launch.inputs.cohortBlob,
                   try git(["hash-object", context.protocolURL.path]) == context.protocolBlob,
                   try git(["hash-object", launch.protocolURL.path]) == protocolBlob,
-                  try git(["rev-parse", Self.currentStudyPublishedRef]) == acceptedHead else {
+                  try git(["rev-parse", "--verify", "--end-of-options", launch.publishedRef + "^{commit}"]) == acceptedHead else {
                 throw ProfessionalQualityCalibrationError.invalidIdentity
             }
         }
@@ -1202,7 +1249,22 @@ struct ProfessionalQualityCalibrationIntegrationTests {
     private func git(_ arguments: [String], input: Data? = nil) throws -> String {
         let process = Process()
         let output = Pipe()
+        #if os(Windows)
+        // The native runner installs Git on PATH; Unix absolute paths cannot
+        // execute on Windows. Keep the executable separate from argument data.
+        let searchPath = ProcessInfo.processInfo.environment.first {
+            $0.key.caseInsensitiveCompare("PATH") == .orderedSame
+        }?.value ?? ""
+        let candidates = searchPath.split(separator: ";").map {
+            URL(fileURLWithPath: String($0), isDirectory: true).appendingPathComponent("git.exe")
+        }
+        guard let executable = candidates.first(where: {
+            FileManager.default.isExecutableFile(atPath: $0.path)
+        }) else { throw ProfessionalQualityCalibrationError.invalidIdentity }
+        process.executableURL = executable
+        #else
         process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        #endif
         process.arguments = ["-C", repositoryRoot.path] + arguments
         process.standardOutput = output
         let inputPipe = input.map { _ in Pipe() }

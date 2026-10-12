@@ -196,6 +196,27 @@ jobs:
           swift test --build-path .build-windows --skip-build --no-parallel --disable-xctest --enable-swift-testing --filter '(AutonomousQualityRecoveryHostPolicyTests|RenderFingerprintParityTests|DiagnosticRoleStemStreamingTests/typedStorageIdentity)'
           if ($LASTEXITCODE -ne 0) { throw "Windows recovery/fingerprint/storage contracts failed." }
 
+      - name: Verify Windows calibration launch provenance
+        if: matrix.test-library == 'recovery'
+        timeout-minutes: 15
+        shell: pwsh
+        run: |
+          $discovered = @(swift test --build-path .build-windows list --skip-build --disable-xctest --enable-swift-testing)
+          if ($LASTEXITCODE -ne 0) { throw "Native calibration discovery failed." }
+          $required = @('ProfessionalQualityCalibrationIntegrationTests/currentContinuousExecutionProtocolRefusesMutation',
+            'ProfessionalQualityCalibrationIntegrationTests/currentContinuousPublishedRefBinding',
+            'ProfessionalQualityCalibrationIntegrationTests/currentContinuousOutputClaimRefusesCompetingWriter',
+            'ProfessionalQualityCalibrationIntegrationTests/currentCoverageSelectionProtocolRefusesMutation',
+            'ProfessionalQualityCalibrationIntegrationTests/currentCoverageParsedByteBindingRejectsPathMutation',
+            'ProfessionalQualityCalibrationIntegrationTests/freshCoverageSelectionIsOutcomeBlind')
+          foreach ($test in $required) {
+            if (-not ($discovered | Select-String -SimpleMatch $test -Quiet)) {
+              throw "Calibration provenance test was not discovered: $test"
+            }
+          }
+          swift test --build-path .build-windows --skip-build --no-parallel --disable-xctest --enable-swift-testing --filter 'ProfessionalQualityCalibrationIntegrationTests/(currentContinuousExecutionProtocolRefusesMutation|currentContinuousPublishedRefBinding|currentContinuousOutputClaimRefusesCompetingWriter|currentCoverageSelectionProtocolRefusesMutation|currentCoverageParsedByteBindingRejectsPathMutation|freshCoverageSelectionIsOutcomeBlind)'
+          if ($LASTEXITCODE -ne 0) { throw "Native calibration provenance controls failed." }
+
       - name: Diagnose native planning baseline fields
         if: matrix.test-library == 'planning'
         timeout-minutes: 10
@@ -370,7 +391,7 @@ jobs:
         run: >-
           swift test -c release --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-component"
-          --filter '(nativePrepared(Admission|SuccessorBinding)FaultMatrix|RenderFingerprintParityTests)'
+          --filter '(nativePrepared(Admission|SuccessorBinding)FaultMatrix|RenderFingerprintParityTests|ProfessionalQualityCalibrationIntegrationTests/(currentContinuousExecutionProtocolRefusesMutation|currentContinuousPublishedRefBinding|currentContinuousOutputClaimRefusesCompetingWriter|currentCoverageSelectionProtocolRefusesMutation|currentCoverageParsedByteBindingRejectsPathMutation|freshCoverageSelectionIsOutcomeBlind))'
       - name: Verify semantic codebase map
         run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/auto-techno-component"
 
