@@ -203,6 +203,25 @@ class HostedMacOSVerificationTests(unittest.TestCase):
             with self.assertRaises(ValueError):hosted.diagnose_crash(Path('/tmp/build'),'test')
             call.assert_not_called()
 
+    def test_crash_diagnostic_cannot_replace_native_failure(self):
+        for outcome in [0, 9, hosted.subprocess.TimeoutExpired('lldb', 900), OSError('missing debugger')]:
+            with self.subTest(outcome=outcome), mock.patch.object(hosted, 'diagnose_crash') as diagnostic:
+                if isinstance(outcome, Exception):diagnostic.side_effect = outcome
+                else:diagnostic.return_value = outcome
+                with self.assertRaisesRegex(ValueError, '^native slice failed$'):
+                    hosted.require_native_success(mock.Mock(returncode=1),
+                        b'error: Exited with unexpected signal code 10', 'swift-testing', Path('/tmp/build'), 'Suite')
+                diagnostic.assert_called_once_with(Path('/tmp/build'), 'Suite')
+
+    def test_success_and_ordinary_failures_do_not_replay(self):
+        with mock.patch.object(hosted, 'diagnose_crash') as diagnostic:
+            hosted.require_native_success(mock.Mock(returncode=0), b'passed', 'swift-testing', Path('/tmp/build'), 'Suite')
+            for raw, library in [(b'assertion failed','swift-testing'),
+                                  (b'Exited with unexpected signal code 10','xctest')]:
+                with self.assertRaisesRegex(ValueError, '^native slice failed$'):
+                    hosted.require_native_success(mock.Mock(returncode=1), raw, library, Path('/tmp/build'), 'Suite')
+            diagnostic.assert_not_called()
+
     def test_non_native_execution_refuses_before_running_commands(self):
         with mock.patch.object(hosted.platform,'system',return_value='Linux'),mock.patch.object(hosted.subprocess,'check_output') as call:
             with self.assertRaises(ValueError):hosted.run_bank(0,Path('/tmp/build'),Path('/tmp/output'))

@@ -233,6 +233,19 @@ def diagnose_crash(build_path, selector):
     return subprocess.run(command, cwd=root, env=environment, timeout=900).returncode
 
 
+
+def require_native_success(result, raw, library, build_path, selector):
+    if result.returncode == 0:
+        return
+    if library == 'swift-testing' and b'Exited with unexpected signal code' in raw:
+        try:
+            diagnose_crash(build_path, selector)
+        except (OSError, ValueError, subprocess.SubprocessError) as exc:
+            print('Crash diagnostic unavailable: ' + str(exc), flush=True)
+    # A debugger pass, crash or timeout must never replace the original failure.
+    raise ValueError('native slice failed')
+
+
 def run_bank(bank, build_path, output):
     require(platform.system() == 'Darwin' and os.environ.get('GITHUB_ACTIONS') == 'true' and
             os.environ.get('RUNNER_OS') == 'macOS', 'hosted native macOS required')
@@ -256,7 +269,7 @@ def run_bank(bank, build_path, output):
                 '--no-parallel', *libraries[selected['library']], '--filter', selected['selector']],
                 cwd=root, stdout=stream, stderr=subprocess.STDOUT)
         raw = log.read_bytes(); print(raw.decode(errors='replace'), flush=True)
-        require(result.returncode == 0, 'native slice failed')
+        require_native_success(result, raw, selected['library'], build_path, selected['selector'])
         counts = summarize_log(raw.decode(), selected['library'], len(selected['identifiers']), selected['identifiers'])
         results.append(dict(selection=selected, **counts, exitCode=result.returncode, logSHA256=sha(raw)))
     require(git('rev-parse', 'HEAD') == source and not git('status', '--porcelain', '--untracked-files=normal'), 'source changed during tests')

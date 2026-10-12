@@ -11,7 +11,7 @@ on:
         type: choice
         required: true
         default: complete
-        options: [complete, map-only, protected-continuation-diagnostic]
+        options: [complete, map-only, protected-continuation-diagnostic, harmonic-tail-diagnostic]
 permissions:
   contents: read
 concurrency:
@@ -101,3 +101,20 @@ jobs:
           python3 scripts/hosted_macos_verification.py
           --build-path "$RUNNER_TEMP/at0039-diagnostic"
           --diagnostic-filter 'IterativeSuccessorPreparationTests[/.]protectedBoundaryRefusal'
+  harmonic-tail-diagnostic:
+    if: inputs.scope == 'harmonic-tail-diagnostic'
+    name: Harmonic tail crash diagnostic
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Build all native tests
+        run: swift build --build-tests --build-path "$RUNNER_TEMP/at0039-diagnostic"
+      - name: Replay harmonic tail under debugger
+        run: >-
+          python3 scripts/hosted_macos_verification.py
+          --build-path "$RUNNER_TEMP/at0039-diagnostic"
+          --diagnostic-filter 'ProfessionalQualityCalibrationTests[/.]activeHarmonicTailProjectionMatchesEvidence'
