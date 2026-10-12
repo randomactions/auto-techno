@@ -1701,3 +1701,22 @@ mutation controls preserve the original16 unexpected admissions, then require
 all16 duration-halved cases to refuse with identical before/after normal and
 damaged PCM. This component repair does not qualify current calibration,
 complete memory/deadlines, lifecycle or physical output.
+
+
+### Kick natural-support admission
+
+The existing detached source-terminal evidence owner binds each kick's actual
+rendered duration to its score onset and original bar boundary, using the
+canonical 0.32-second source contract. It shares the rumble admission predicate;
+terminal de-click completion alone cannot authorize source truncation. The
+canonical fault experiment preserves score, graph, event identities and output
+geometry while halving the actual kick source inside shared nonlinear rendering.
+Normal and damaged PCM remain unchanged by this admission-only repair. Rejection
+uses existing candidate hard gates and future preparation/fallback; there is no
+new state, policy parameter, renderer, extra PCM buffer or callback work.
+
+Shared full-phrase kick/rumble controls use independent rational sample-support
+oracles at both native rates and retain authorized end-of-bar clipping. These
+known construction controls do not supply population or perceptual qualification;
+current full integration, calibration, resource, lifecycle and output requirements
+remain separate.

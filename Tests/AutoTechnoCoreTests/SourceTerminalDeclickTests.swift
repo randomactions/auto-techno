@@ -8,6 +8,17 @@ struct SourceTerminalDeclickTests {
     @MainActor
     @Test("Canonical full-phrase rumble support reaches candidate admission")
     func algorithmicRumbleFullPhraseSupport() throws {
+        try canonicalSourceSupport(voice: .rumble)
+    }
+
+    @MainActor
+    @Test("Canonical full-phrase kick support reaches candidate admission")
+    func algorithmicKickFullPhraseSupport() throws {
+        try canonicalSourceSupport(voice: .kick)
+    }
+
+    @MainActor
+    private func canonicalSourceSupport(voice: EnsembleVoice) throws {
         struct Support: Encodable {
             let bar: Int
             let scoreEventIndex: Int
@@ -25,7 +36,8 @@ struct SourceTerminalDeclickTests {
             let graphFingerprint: String
             let sampleHash: String
             let frameCount: Int
-            let scoreRumbleEvents: Int
+            let scoreRumbleEvents: Int?
+            let scoreKickEvents: Int?
             let support: [Support]
             let exactReplay: Bool
             let preparedProductPresent: Bool
@@ -40,7 +52,7 @@ struct SourceTerminalDeclickTests {
         }
         var rows: [Row] = []
         // Frozen mutation protocol: known roots, first score-only phrase with a
-        // positive step-zero rumble, no output-based selection. The independent
+        // positive step-zero source, no output-based selection. The independent
         // integer oracle never calls the source-duration admission predicate.
         // The normal test expects valid production. An isolated mutation build
         // changes source duration before the same nonlinear render; its expected
@@ -52,12 +64,12 @@ struct SourceTerminalDeclickTests {
             for _ in 0..<128 {
                 let plan = director.plan(from: session)
                 if plan.resolvedBars.contains(where: { bar in
-                    bar.ensemble.events.contains { $0.voice == .rumble && $0.step == 0 && $0.intensity > 0 }
+                    bar.ensemble.events.contains { $0.voice == voice && $0.step == 0 && $0.intensity > 0 }
                 }) { selected = plan; break }
                 session.advancePlanning(using: plan)
             }
             let plan = try #require(selected)
-            let scoreCount = plan.resolvedBars.flatMap(\.ensemble.events).filter { $0.voice == .rumble }.count
+            let scoreCount = plan.resolvedBars.flatMap(\.ensemble.events).filter { $0.voice == voice }.count
             for rate in [44_100.0, 48_000.0] {
                 let graph = DSPGraphGenerator.plan(sessionSeed: seed, phrase: plan,
                     memory: session.memory, previous: nil)
@@ -73,9 +85,10 @@ struct SourceTerminalDeclickTests {
                 let preflight = try #require(preflightResult)
                 var support: [Support] = []
                 for block in blocks {
-                    for event in block.sourceTerminalDeclickRenderEvidence where event.voice == .rumble {
+                    for event in block.sourceTerminalDeclickRenderEvidence where event.voice == voice {
                         let start = (event.step * block.left.count + 8) / 16
-                        let expected = min(Int(rate) * 17 / 25, block.left.count - start)
+                        let numerator = voice == .kick ? 8 : 17
+                        let expected = min(Int(rate) * numerator / 25, block.left.count - start)
                         support.append(Support(bar: block.bar, scoreEventIndex: event.scoreEventIndex,
                             step: event.step, barFrames: block.left.count, expectedFrames: expected,
                             renderedFrames: event.renderedFrameCount,
@@ -113,7 +126,8 @@ struct SourceTerminalDeclickTests {
                     planFingerprint: AutonomousCandidateFingerprint.plan(plan),
                     graphFingerprint: AutonomousCandidateFingerprint.graph(graph),
                     sampleHash: preflight.quality.sampleHash,
-                    frameCount: blocks.reduce(0) { $0 + $1.left.count }, scoreRumbleEvents: scoreCount,
+                    frameCount: blocks.reduce(0) { $0 + $1.left.count }, scoreRumbleEvents: voice == .rumble ? scoreCount : nil,
+                    scoreKickEvents: voice == .kick ? scoreCount : nil,
                     support: support, exactReplay: exactReplay, preparedProductPresent: prepared != nil,
                     preparedMatchesDirectRender: matches, vectorComplete: vectorComplete,
                     transactionComplete: transactionComplete,
@@ -126,13 +140,49 @@ struct SourceTerminalDeclickTests {
         }
         #expect(rows.count == 4)
         struct Report: Encodable {
-            let schema = "autotechno-rumble-full-phrase-source-support.v1"
+            let schema: String
             let scope = "canonical-nonlinear-render-and-preparer-duration-binding"
             let rows: [Row]
         }
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
-        FileHandle.standardOutput.write(try encoder.encode(Report(rows: rows)))
+        FileHandle.standardOutput.write(try encoder.encode(Report(
+            schema: voice == .kick ? "autotechno-kick-full-phrase-source-support.v1" :
+                "autotechno-rumble-full-phrase-source-support.v1", rows: rows)))
         FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
+    @Test("Kick and rumble duration admission preserves clipping and refuses shorter faded sources")
+    func sourceSupportGeometry() throws {
+        // Construct terminal evidence independently of either source renderer.
+        // Full-phrase tests establish the same predicate's production path.
+        for rate in [44_100.0, 48_000.0] {
+            let barFrames = Int((240.0 / 130.0 * rate).rounded())
+            for (voice, numerator) in [(EnsembleVoice.kick, 8), (.rumble, 17)] {
+                for step in [0, 15] {
+                    let start = (step * barFrames + 8) / 16
+                    let expected = min(Int(rate) * numerator / 25, barFrames - start)
+                    for shortened in [false, true] {
+                        let frames = shortened ? expected / 2 : expected
+                        var accumulator = SourceTerminalDeclickEvidenceAccumulator(
+                            scoreEventIndex: 0, voice: voice, step: step,
+                            sampleRate: rate, renderedFrameCount: frames)
+                        for frame in 0..<frames {
+                            let source = Float(0.2 + 0.1 * sin(Double(frame) * 0.017))
+                            accumulator.append(frame: frame, preFade: source,
+                                rendered: SourceTerminalDeclickContract.process(
+                                    sample: source, voice: voice, frame: frame,
+                                    renderedFrameCount: frames, sampleRate: rate))
+                        }
+                        let evidence = accumulator.evidence
+                        #expect(evidence.isComplete(sampleRate: rate))
+                        #expect(evidence.isComplete(sampleRate: rate,
+                            destinationFrameCount: barFrames) == !shortened)
+                        #expect(!evidence.isComplete(sampleRate: rate,
+                            destinationFrameCount: 0))
+                    }
+                }
+            }
+        }
     }
 
     @Test("Raised-cosine release preserves the first 8 ms and reaches exact zero")
