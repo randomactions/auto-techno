@@ -6695,7 +6695,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 score.offset == evidence.scoreEventIndex &&
                     score.element.voice == evidence.voice &&
                     score.element.step == evidence.step &&
-                    evidence.isComplete(sampleRate: sampleRate)
+                    evidence.isComplete(sampleRate: sampleRate,
+                        destinationFrameCount: block.left.count)
             }
         }
         var samplesFinite = true

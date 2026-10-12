@@ -132,6 +132,10 @@ struct SourceTerminalDeclickTests {
                         let supportBinding = evidence.renderedFrameCount == expectedFrames
                         #expect(declickComplete) // Valid de-clicking does not prove duration.
                         #expect(supportBinding == !shortened)
+                        // Exercise the same source-support predicate used by
+                        // candidate audio-safety admission, not only the oracle.
+                        #expect(evidence.isComplete(sampleRate: rate,
+                            destinationFrameCount: barFrames) == supportBinding)
                         let suppliedSupport = min(naturalFrames, suppliedFrames - start)
                         #expect(evidence.renderedFrameCount == suppliedSupport)
                         // The fault is applied before canonical rendering. Zero
@@ -181,6 +185,23 @@ struct SourceTerminalDeclickTests {
             "rows": rows
         ], options: [.sortedKeys]))
         FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
+    @Test("Rumble support admission refuses unavailable destination geometry")
+    func rumbleSupportAdmissionBounds() throws {
+        var samples = [Float](repeating: 0, count: 96_000)
+        var measurement = samples
+        let evidence = try #require(VoiceRenderer.rumble(&samples,
+            measurement: &measurement, scoreEventIndex: 0, start: 0,
+            sampleRate: 48_000, level: 0.072, seed: 1, step: 0))
+        #expect(evidence.isComplete(sampleRate: 48_000, destinationFrameCount: samples.count))
+        for frames in [0, -1, Int.min] {
+            #expect(!evidence.isComplete(sampleRate: 48_000, destinationFrameCount: frames))
+        }
+        for rate in [Double.nan, .infinity, -.infinity, .greatestFiniteMagnitude, 0, -1, 7_999, 192_001] {
+            #expect(!evidence.isComplete(sampleRate: rate, destinationFrameCount: samples.count))
+        }
+        #expect(!evidence.isComplete(sampleRate: 48_000, destinationFrameCount: evidence.renderedFrameCount / 2))
     }
 
     @Test("Unsupported voices remain bit-exact")

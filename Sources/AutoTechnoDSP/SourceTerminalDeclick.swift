@@ -161,6 +161,23 @@ package struct SourceTerminalDeclickRenderEvidence: Equatable, Sendable {
                 .allSatisfy(\.isFinite)
     }
 
+    /// Candidate admission also checks rumble's score-owned source support.
+    /// Rumble has no swing offset: its natural 0.68-second source is clipped
+    /// only by the original destination boundary. A valid terminal fade alone
+    /// cannot authorize a shorter source. Other voices retain their existing
+    /// articulation-specific duration contracts and terminal checks.
+    package func isComplete(sampleRate: Double, destinationFrameCount: Int) -> Bool {
+        guard sampleRate.isFinite,
+              (QualityQualificationContract.minimumSupportedSampleRate...QualityQualificationContract.maximumSupportedSampleRate)
+                .contains(sampleRate),
+              destinationFrameCount > 0,
+              isComplete(sampleRate: sampleRate) else { return false }
+        guard voice == .rumble else { return true }
+        let startFrame = Int((Double(step) * Double(destinationFrameCount) / 16).rounded())
+        let expectedFrames = min(Int(sampleRate * 0.68), destinationFrameCount - startFrame)
+        return expectedFrames > 0 && renderedFrameCount == expectedFrames
+    }
+
     private static func isFingerprint(_ value: String) -> Bool {
         value.utf8.count == 16 && value.utf8.allSatisfy { byte in
             (48...57).contains(byte) || (97...102).contains(byte)

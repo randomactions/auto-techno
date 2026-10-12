@@ -84,6 +84,10 @@ sample count, difference RMS, and pre/post terminal delta. Missing, duplicated,
 retargeted, non-finite, attack-changing, or non-zero-terminal evidence fails the
 existing non-compensable audio-safety gate. This adds no score parameter,
 continuation, extra renderer, master processor, or callback work.
+For rumble, candidate admission additionally binds the natural 0.68-second
+source window to the score onset and original destination boundary. A valid
+terminal fade on a shortened source cannot substitute for that duration proof.
+This check preserves current PCM, source evidence encoding and continuation.
 
 The retained material-world implementation addresses long-form perceptual
 sameness caused by recurring phrase-role order and randomly chosen graph
