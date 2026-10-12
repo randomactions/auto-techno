@@ -3,8 +3,8 @@
 > Generated from `docs/COMPONENT_LICENSE_ASSET_MANIFEST.json`; do not edit by hand.
 
 Schema: `autotechno-component-license-asset-manifest.v1`  
-Manifest version: 1  
-Source access date: 2026-08-31  
+Manifest version: 2  
+Source access date: 2026-10-12  
 
 ## Scope
 
@@ -17,6 +17,7 @@ Covers the repository licence, resolved SwiftPM graph, source-level platform imp
 | `apple-platform-frameworks` — Apple macOS SDK and system frameworks | `platform-sdk` | `macOS 14 minimum; Xcode selected by build host` / `installation-specific` | Apple Xcode and SDK Agreement; system-framework use only; No Apple framework is copied into the repository or app bundle by project scripts | macOS UI, audio transport, observation, and platform services / `platform-provided` | `GREEN-SYSTEM` / `retain-platform-only` |
 | `auto-techno-project` — Auto Techno source, documentation, and generated policy assets | `project` | `current checkout` / `Git revision recorded by each build artifact` | Apache-2.0; No project NOTICE file is currently present | canonical application, tests, documentation, and project-generated qualification resources / `repository-source` | `GREEN-ORIGINAL` / `retain` |
 | `github-actions-checkout` — GitHub Actions checkout | `ci-action` | `v4-compatible exact workflow revision` / `11d5960a326750d5838078e36cf38b85af677262` | MIT; Build-only action; not shipped with Auto Techno | CI source checkout / `build-only` | `GREEN-OPEN-SOURCE` / `retain` |
+| `github-actions-setup-python` — GitHub Actions setup-python | `ci-action` | `v6 exact workflow revision` / `ece7cb06caefa5fff74198d8649806c4678c61a1` | MIT; Build-only action; exact-revision licence inspected 2026-10-12; not shipped with Auto Techno | Select Python 3.13 for native Windows CI test-bank planning / `build-only` | `GREEN-OPEN-SOURCE` / `retain` |
 | `microsoft-vc143-runtime` — Microsoft Visual C++ v14 build-host runtime | `platform-sdk` | `host-installed Windows build runtime` / `installation-specific; not redistributed` | Microsoft Visual C++ v14 Redistributable and Runtime terms; The active source-validation path does not copy or redistribute Visual C++ runtime files | Windows build, link, and validation-host runtime prerequisite / `platform-provided` | `GREEN-SYSTEM` / `retain-platform-only` |
 | `python-standard-library` — Python 3 standard library | `build-tool` | `Python 3 host interpreter` / `unconstrained; local audit observed 3.14.7` | PSF-2.0; Offline tooling only; interpreter is not shipped | Repository validation, inventory generation, and audit tests / `build-only` | `GREEN-OPEN-SOURCE` / `retain-with-release-gate` |
 | `swift-runtime-toolchain` — Swift toolchain, standard library, Foundation, and Dispatch | `toolchain-runtime` | `swift-tools 6.0; Windows CI 6.3.3; macOS runner selected` / `Windows 6.3.3 pinned; local audit observed swiftlang-6.3.3.1.3` | Apache-2.0 with Swift Runtime Library Exception; The active Windows scripts build and test only; no Swift, Foundation, or Dispatch DLL is copied or redistributed | Compiler and cross-platform standard/runtime libraries on build and validation hosts / `build-only` | `GREEN-OPEN-SOURCE` / `retain-with-release-gate` |
@@ -52,6 +53,7 @@ Covers the repository licence, resolved SwiftPM graph, source-level platform imp
 | Severity | Finding | Component | Disposition / follow-up |
 |---|---|---|---|
 | `green` | `ci-action-revision-pinned` — Every active GitHub Action binding uses an exact 40-digit revision recorded by this manifest | `github-actions-checkout` | Retain the exact pin and fail manifest validation if a mutable selector is introduced / No AT-0008 follow-up; future action upgrades require an explicit reviewed revision change |
+| `green` | `ci-python-selection-pinned` — Native Windows bank planning uses the exact MIT-licensed setup-python revision after Swift PATH registration | `github-actions-setup-python` | Retain the exact CI-only pin and declared dependency binding; no playback or shipped-runtime dependency / Future action upgrades require review of the exact replacement revision and licence |
 | `green` | `windows-installer-tool-isolated` — Active Windows scripts and workflows neither install nor invoke Inno Setup; the project-owned installer template is dormant | `auto-techno-project` | Keep installer generation outside the executable build path until the documented distribution re-entry gate is satisfied / Future distribution work must review and pin its installer tool before activating the dormant template |
 | `green` | `windows-msvc-distribution-isolated` — The active Windows path no longer copies a Visual C++ runtime directory or creates a distributable artifact | `microsoft-vc143-runtime` | Treat the runtime as validation-host infrastructure only / Future distribution work must prove exact per-file REDIST eligibility, versions, licences, and notices |
 | `green` | `windows-swift-distribution-isolated` — The active Windows path builds and tests in place without copying Swift, Foundation, or Dispatch DLLs into a distributable artifact | `swift-runtime-toolchain` | Retain Swift as a pinned Windows build toolchain and keep runtime distribution isolated / Future distribution work must enumerate every runtime file and stage exact version-matched licence and notice evidence |
@@ -81,6 +83,14 @@ Covers the repository licence, resolved SwiftPM graph, source-level platform imp
 - Notice: https://github.com/actions/checkout/tree/11d5960a326750d5838078e36cf38b85af677262
 - Repository anchors: `.github/workflows/swift.yml`, `.github/workflows/windows-distribution.yml`
 - Bindings: `ci-action:actions/checkout@11d5960a326750d5838078e36cf38b85af677262`
+
+### GitHub Actions setup-python
+
+- Source: https://github.com/actions/setup-python
+- Licence: https://github.com/actions/setup-python/blob/ece7cb06caefa5fff74198d8649806c4678c61a1/LICENSE
+- Notice: https://github.com/actions/setup-python/tree/ece7cb06caefa5fff74198d8649806c4678c61a1
+- Repository anchors: `.github/workflows/windows-distribution.yml`
+- Bindings: `ci-action:actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1`
 
 ### Microsoft Visual C++ v14 build-host runtime
 
