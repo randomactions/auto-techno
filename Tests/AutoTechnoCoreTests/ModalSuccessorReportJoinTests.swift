@@ -1297,13 +1297,19 @@ struct ModalSuccessorReportJoinTests {
             "qualification": "diagnostic-not-activated"
         ], options: [.sortedKeys]))
         FileHandle.standardOutput.write(Data([0x0A]))
-        // This digest includes the engine identity and full canonical reports.
-        // The v48 value 11743474e0cedea5 predates the v49 timing-policy change.
-        // Refresh from the native construction run 38143331435/job114481483602;
-        // keep the exact version and missing-population refusal independently
-        // pinned. This one-bank fixture cannot qualify or activate a policy.
+        // Full report identity includes render continuation fingerprints. The
+        // typed-v5 parity repair changes the earlier v49 digest 05d18c479efe25a3
+        // without changing PCM. Native run38198883431/job114647681016 records
+        // the current value; retain the engine and missing-population checks.
+        // This one-bank fixture cannot qualify or activate a policy.
         #expect(bank.engineVersion == "autotechno-canonical-engine.v49")
-        #expect(complete.sourceBankFingerprint == "05d18c479efe25a3")
+        // Exact PCM-derived reports are pinned per supported native platform;
+        // Windows run38198830687/job114647439300 records its own native result.
+        #if os(Windows)
+        #expect(complete.sourceBankFingerprint == "965001781665ad18")
+        #else
+        #expect(complete.sourceBankFingerprint == "4e2cb5ddb657fb10")
+        #endif
         #expect(unsupportedTrainingMetrics == [.upperPercussionTailRenderedTailToAttackDBMean])
         #expect(throws: ProfessionalQualityCalibrationError.invalidMetricSet) {
             try ProfessionalQualityCalibrationProfile(continuousBank: bank, successors: receipts)
@@ -1335,8 +1341,13 @@ struct ModalSuccessorReportJoinTests {
             let claimedRate = try #require(challengedFields.removeValue(
                 forKey: "sampleRate") as? NSNumber)
             originalFields.removeValue(forKey: "sampleRate")
-            let retainedFields = NSDictionary(dictionary: originalFields)
-                .isEqual(to: challengedFields)
+            // Compare the complete JSON value after removing only the rate.
+            // NSDictionary bridging equality differs on Windows Foundation;
+            // sorted serialization preserves nested arrays, numbers and bools.
+            let retainedFields = try JSONSerialization.data(
+                withJSONObject: originalFields, options: [.sortedKeys]) ==
+                JSONSerialization.data(
+                    withJSONObject: challengedFields, options: [.sortedKeys])
             #expect(claimedRate.doubleValue == 96_000)
             #expect(retainedFields)
         }
