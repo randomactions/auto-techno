@@ -4,7 +4,11 @@ import Testing
 
 @testable import AutoTechnoDSP
 
+// Native Debug setup embeds large canonical state and prepared evidence values.
+// Keep this synchronous fixture suite on the main stack, matching the other
+// preparation fixtures. Production preparation and callback ownership are unchanged.
 @Suite("Long-horizon realized signal trajectory")
+@MainActor
 struct LongHorizonSignalTrajectoryTests {
   @Test("One accepted detached phrase binds semantic target to exact PCM evidence")
   func detachedPhraseEvidenceIsExactAndSignalOnly() throws {

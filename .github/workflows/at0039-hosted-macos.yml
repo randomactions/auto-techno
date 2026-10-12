@@ -68,6 +68,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Generate and validate semantic codebase map
+        id: generate-map
         run: |
           python3 scripts/codebase_map.py generate --build-path "$RUNNER_TEMP/at0039-map"
           python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/at0039-map"
@@ -78,6 +79,7 @@ jobs:
           --disable-xctest --enable-swift-testing
           --filter '(PrimaryEvaluatorReadinessTests|LongHorizonSignalTrajectoryTests|LongHorizonProfessionalPolicyTests|IterativeSuccessorPreparationTests[/.](actualIterativeChain|protectedBoundaryRefusal|childRefusalAndCancellation|selectedStreamedChain)|ProfessionalQualityCalibrationTests[/.]activeHarmonicTailProjectionMatchesEvidence|AutonomousPhrasePreparationDiagnosticsTests[/.](renderBoundaryMismatchIsReasonCoded|finalRetryBoundsLatePhraseCrestSpan))'
       - name: Emit source-bound generated map
+        if: always() && steps.generate-map.outcome == 'success'
         run: |
           python3 - <<'PYMAP'
           import base64, hashlib, json, pathlib, subprocess
