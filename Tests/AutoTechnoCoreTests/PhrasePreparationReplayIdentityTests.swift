@@ -635,6 +635,7 @@ struct IterativeSuccessorPreparationTests {
     }
 
     @Test("Unused incoming capacity refuses before PCM, observation or evaluator creation")
+    @MainActor
     func oversizedIncomingCapacityRefuses() async throws {
         let original = Self.sourceRequest(rate: 48_000)
         var render = original.incomingRenderState
@@ -670,6 +671,7 @@ struct IterativeSuccessorPreparationTests {
     }
 
     @Test("Charged unused root capacity preserves native PCM, proof, continuation and child ownership")
+    @MainActor
     func chargedIncomingCapacityPreservesNativeProducts() async throws {
         for rate in [44_100.0, 48_000.0] {
             let original = Self.sourceRequest(rate: rate)
@@ -976,6 +978,7 @@ struct IterativeSuccessorPreparationTests {
     }
 
     @Test("Applied live source protects its exact child at the known future sample boundary")
+    @MainActor
     func protectedAppliedLiveBoundary() async throws {
         let base = Self.sourceRequest(rate: 48_000)
         let director = AutonomousSessionDirector(rootSeed: base.sourceState.rootSeed)
@@ -1093,6 +1096,7 @@ struct IterativeSuccessorPreparationTests {
     }
 
     @Test("A measured root rejection preserves canonical recovery without releasing child ownership")
+    @MainActor
     func rootRejectionPreservesRecovery() async throws {
         let request = Self.sourceRequest(rate: 8_000)
         let control = Control(mode: .rejectRoot)
@@ -1192,6 +1196,7 @@ struct IterativeSuccessorPreparationTests {
     }
 
     @Test("Ordinary native chain control retains no storage observer or full snapshot report")
+    @MainActor
     func nativeChainOrdinaryProcessControl() async throws {
         for rate in [44_100.0, 48_000.0] {
             for mode in [Control.Mode.accept, .forceCorrection] {
@@ -1213,6 +1218,7 @@ struct IterativeSuccessorPreparationTests {
     }
 
     @Test("Native chain observations preserve exact initial and corrective admission")
+    @MainActor
     func nativeChainStorageObservations() async throws {
         for rate in [44_100.0, 48_000.0] {
             for mode in [Control.Mode.accept, .forceCorrection] {
@@ -1407,6 +1413,7 @@ struct IterativeSuccessorPreparationTests {
     }
 
     @Test("Rejected unavailable and cancelled chains discard every private capture")
+    @MainActor
     func rejectedStreamedChains() async throws {
         let request = Self.sourceRequest(rate: 8_000)
         let director = AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed)
@@ -1430,6 +1437,7 @@ struct IterativeSuccessorPreparationTests {
     }
 
     @Test("Native full-capture reservations refuse streaming before any attempted file or PCM")
+    @MainActor
     func nativeStreamResourceRefusal() throws {
         for rate in [44_100.0, 48_000.0] {
             let request = Self.sourceRequest(rate: rate)
@@ -1448,11 +1456,12 @@ struct IterativeSuccessorPreparationTests {
     }
 
     @Test("Sealed diagnostic drafts outlive session metadata without retaining scheduled ownership")
+    @MainActor
     func sealedStreamFileLifetime() async throws {
         let parent = try Self.captureParent(); defer { try? FileManager.default.removeItem(at: parent) }
+        let request = Self.sourceRequest(rate: 8_000)
+        let director = AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed)
         let bindings: [DiagnosticRoleStemSelectedBinding] = try await Task.detached {
-            let request = Self.sourceRequest(rate: 8_000)
-            let director = AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed)
             let session = DiagnosticRoleStemCaptureSession(parentDirectory: parent)
             let control = Control()
             let outcome = AutonomousPerformancePreparer.prepareChainDiagnosing(request: request, director: director,
@@ -1470,6 +1479,10 @@ struct IterativeSuccessorPreparationTests {
         }
     }
 
+    // Native Debug construction exceeds the cooperative-worker stack. Enforce
+    // fixture setup on the main actor; callers pass immutable requests into
+    // unchanged detached production preparation.
+    @MainActor
     static func sourceRequest(rate: Double) -> PhrasePreparationRequest {
         let director = AutonomousSessionDirector(rootSeed: 48_300)
         var state = director.initialState()
