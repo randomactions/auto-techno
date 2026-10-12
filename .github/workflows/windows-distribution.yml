@@ -13,6 +13,7 @@ on:
           - windows-diagnostics
           - windows-recovery-build
           - windows-planning-probe
+          - windows-planning-math
           - windows-full-banks
           - modal-continuation
           - rumble-duration
@@ -28,7 +29,7 @@ concurrency:
 
 jobs:
   validate-windows-source:
-    if: inputs.validation == 'windows' || inputs.validation == 'windows-diagnostics' || inputs.validation == 'windows-recovery-build' || inputs.validation == 'windows-full-banks' || inputs.validation == 'windows-planning-probe' || inputs.validation == ''
+    if: inputs.validation == 'windows' || inputs.validation == 'windows-diagnostics' || inputs.validation == 'windows-recovery-build' || inputs.validation == 'windows-full-banks' || inputs.validation == 'windows-planning-probe' || inputs.validation == 'windows-planning-math' || inputs.validation == ''
     name: Windows x64 source validation (${{ matrix.test-library }})
     runs-on: windows-2025
     timeout-minutes: ${{ inputs.validation == 'windows-full-banks' && 360 || inputs.validation == 'windows-recovery-build' && 90 || 60 }}
@@ -36,7 +37,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        test-library: ${{ fromJSON(inputs.validation == 'windows-diagnostics' && '["xctest","swift-testing"]' || inputs.validation == 'windows-planning-probe' && '["planning"]' || inputs.validation == 'windows-recovery-build' && '["recovery"]' || inputs.validation == 'windows-full-banks' && '["bank-0","bank-1","bank-2","bank-3","bank-4","bank-5","bank-6","bank-7"]' || '["all"]') }}
+        test-library: ${{ fromJSON(inputs.validation == 'windows-diagnostics' && '["xctest","swift-testing"]' || inputs.validation == 'windows-planning-math' && '["math"]' || inputs.validation == 'windows-planning-probe' && '["planning"]' || inputs.validation == 'windows-recovery-build' && '["recovery"]' || inputs.validation == 'windows-full-banks' && '["bank-0","bank-1","bank-2","bank-3","bank-4","bank-5","bank-6","bank-7"]' || '["all"]') }}
 
     steps:
       - name: Check out source
@@ -105,8 +106,22 @@ jobs:
       # Diagnostic scopes do not replace the full source-validation command.
       # Separate framework discovery from compilation and a single execution so
       # a silent aggregate run cannot hide which boundary is still active.
+      - name: Probe native planning scalar arithmetic
+        if: matrix.test-library == 'math'
+        timeout-minutes: 5
+        shell: pwsh
+        run: |
+          swiftc -Onone scripts/native-planning-math-probe.swift -o planning-math-debug.exe
+          if ($LASTEXITCODE -ne 0) { throw "Debug scalar probe compilation failed." }
+          .\planning-math-debug.exe debug
+          if ($LASTEXITCODE -ne 0) { throw "Debug scalar probe execution failed." }
+          swiftc -O scripts/native-planning-math-probe.swift -o planning-math-release.exe
+          if ($LASTEXITCODE -ne 0) { throw "Optimized scalar probe compilation failed." }
+          .\planning-math-release.exe release
+          if ($LASTEXITCODE -ne 0) { throw "Optimized scalar probe execution failed." }
+
       - name: Build diagnostic test executable
-        if: matrix.test-library != 'all'
+        if: matrix.test-library != 'all' && matrix.test-library != 'math'
         timeout-minutes: 30
         shell: pwsh
         run: |
