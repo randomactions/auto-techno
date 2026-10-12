@@ -11,7 +11,7 @@ on:
         type: choice
         required: true
         default: complete
-        options: [complete, map-only]
+        options: [complete, map-only, protected-continuation-diagnostic]
 permissions:
   contents: read
 concurrency:
@@ -84,3 +84,20 @@ jobs:
                   sha256=hashlib.sha256(raw).hexdigest(), bytes=len(raw), index=index,
                   chunks=len(chunks), payload=chunk), sort_keys=True))
           PYMAP
+  diagnostic:
+    if: inputs.scope == 'protected-continuation-diagnostic'
+    name: Protected continuation crash diagnostic
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Build all native tests
+        run: swift build --build-tests --build-path "$RUNNER_TEMP/at0039-diagnostic"
+      - name: Replay protected continuation under debugger
+        run: >-
+          python3 scripts/hosted_macos_verification.py
+          --build-path "$RUNNER_TEMP/at0039-diagnostic"
+          --diagnostic-filter 'IterativeSuccessorPreparationTests[/.]protectedBoundaryRefusal'

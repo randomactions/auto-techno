@@ -12,6 +12,7 @@ on:
           - windows
           - complete-hosted-macos
           - hosted-macos-map
+          - hosted-macos-diagnostic
           - windows-diagnostics
           - windows-recovery-build
           - windows-planning-probe
@@ -36,10 +37,10 @@ concurrency:
 
 jobs:
   hosted-macos:
-    if: inputs.validation == 'complete-hosted-macos' || inputs.validation == 'hosted-macos-map'
+    if: inputs.validation == 'complete-hosted-macos' || inputs.validation == 'hosted-macos-map' || inputs.validation == 'hosted-macos-diagnostic'
     uses: ./.github/workflows/at0039-hosted-macos.yml
     with:
-      scope: ${{ inputs.validation == 'hosted-macos-map' && 'map-only' || 'complete' }}
+      scope: ${{ inputs.validation == 'hosted-macos-map' && 'map-only' || inputs.validation == 'hosted-macos-diagnostic' && 'protected-continuation-diagnostic' || 'complete' }}
 
   validate-windows-source:
     if: inputs.validation == 'windows' || inputs.validation == 'windows-diagnostics' || inputs.validation == 'windows-recovery-build' || inputs.validation == 'windows-full-banks' || inputs.validation == 'windows-planning-probe' || inputs.validation == 'windows-planning-math' || inputs.validation == ''

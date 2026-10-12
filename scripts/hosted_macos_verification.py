@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import platform
 import re
+import shlex
 import subprocess
 import zlib
 from windows_test_plan import plan
@@ -199,6 +200,39 @@ def emit(value):
               sha256=sha(raw), bytes=len(raw), payload=encoded[offset:offset+size])), flush=True)
 
 
+
+def diagnose_crash(build_path, selector):
+    """One bounded native debugger replay; never emits verification receipts."""
+    require(platform.system() == 'Darwin' and os.environ.get('GITHUB_ACTIONS') == 'true' and
+            os.environ.get('RUNNER_OS') == 'macOS', 'hosted native macOS required')
+    require(isinstance(selector, str) and 0 < len(selector) <= 2048, 'bounded diagnostic selector')
+    root = Path(__file__).resolve().parents[1]
+    def output(command):
+        return subprocess.check_output(command, cwd=root, text=True, timeout=60).strip()
+    binary_dir = Path(output(['swift', 'build', '--build-path', str(build_path), '--show-bin-path']))
+    binary = str(binary_dir / 'AutoTechnoPackageTests.xctest/Contents/MacOS/AutoTechnoPackageTests')
+    compiler = Path(output(['xcrun', '--find', 'swift']))
+    helper = str(compiler.parent / '../libexec/swift/pm/swiftpm-testing-helper')
+    sdk = output(['xcrun', '--sdk', 'macosx', '--show-sdk-platform-path'])
+    environment = os.environ.copy()
+    for name, suffix in [('DYLD_FRAMEWORK_PATH', f'{sdk}/Developer/Library/Frameworks:{sdk}/Developer/Library/PrivateFrameworks'),
+                         ('DYLD_LIBRARY_PATH', f'{sdk}/Developer/usr/lib')]:
+        environment[name] = ':'.join(filter(None, [environment.get(name), suffix]))
+    target_environment = ' '.join(shlex.quote(name + '=' + environment[name])
+                                  for name in ['DYLD_FRAMEWORK_PATH', 'DYLD_LIBRARY_PATH'])
+    command = ['xcrun', 'lldb', '--batch', '--no-lldbinit',
+               '-o', 'settings set target.env-vars ' + target_environment,
+               '-o', 'process launch --shell-expand-args false']
+    for instruction in ['thread backtrace --count 40 all', 'register read sp fp pc x9',
+                        'memory region $sp', 'disassemble --frame --count 12',
+                        'frame select 1', 'disassemble --frame --count 24']:
+        command.extend(['-k', instruction])
+    command.extend(['--', helper, '--test-bundle-path', binary, '--no-parallel',
+                    '--filter', selector, binary, '--testing-library', 'swift-testing'])
+    print('Diagnostic replay only: no native verification or qualification receipt.', flush=True)
+    return subprocess.run(command, cwd=root, env=environment, timeout=900).returncode
+
+
 def run_bank(bank, build_path, output):
     require(platform.system() == 'Darwin' and os.environ.get('GITHUB_ACTIONS') == 'true' and
             os.environ.get('RUNNER_OS') == 'macOS', 'hosted native macOS required')
@@ -274,8 +308,14 @@ if __name__ == '__main__':
     parser.add_argument('--build-path', type=Path)
     parser.add_argument('--run', type=int)
     parser.add_argument('--source')
-    parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--output', type=Path)
+    parser.add_argument('--diagnostic-filter')
     args = parser.parse_args()
+    if args.diagnostic_filter is not None:
+        require(args.build_path is not None and args.run is None and args.bank is None and
+                args.source is None and args.output is None, 'diagnostic-only arguments')
+        raise SystemExit(diagnose_crash(args.build_path, args.diagnostic_filter))
+    require(args.output is not None, 'verification output required')
     if args.run is not None:
         require(args.source and args.bank is None and args.build_path is None, 'collection arguments')
         print(json.dumps(collect(args.run,args.source,args.output),sort_keys=True))

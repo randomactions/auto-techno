@@ -177,6 +177,32 @@ class HostedMacOSVerificationTests(unittest.TestCase):
                 with self.assertRaises(ValueError):hosted.collect(50,SOURCE,Path(folder)/'moved')
                 self.assertFalse((Path(folder)/'moved').exists())
 
+    def test_debugger_replay_is_bounded_literal_and_has_no_receipt(self):
+        selector = 'IterativeSuccessorPreparationTests[/.]protectedBoundaryRefusal'
+        with mock.patch.object(hosted.platform, 'system', return_value='Darwin'), \
+             mock.patch.dict(hosted.os.environ, {'GITHUB_ACTIONS':'true', 'RUNNER_OS':'macOS'}, clear=True), \
+             mock.patch.object(hosted.subprocess, 'check_output', side_effect=[
+                 '/tmp/build/debug', '/Xcode/usr/bin/swift', '/Xcode/MacOSX.platform']), \
+             mock.patch.object(hosted.subprocess, 'run', return_value=mock.Mock(returncode=9)) as run, \
+             mock.patch.object(hosted, 'emit') as emit:
+            self.assertEqual(hosted.diagnose_crash(Path('/tmp/build'), selector), 9)
+            command = run.call_args.args[0]
+            self.assertEqual(command[command.index('--filter')+1], selector)
+            self.assertIn('--no-lldbinit', command)
+            self.assertIn('process launch --shell-expand-args false', command)
+            self.assertIn('thread backtrace --count 40 all', command)
+            self.assertEqual(run.call_args.kwargs['timeout'], 900)
+            self.assertIn('/Xcode/MacOSX.platform/Developer/usr/lib',
+                          run.call_args.kwargs['env']['DYLD_LIBRARY_PATH'])
+            emit.assert_not_called()
+
+    def test_diagnostic_execution_refuses_non_hosted_environment(self):
+        with mock.patch.object(hosted.platform,'system',return_value='Darwin'), \
+             mock.patch.dict(hosted.os.environ,{},clear=True), \
+             mock.patch.object(hosted.subprocess,'check_output') as call:
+            with self.assertRaises(ValueError):hosted.diagnose_crash(Path('/tmp/build'),'test')
+            call.assert_not_called()
+
     def test_non_native_execution_refuses_before_running_commands(self):
         with mock.patch.object(hosted.platform,'system',return_value='Linux'),mock.patch.object(hosted.subprocess,'check_output') as call:
             with self.assertRaises(ValueError):hosted.run_bank(0,Path('/tmp/build'),Path('/tmp/output'))
