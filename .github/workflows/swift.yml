@@ -666,14 +666,14 @@ jobs:
         run: >-
           swift test -c release --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(FoundationRhythmicRelationTests/algorithmicFullPhrase(BassBehavior|OutputFrame)Faults|SourceTerminalDeclickTests)'
+          --filter '(FoundationRhythmicRelationTests/algorithmicFullPhrase((Absent|Monotone|Point|Pump|SubPulse)Bass|OutputFrame)Faults|SourceTerminalDeclickTests)'
 
       - name: Run core and evidence tests
         if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --skip 'FoundationRhythmicRelationTests/(algorithmicFoundation(Bass|Companion|Release)Faults|algorithmicFullPhrase(BassBehavior|OutputFrame)Faults)'
+          --skip 'FoundationRhythmicRelationTests/(algorithmicFoundation(Bass|Companion|Release)Faults|algorithmicFullPhrase((Absent|Monotone|Point|Pump|SubPulse)Bass|OutputFrame)Faults)'
           --filter '(ClimaxHangTests|FoundationRhythmicRelationTests|GeneratedDSPTopologyTests|FeedbackDelayNetworkTests|IdentityReturnContinuationTests|KickSyntaxTests|PercussionEchoTextureTests|PhraseCompositionTests|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|TPTAntialiasedNonlinearCoreTests|fixedSessionIdentity|currentPlanningIsDeterministic)'
 
       - name: Run upper-percussion tail DSP tests

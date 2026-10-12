@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """AT-0039-only complete hosted macOS verification; no quality or runtime authority."""
 import argparse
+import codecs
 import base64
 import hashlib
 import gzip
@@ -11,6 +12,7 @@ import platform
 import re
 import shlex
 import subprocess
+import sys
 import zlib
 from windows_test_plan import plan
 
@@ -246,6 +248,22 @@ def require_native_success(result, raw, library, build_path, selector):
     raise ValueError('native slice failed')
 
 
+def run_logged_native(command, root, log):
+    """Keep exact receipt bytes and expose progress before the child completes."""
+    decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
+    with log.open('wb') as stream, subprocess.Popen(command, cwd=root,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT) as process:
+        require(process.stdout is not None, 'native output pipe required')
+        while chunk := process.stdout.read1(64 * 1024):
+            stream.write(chunk)
+            stream.flush()
+            sys.stdout.write(decoder.decode(chunk))
+            sys.stdout.flush()
+        sys.stdout.write(decoder.decode(b'', final=True))
+        sys.stdout.flush()
+        return subprocess.CompletedProcess(command, process.wait())
+
+
 def run_bank(bank, build_path, output):
     require(platform.system() == 'Darwin' and os.environ.get('GITHUB_ACTIONS') == 'true' and
             os.environ.get('RUNNER_OS') == 'macOS', 'hosted native macOS required')
@@ -264,11 +282,9 @@ def run_bank(bank, build_path, output):
     for ordinal, selected in enumerate(selection['selected']):
         print(f'BEGIN native slice {bank}:{selected["library"]}:{selected["suite"]}', flush=True)
         log = output / f'{ordinal}.log'
-        with log.open('wb') as stream:
-            result = subprocess.run(['swift', 'test', '--build-path', str(build_path), '--skip-build',
-                '--no-parallel', *libraries[selected['library']], '--filter', selected['selector']],
-                cwd=root, stdout=stream, stderr=subprocess.STDOUT)
-        raw = log.read_bytes(); print(raw.decode(errors='replace'), flush=True)
+        result = run_logged_native(['swift', 'test', '--build-path', str(build_path), '--skip-build',
+            '--no-parallel', *libraries[selected['library']], '--filter', selected['selector']], root, log)
+        raw = log.read_bytes()
         require_native_success(result, raw, selected['library'], build_path, selected['selector'])
         counts = summarize_log(raw.decode(), selected['library'], len(selected['identifiers']), selected['identifiers'])
         results.append(dict(selection=selected, **counts, exitCode=result.returncode, logSHA256=sha(raw)))

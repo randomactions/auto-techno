@@ -222,6 +222,32 @@ class HostedMacOSVerificationTests(unittest.TestCase):
                     hosted.require_native_success(mock.Mock(returncode=1), raw, library, Path('/tmp/build'), 'Suite')
             diagnostic.assert_not_called()
 
+    def test_native_progress_is_visible_before_exit_and_exact_bytes_are_retained(self):
+        for code in [0, 7]:
+            with self.subTest(code=code), tempfile.TemporaryDirectory() as directory:
+                log = Path(directory) / 'native.log'; console = io.StringIO()
+                process = mock.MagicMock(); chunks = [b'begin\n\xe2', b'\x9c\x93 done\n', b'']
+                consumed = bytearray()
+                def read(size):
+                    self.assertEqual(size, 64 * 1024)
+                    if consumed:
+                        self.assertEqual(log.read_bytes(), bytes(consumed))
+                        self.assertIn('begin\n', console.getvalue())
+                    chunk = chunks.pop(0); consumed.extend(chunk); return chunk
+                process.stdout.read1.side_effect = read
+                process.wait.side_effect = lambda: (self.assertEqual(console.getvalue(), 'begin\n✓ done\n') or code)
+                process.__enter__.return_value = process
+                command = ['swift', 'test', '--filter', 'literal.selector()']
+                with mock.patch.object(hosted.subprocess, 'Popen', return_value=process) as spawn, \
+                     mock.patch.object(hosted.sys, 'stdout', console), mock.patch.object(hosted, 'emit') as emit:
+                    result = hosted.run_logged_native(command, Path(directory), log)
+                self.assertEqual(result.returncode, code)
+                self.assertEqual(result.args, command)
+                self.assertEqual(log.read_bytes(), b'begin\n\xe2\x9c\x93 done\n')
+                spawn.assert_called_once_with(command, cwd=Path(directory),
+                    stdout=hosted.subprocess.PIPE, stderr=hosted.subprocess.STDOUT)
+                emit.assert_not_called()
+
     def test_non_native_execution_refuses_before_running_commands(self):
         with mock.patch.object(hosted.platform,'system',return_value='Linux'),mock.patch.object(hosted.subprocess,'check_output') as call:
             with self.assertRaises(ValueError):hosted.run_bank(0,Path('/tmp/build'),Path('/tmp/output'))

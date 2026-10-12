@@ -381,7 +381,7 @@ jobs:
         run: >-
           swift test -c release --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-component"
-          --filter '(RenderFingerprintParityTests|RepeatHoldEvolutionTests|algorithmicFullPhrase${{ inputs.validation == 'full-phrase-bass-behaviors' && 'BassBehavior' || inputs.validation == 'full-phrase-foundation' && '(Bass|Companion|OutputFrame)' || 'Bass' }}Faults)'
+          --filter '(RenderFingerprintParityTests|RepeatHoldEvolutionTests|algorithmicFullPhrase${{ inputs.validation == 'full-phrase-bass-behaviors' && '(Absent|Monotone|Point|Pump|SubPulse)Bass' || inputs.validation == 'full-phrase-foundation' && '(Bass|Companion|OutputFrame)' || 'Bass' }}Faults)'
       - name: Verify semantic codebase map
         run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/auto-techno-component"
 
@@ -481,7 +481,7 @@ jobs:
         run: >-
           swift test -c release --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-component"
-          --filter '(SourceTerminalDeclickTests|RenderFingerprintParityTests|RepeatHoldEvolutionTests|algorithmicFullPhrase(Bass|Companion|BassBehavior|OutputFrame)Faults|nativePrepared(Admission|SuccessorBinding)FaultMatrix)'
+          --filter '(SourceTerminalDeclickTests|RenderFingerprintParityTests|RepeatHoldEvolutionTests|algorithmicFullPhrase(Bass|Companion|(Absent|Monotone|Point|Pump|SubPulse)Bass|OutputFrame)Faults|nativePrepared(Admission|SuccessorBinding)FaultMatrix)'
       - name: Generate and validate semantic codebase map
         run: |
           python3 scripts/codebase_map.py generate --build-path "$RUNNER_TEMP/auto-techno-component"

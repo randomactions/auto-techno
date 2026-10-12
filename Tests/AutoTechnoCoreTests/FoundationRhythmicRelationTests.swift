@@ -745,11 +745,37 @@ struct FoundationRhythmicRelationTests {
         try fullPhraseFoundationFaults(voice: .tunedTom)
     }
 
+    // Separate discovered identities let complete native banks distribute the
+    // same five expensive matrices. Each keeps the original helper, roots,
+    // rates, full-phrase renders and fault assertions unchanged.
     @MainActor
-    @Test("Full-phrase faults bind each declared bass behavior", arguments:
-        [FoundationBehavior.absent, .monotone, .point, .pump, .subPulse])
-    func algorithmicFullPhraseBassBehaviorFaults(behavior: FoundationBehavior) throws {
-        try fullPhraseFoundationFaults(voice: .bass, behavior: behavior)
+    @Test("Full-phrase faults bind absent bass behavior")
+    func algorithmicFullPhraseAbsentBassFaults() throws {
+        try fullPhraseFoundationFaults(voice: .bass, behavior: .absent)
+    }
+
+    @MainActor
+    @Test("Full-phrase faults bind monotone bass behavior")
+    func algorithmicFullPhraseMonotoneBassFaults() throws {
+        try fullPhraseFoundationFaults(voice: .bass, behavior: .monotone)
+    }
+
+    @MainActor
+    @Test("Full-phrase faults bind point bass behavior")
+    func algorithmicFullPhrasePointBassFaults() throws {
+        try fullPhraseFoundationFaults(voice: .bass, behavior: .point)
+    }
+
+    @MainActor
+    @Test("Full-phrase faults bind pump bass behavior")
+    func algorithmicFullPhrasePumpBassFaults() throws {
+        try fullPhraseFoundationFaults(voice: .bass, behavior: .pump)
+    }
+
+    @MainActor
+    @Test("Full-phrase faults bind subPulse bass behavior")
+    func algorithmicFullPhraseSubPulseBassFaults() throws {
+        try fullPhraseFoundationFaults(voice: .bass, behavior: .subPulse)
     }
 
     @MainActor
