@@ -6,6 +6,10 @@ import Foundation
 @Suite("Autonomous phrase preparation diagnostics")
 struct AutonomousPhrasePreparationDiagnosticsTests {
     @Test("Input guard identifies the exact render boundary mismatch")
+    // Large Debug fixture values exceed the native cooperative-worker stack.
+    // Only fixture setup/assertions use the main actor; detached production
+    // preparation and its exact continuation/PCM checks remain unchanged.
+    @MainActor
     func renderBoundaryMismatchIsReasonCoded() throws {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         let state = director.initialState()

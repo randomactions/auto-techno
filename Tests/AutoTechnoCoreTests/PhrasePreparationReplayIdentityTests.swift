@@ -805,6 +805,10 @@ struct IterativeSuccessorPreparationTests {
     }
 
     @Test("Actual three-rate chains render iteratively on the detached preparation thread")
+    // Large Debug fixture values exceed the native cooperative-worker stack.
+    // Only fixture setup/assertions use the main actor; detached production
+    // preparation and its exact continuation/PCM checks remain unchanged.
+    @MainActor
     func actualIterativeChain() async throws {
         var rows: [[String: Any]] = []
         for rate in [8_000.0, 44_100.0, 48_000.0] {
@@ -910,6 +914,10 @@ struct IterativeSuccessorPreparationTests {
     }
 
     @Test("Protected continuation refuses missing ownership, stale state and routes without replacing its child")
+    // Large Debug fixture values exceed the native cooperative-worker stack.
+    // Only fixture setup/assertions use the main actor; detached production
+    // preparation and its exact continuation/PCM checks remain unchanged.
+    @MainActor
     func protectedBoundaryRefusal() async throws {
         let request = Self.sourceRequest(rate: 8_000)
         let control = Control()

@@ -1591,6 +1591,10 @@ struct ProfessionalQualityCalibrationTests {
     }
 
     @Test("Active harmonic tail projects rendered energy evidence")
+    // Large Debug fixture values exceed the native cooperative-worker stack.
+    // Only fixture setup/assertions use the main actor; detached production
+    // preparation and its exact continuation/PCM checks remain unchanged.
+    @MainActor
     func activeHarmonicTailProjectionMatchesEvidence() throws {
         let candidate = try candidateWithActiveHarmonicTail()
         let phraseKind = try #require(AutonomousPhraseKind(
