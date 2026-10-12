@@ -927,6 +927,107 @@ struct ModalSuccessorReportJoinTests {
         FileHandle.standardOutput.write(Data([0x0A]))
     }
 
+    @Test("Actual successor input mismatches refuse native prepared admission", arguments: [44_100.0, 48_000.0])
+    @MainActor
+    func nativePreparedSuccessorBindingFaultMatrix(rate: Double) throws {
+        // Same frozen mechanical source as the original admission matrix.
+        // Mutate only actual successor inputs; never fabricate a report/proof.
+        let director = AutonomousSessionDirector(rootSeed: 48_300)
+        var state = director.initialState()
+        for _ in 0..<21 { state.advancePlanning(using: director.plan(from: state)) }
+        let plan = director.plan(from: state)
+        try #require(plan.phraseIndex == 21 && plan.startBar == 225)
+        let originalState = state
+        struct Row: Encodable {
+            let scenario: String
+            let changedInputs: [String]
+            let sourceActiveModalVoices: Int
+            let modalMeasurementPreserved: Bool
+            let successorPresent: Bool
+            let successorCommitEligible: Bool
+            let successorInputIdentityMatchesRequest: Bool
+            let sourceProductPresent: Bool
+            let sourcePCMUnchanged: Bool
+            let sourceCommitEligible: Bool
+            let callerStateUnchanged: Bool
+            let validationCalls: Int
+            let successorRenders: Int
+            let assessmentCalls: Int
+            let refusal: String?
+        }
+        let scenarios: [(String, PreparedValidationTestEvaluator.Mode, [String])] = [
+            ("unaltered", .actualSuccessor, []),
+            ("wrong-successor-rate", .wrongSuccessorRate, ["sample-rate"]),
+            ("wrong-successor-route", .wrongSuccessorRoute, ["route-generation"]),
+            ("wrong-successor-quality", .wrongSuccessorQuality, ["quality-state"]),
+            ("lost-successor-modal-state", .lostSuccessorModalState, ["render-dsp-state"]),
+            ("lost-successor-modal-voices", .lostSuccessorModalVoices, ["render-dsp-state"])]
+        var rows: [Row] = []
+        var baseline: PreparedAutonomousPhrase?
+        for (name, mode, expectedChanges) in scenarios {
+            let control = PreparedValidationControl()
+            let outcome = prepareValidationSource(state: state, plan: plan, rate: rate,
+                evaluator: PreparedValidationTestEvaluator(startingState: state, control: control, mode: mode))
+            let product = try #require(outcome.preparedPhrase)
+            let observed = control.snapshot
+            #expect(observed.successorInputChanges == expectedChanges)
+            #expect(observed.sourceActiveModalVoices > 0)
+            #expect(observed.calls == 1 && observed.probes == 1)
+            #expect(observed.successorInputIdentityMatchesRequest)
+            #expect(observed.successorPresent)
+            if mode == .actualSuccessor {
+                try #require(product.commitEligible)
+                try #require(product.preparedValidation?.qualifiedSuccessor?.commitEligible == true)
+                #expect(observed.assessments == 1 && observed.successorRefusal == nil)
+                baseline = product
+            } else {
+                #expect(!product.commitEligible && product.preparedValidation == nil)
+                #expect(!product.qualityDecision.isAcceptanceOutcome)
+                #expect(product.qualityContinuationState.acceptedEvidenceFingerprint == state.quality.acceptedEvidenceFingerprint)
+                #expect(observed.assessments == 0 && observed.successorRefusal != nil)
+            }
+            let original = try #require(baseline)
+            let samePCM = product.blocks == original.blocks
+            #expect(samePCM && state == originalState)
+            #expect(observed.modalMeasurementPreserved == (mode != .lostSuccessorModalState))
+            rows.append(Row(scenario: name, changedInputs: observed.successorInputChanges,
+                sourceActiveModalVoices: observed.sourceActiveModalVoices,
+                modalMeasurementPreserved: observed.modalMeasurementPreserved,
+                successorPresent: observed.successorPresent,
+                successorCommitEligible: observed.probeWasCommitEligible,
+                successorInputIdentityMatchesRequest: observed.successorInputIdentityMatchesRequest,
+                sourceProductPresent: true, sourcePCMUnchanged: samePCM,
+                sourceCommitEligible: product.commitEligible, callerStateUnchanged: state == originalState,
+                validationCalls: observed.calls, successorRenders: observed.probes,
+                assessmentCalls: observed.assessments, refusal: observed.successorRefusal))
+        }
+        let original = try #require(baseline)
+        let replay = try #require(prepareValidationSource(state: state, plan: plan, rate: rate,
+            evaluator: PreparedValidationTestEvaluator(startingState: state,
+                control: PreparedValidationControl(), mode: .actualSuccessor)).preparedPhrase)
+        let exactReplay = replay.commitEligible && replay.blocks == original.blocks &&
+            replay.commitProvenance == original.commitProvenance &&
+            replay.qualityContinuationState == original.qualityContinuationState &&
+            replay.preparedValidation?.observation == original.preparedValidation?.observation &&
+            replay.preparedValidation?.qualifiedSuccessor?.blocks == original.preparedValidation?.qualifiedSuccessor?.blocks
+        #expect(exactReplay && state == originalState)
+        struct Report: Encodable {
+            let schema = "autotechno-native-successor-binding-faults.v1"
+            let rootSeed: UInt64
+            let phraseIndex: Int
+            let sampleRate: Int
+            let sampleHash: String
+            let exactControlReplay: Bool
+            let rows: [Row]
+            let qualification = "mechanical-only-not-installed"
+        }
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        FileHandle.standardOutput.write(try encoder.encode(Report(rootSeed: state.rootSeed,
+            phraseIndex: plan.phraseIndex, sampleRate: Int(rate), sampleHash: original.audioPreflight.quality.sampleHash,
+            exactControlReplay: exactReplay, rows: rows)))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
     private func prepareValidationSource(state: AutonomousSessionState,
         plan: AutonomousPhrasePlan, rate: Double,
         evaluator: PreparedValidationTestEvaluator,
@@ -943,6 +1044,12 @@ struct ModalSuccessorReportJoinTests {
         struct Snapshot {
             var calls = 0; var probes = 0; var assessments = 0
             var probeWasCommitEligible = false; var cancelled = false
+            var successorInputChanges: [String] = []
+            var sourceActiveModalVoices = 0
+            var modalMeasurementPreserved = true
+            var successorPresent = false
+            var successorInputIdentityMatchesRequest = false
+            var successorRefusal: String?
             var projection: LongHorizonProspectiveAdaptation?
             var signal: LongHorizonSignalPhraseEvidence?
         }
@@ -958,7 +1065,9 @@ struct ModalSuccessorReportJoinTests {
 
     private struct PreparedValidationTestEvaluator: AutonomousCandidateEvaluating {
         enum Mode: Equatable { case actualSuccessor, missingProof, missingSuccessor, unacceptedSuccessor, reject,
-            changedAcceptedReason, foreignProof, cancel }
+            changedAcceptedReason, foreignProof, cancel,
+            wrongSuccessorRate, wrongSuccessorRoute, wrongSuccessorQuality,
+            lostSuccessorModalState, lostSuccessorModalVoices }
         let startingState: AutonomousSessionState
         let control: PreparedValidationControl
         let mode: Mode
@@ -1001,24 +1110,64 @@ struct ModalSuccessorReportJoinTests {
                     liveMasterHeadroom: preview.prospectiveLiveMasterState,
                     longHorizonDecision: projection?.decision)
                 let director = AutonomousSessionDirector(rootSeed: next.rootSeed)
-                control.update { $0.probes += 1 }
+                let expectedRate = preview.selectedCandidateEvidence.routeContinuation.sampleRate
+                let expectedRoute = preview.selectedCandidateEvidence.routeContinuation.routeGeneration
+                let successorRate = mode == .wrongSuccessorRate ? (expectedRate == 44_100 ? 48_000.0 : 44_100.0) : expectedRate
+                let successorRoute = mode == .wrongSuccessorRoute ? expectedRoute + 1 : expectedRoute
+                let successorQuality = mode == .wrongSuccessorQuality ? QualityContinuationState() : next.quality
+                var successorState = preview.endingRenderState
+                if mode == .lostSuccessorModalState { successorState.modalPercussionState = ModalPercussionVoiceState() }
+                if mode == .lostSuccessorModalVoices {
+                    successorState.modalPercussionState.slot0 = ModalPercussionVoiceSlotState()
+                    successorState.modalPercussionState.slot1 = ModalPercussionVoiceSlotState()
+                    successorState.modalPercussionState.slot2 = ModalPercussionVoiceSlotState()
+                    successorState.modalPercussionState.slot3 = ModalPercussionVoiceSlotState()
+                }
+                let expectedDSP = AutonomousCandidateFingerprint.renderDSPContinuation(
+                    renderState: preview.endingRenderState, generatedDSPState: preview.endingGraphState)
+                let requestedDSP = AutonomousCandidateFingerprint.renderDSPContinuation(
+                    renderState: successorState, generatedDSPState: preview.endingGraphState)
+                control.update {
+                    $0.probes += 1
+                    if successorRate != expectedRate { $0.successorInputChanges.append("sample-rate") }
+                    if successorRoute != expectedRoute { $0.successorInputChanges.append("route-generation") }
+                    if successorQuality != next.quality { $0.successorInputChanges.append("quality-state") }
+                    if requestedDSP != expectedDSP { $0.successorInputChanges.append("render-dsp-state") }
+                    let modal = preview.endingRenderState.modalPercussionState
+                    $0.sourceActiveModalVoices = [modal.slot0, modal.slot1, modal.slot2, modal.slot3].filter(\.active).count
+                    $0.modalMeasurementPreserved = successorState.modalPercussionState.measurement == modal.measurement
+                }
                 successor = AutonomousPhrasePreparer.prepareIfNotCancelled(
                     plan: director.plan(from: next), sessionSeed: next.rootSeed, memory: next.memory,
-                    sampleRate: preview.selectedCandidateEvidence.routeContinuation.sampleRate,
-                    incomingRenderState: preview.endingRenderState, incomingGraphState: preview.endingGraphState,
-                    previousGraph: preview.graph, incomingQualityState: next.quality,
-                    routeGeneration: preview.selectedCandidateEvidence.routeContinuation.routeGeneration,
+                    sampleRate: successorRate,
+                    incomingRenderState: successorState, incomingGraphState: preview.endingGraphState,
+                    previousGraph: preview.graph, incomingQualityState: successorQuality,
+                    routeGeneration: successorRoute,
                     evaluator: ValidationProbeTestEvaluator(policyVersion: policyVersion, evaluatorVersion: evaluatorVersion,
                         allowAcceptance: mode != .unacceptedSuccessor),
                     cancellationRequested: { false })
-                control.update { $0.probeWasCommitEligible = successor?.commitEligible ?? false }
+                control.update {
+                    $0.probeWasCommitEligible = successor?.commitEligible ?? false
+                    $0.successorPresent = successor != nil
+                    $0.successorInputIdentityMatchesRequest = successor.map {
+                        $0.selectedCandidateEvidence.routeContinuation.incomingRenderDSPFingerprint == requestedDSP &&
+                        $0.selectedCandidateEvidence.routeContinuation.sampleRate == successorRate &&
+                        $0.selectedCandidateEvidence.routeContinuation.routeGeneration == successorRoute &&
+                        $0.incomingQualityState == successorQuality
+                    } ?? false
+                }
                 if successor == nil { return nil }
             }
-            return try? preview.assessingContinuous(successor: successor) { _ in
-                control.update { $0.assessments += 1 }
-                return mode == .reject ? AutonomousCandidatePolicyVerdict(outcome: .rejected,
-                    decisionBasis: .calibratedQuality, reasonCodes: [.guardrailRegressionV1]) :
-                    Self.accepted(preview.transaction, extraReason: mode == .changedAcceptedReason)
+            do {
+                return try preview.assessingContinuous(successor: successor) { _ in
+                    control.update { $0.assessments += 1 }
+                    return mode == .reject ? AutonomousCandidatePolicyVerdict(outcome: .rejected,
+                        decisionBasis: .calibratedQuality, reasonCodes: [.guardrailRegressionV1]) :
+                        Self.accepted(preview.transaction, extraReason: mode == .changedAcceptedReason)
+                }
+            } catch {
+                control.update { $0.successorRefusal = String(describing: error) }
+                return nil
             }
         }
     }
