@@ -2781,3 +2781,11 @@ lifecycle, app/route and applicable physical-output requirements remain.
 Nothing here supplies missing item-specific quality authority or makes AT-0039
 complete. Human listening remains optional, and other roadmap items retain the
 ordinary local-verification requirement.
+
+Hosted ordinary-suite skip accounting enumerates the two retired mutation tests
+and six existing opt-in diagnostics whose private historical inputs or optimized
+qualification runs are owned separately. Their identities and counts remain
+explicit; they supply no executed-test or separate qualification credit. The
+installed-primary successor test is not exempt: absent current primary seals
+must prevent the hosted full-verification gate from passing. Unexpected skips
+also fail the gate.

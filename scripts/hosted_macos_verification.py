@@ -22,6 +22,20 @@ RETIRED_SKIPS = {
 }
 
 
+# Existing opt-in diagnostics require private historical inputs or their own
+# optimized qualification run. Ordinary full-suite discovery includes them,
+# but a skip supplies no evidence for their separate quality/resource gates.
+DIAGNOSTIC_SKIPS = {
+    'Retained continuous model exercises actual calibrated prepared admission': 'AutoTechnoCoreTests.ContinuousPrimaryPreparedAdmissionTests/retainedModelPreparedAdmission()',
+    'Probe the actual native bootstrap through the same full-journey owner': 'AutoTechnoCoreTests.LongHorizonPolicyCalibrationIntegrationTests/probeSharedPreparedBootstrap()',
+    'Probe actual native recovery past the frozen structural-debt refusal': 'AutoTechnoCoreTests.LongHorizonPolicyCalibrationIntegrationTests/probeNativeCoreRecovery()',
+    'Export frozen calibrated continuation-chain resource observations': 'AutoTechnoCoreTests.PerformanceEnvelopeIntegrationTests/exportContinuousPreparationEnvelope()',
+    'Export current shared preparation with exact owned-child replay': 'AutoTechnoCoreTests.PerformanceEnvelopeIntegrationTests/exportCurrentSharedPreparationEnvelope()',
+    'Previous v32 native study cannot authorize the new dotted-rhythm policy': 'AutoTechnoCoreTests.ModalSuccessorReportJoinTests/verifyFreshNativePrimaryAndLiveReproducibility()',
+}
+ALLOWED_SKIPS = {**RETIRED_SKIPS, **DIAGNOSTIC_SKIPS}
+
+
 def require(ok, reason):
     if not ok:
         raise ValueError(reason)
@@ -135,8 +149,8 @@ def verify(bundle, source):
                 require(type(result[key]) is int and result[key] >= 0, 'integer native counts')
             require(result['reportedTests'] == count and result['executedTests'] + result['explicitlySkippedTests'] == count, 'native count and skip accounting')
             require(re.fullmatch('[0-9a-f]{64}', str(result['logSHA256'])), 'native log hash')
-            allowed_skips = sorted(set(selection['identifiers']) & set(RETIRED_SKIPS.values())) if selection['library'] == 'swift-testing' else []
-            require(result['skippedIdentifiers'] == allowed_skips and result['explicitlySkippedTests'] == len(allowed_skips), 'only two existing retired skips')
+            allowed_skips = sorted(set(selection['identifiers']) & set(ALLOWED_SKIPS.values())) if selection['library'] == 'swift-testing' else []
+            require(result['skippedIdentifiers'] == allowed_skips and result['explicitlySkippedTests'] == len(allowed_skips), 'only enumerated retired and separate diagnostic skips')
             skipped += result['explicitlySkippedTests']; executed += result['executedTests']
             for case in selection['identifiers']:
                 key = selection['library'] + ':' + case
@@ -168,9 +182,9 @@ def summarize_log(raw, library, expected, identifiers):
     require(matches and int(matches[-1]) == expected and expected > 0, 'missing or mismatched native test summary')
     skips = len(re.findall(r'Test Case .* skipped' if library == 'xctest' else r'Test ".*" skipped', raw))
     names = re.findall(r'Test "([^"\n]+)" skipped', raw) if library == 'swift-testing' else []
-    require(all(name in RETIRED_SKIPS for name in names), 'unexpected skipped test')
-    skipped_ids = sorted(RETIRED_SKIPS[name] for name in names)
-    allowed = sorted(set(identifiers) & set(RETIRED_SKIPS.values())) if library == 'swift-testing' else []
+    require(all(name in ALLOWED_SKIPS for name in names), 'unexpected skipped test')
+    skipped_ids = sorted(ALLOWED_SKIPS[name] for name in names)
+    allowed = sorted(set(identifiers) & set(ALLOWED_SKIPS.values())) if library == 'swift-testing' else []
     require(skips <= expected and skips == len(skipped_ids) and skipped_ids == allowed, 'invalid skipped identity/count')
     return dict(reportedTests=expected, explicitlySkippedTests=skips, executedTests=expected-skips, skippedIdentifiers=skipped_ids)
 

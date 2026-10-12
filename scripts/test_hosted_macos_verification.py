@@ -84,6 +84,18 @@ class HostedMacOSVerificationTests(unittest.TestCase):
         self.assertEqual(result['executedTests'],256)
         self.assertEqual(result['explicitlySkippedTests'],2)
 
+
+    def test_only_existing_opt_in_diagnostics_may_skip_without_gate_credit(self):
+        for name, identity in hosted.DIAGNOSTIC_SKIPS.items():
+            counts=hosted.summarize_log(f'Test "{name}" skipped.\nTest run with 1 test passed',
+                                      'swift-testing',1,[identity])
+            self.assertEqual(counts['executedTests'],0)
+            self.assertEqual(counts['skippedIdentifiers'],[identity])
+        for name in ['Combined live/long-horizon successor proof requires sealed current primary identity',
+                     'New unexpected test']:
+            with self.assertRaises(ValueError):
+                hosted.summarize_log(f'Test "{name}" skipped.\nTest run with 1 test passed','swift-testing',1,[])
+
     def test_native_log_summary_requires_exact_framework_counts(self):
         self.assertEqual(hosted.summarize_log('Test "Legacy random mutation suppression" skipped.\nTest run with 3 tests passed', 'swift-testing',3,[hosted.RETIRED_SKIPS['Legacy random mutation suppression']]),
                          dict(reportedTests=3,explicitlySkippedTests=1,executedTests=2,skippedIdentifiers=[hosted.RETIRED_SKIPS['Legacy random mutation suppression']]))
