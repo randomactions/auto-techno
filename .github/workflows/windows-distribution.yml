@@ -1,17 +1,29 @@
-name: Windows Source Validation
+name: Native Source Validation
 
 on:
   workflow_dispatch:
+    inputs:
+      validation:
+        description: Validation scope (component runs do not replace full CI)
+        type: choice
+        required: true
+        default: windows
+        options:
+          - windows
+          - modal-continuation
+          - rumble-duration
+          - foundation-timing
 
 permissions:
   contents: read
 
 concurrency:
-  group: windows-source-validation-${{ github.ref }}
+  group: native-source-validation-${{ github.ref }}-${{ inputs.validation }}
   cancel-in-progress: false
 
 jobs:
   validate-windows-source:
+    if: inputs.validation == 'windows' || inputs.validation == ''
     name: Windows x64 source validation
     runs-on: windows-2025
     timeout-minutes: 60
@@ -26,16 +38,102 @@ jobs:
         shell: pwsh
         run: |
           winget install --id Swift.Toolchain --exact --version 6.3.3 --source winget --accept-package-agreements --accept-source-agreements
-          $swift = Get-ChildItem @("$env:ProgramFiles\Swift", "$env:LocalAppData\Programs\Swift") -Filter swift.exe -Recurse -ErrorAction SilentlyContinue |
-            Where-Object { $_.DirectoryName -match "usr\\bin$" } |
-            Select-Object -First 1
-          if ($null -eq $swift) { throw "Unable to locate swift.exe after installation." }
-          $swift.DirectoryName | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          if ($LASTEXITCODE -ne 0) { throw "Swift installation failed with exit code $LASTEXITCODE." }
+          # The running Actions worker predates installation. Carry registered
+          # runtime and toolchain paths into later steps, not only swift.exe's bin.
+          $registeredPaths = foreach ($scope in @("Machine", "User")) {
+            [Environment]::GetEnvironmentVariable("Path", $scope) -split ";" |
+              Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+          }
+          $registeredPaths | Select-Object -Unique |
+            Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          $sdkRoot = [Environment]::GetEnvironmentVariable("SDKROOT", "User")
+          if ([string]::IsNullOrWhiteSpace($sdkRoot)) {
+            $sdkRoot = [Environment]::GetEnvironmentVariable("SDKROOT", "Machine")
+          }
+          if (-not [string]::IsNullOrWhiteSpace($sdkRoot)) {
+            "SDKROOT=$sdkRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
 
       - name: Show toolchain
         shell: pwsh
-        run: swift --version
+        run: |
+          $swift = Get-Command swift -CommandType Application -ErrorAction Stop
+          Write-Host "Swift executable: $($swift.Source)"
+          $versionOutput = & $swift.Source --version 2>&1
+          $swiftExit = $LASTEXITCODE
+          $versionOutput | Write-Output
+          if ($swiftExit -ne 0) { throw "Swift startup failed with exit code $swiftExit." }
+          if (($versionOutput -join "`n") -notmatch 'Swift version 6\.3\.3(?:\s|$)') {
+            throw "The selected Swift executable does not match the pinned 6.3.3 toolchain."
+          }
 
       - name: Build and test without distribution
         shell: pwsh
         run: .\scripts\build-windows.ps1
+
+  modal-continuation:
+    if: inputs.validation == 'modal-continuation'
+    name: Native modal continuation component
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Record candidate and toolchain
+        run: |
+          git rev-parse HEAD
+          swift --version
+      # Focused research evidence only. This manual workflow neither supplies
+      # the required swift-test check nor replaces the complete Swift CI banks.
+      - name: Verify canonical continuation and fault controls
+        run: >-
+          swift test --no-parallel
+          --build-path "$RUNNER_TEMP/auto-techno-component"
+          --filter '(algorithmicModalContinuationFaults|continuousModalWindowMatrix|continuousModalInterruptionAndBounds)'
+
+  rumble-duration:
+    if: inputs.validation == 'rumble-duration'
+    name: Native rumble duration component
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Record candidate and toolchain
+        run: |
+          git rev-parse HEAD
+          swift --version
+      - name: Verify canonical rumble duration and terminal controls
+        run: >-
+          swift test --no-parallel
+          --build-path "$RUNNER_TEMP/auto-techno-component"
+          --filter SourceTerminalDeclickTests
+      - name: Verify semantic codebase map
+        run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/auto-techno-component"
+
+  foundation-timing:
+    if: inputs.validation == 'foundation-timing'
+    name: Native independent foundation timing component
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Record candidate and toolchain
+        run: |
+          git rev-parse HEAD
+          swift --version
+      - name: Verify independent native bass timing and score faults
+        run: >-
+          swift test --no-parallel
+          --build-path "$RUNNER_TEMP/auto-techno-component"
+          --filter algorithmicFoundationBassFaults
+      - name: Verify semantic codebase map
+        run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/auto-techno-component"

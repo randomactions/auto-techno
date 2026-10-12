@@ -685,6 +685,10 @@ struct FoundationRhythmicRelationTests {
             let renderedStepMask: UInt16
             let expectedStartFrames: [Int]
             let renderedStartFrames: [Int]
+            let scoreSteps: [Int]
+            let barFrameCount: Int
+            let scoreSwingPercent: Double
+            let independentTimingOracle: String
             let drySampleHash: String
             let peak: Double
             let rms: Double
@@ -693,15 +697,14 @@ struct FoundationRhythmicRelationTests {
             let renderPassesMatch: Bool
         }
         struct Report: Encodable {
-            let schema = "autotechno-foundation-bass-fault-component.v1"
-            let scope = "native-established-bass-score-binding-and-declared-absence"
+            let schema = "autotechno-foundation-bass-fault-component.v2"
+            let scope = "native-established-bass-score-binding-with-independent-onset-equation"
             let behaviors = ["subPulse", "monotone", "point", "pump", "absent"]
             let unavailableBehaviors = ["kickTail:requires-rumble-event-evidence",
                                        "tunedPercussive:requires-modal-event-evidence"]
             let unavailable = ["dotted-authorized-release", "unauthorized-truncation",
                                "full-prepared-transaction", "nonlinear-full-mix-quality",
-                               "perceptual-quality", "population-error-intervals",
-                               "independent-timing-offset-equations"]
+                               "perceptual-quality", "population-error-intervals"]
             let rows: [Row]
         }
         // Freeze roots, selection and recipes before observing PCM. Each root
@@ -744,12 +747,18 @@ struct FoundationRhythmicRelationTests {
                 let assignment = SynthPerformancePlan(scene: plan.scene, dna: plan.dna,
                     kind: plan.kind, resolvedBars: [source]).bars[0].foundationInstrument
                 for rate in [44_100.0, 48_000.0] {
-                    let frames = Int((240.0 / 130.0 * rate).rounded())
-                    // Score-owned offsets define the declared timing semantics;
-                    // rendered starts or observed peaks never choose the oracle.
+                    // Exact positive integer rounding of (24/13)*sampleRate at130 BPM.
+                    let frames = (48 * Int(rate) + 13) / 26
+                    // Independent score equation: even sixteenths stay on the
+                    // grid; odd bass sixteenths add clamp(2*swing-1, 0, 6/25).
+                    // Convert the nonnegative position with floor(x+1/2).
+                    // Never call the renderer's timing/start helpers or derive
+                    // the expected offset from measured starts or audio peaks.
                     let expectedStarts = originalEvents.map { event in
-                        Int(((Double(event.step) + VoiceRenderer.timingOffsetInSteps(
-                            for: .bass, step: event.step, dna: plan.dna)) * Double(frames) / 16.0).rounded())
+                        let displacement = event.step % 2 == 0 ? 0.0 :
+                            min(6.0 / 25.0, max(0.0, 2.0 * plan.dna.rhythm.swingPercent - 1.0))
+                        return Int(floor((Double(event.step) + displacement) *
+                            Double(frames) / 16.0 + 0.5))
                     }
                     let scenarios = behavior == .absent ? ["declared-absence"] :
                         ["unaltered", "deleted-bass", "shifted-bass", "wrong-voice", "zero-intensity"]
@@ -818,7 +827,11 @@ struct FoundationRhythmicRelationTests {
                             scenario: scenario, scoreBar: source.performance.bar, scoreEventCount: originalEvents.count,
                             renderedEventCount: actual.renderedBassEventCount, scoreStepMask: expectedMask,
                             renderedStepMask: actual.renderedBassStepMask, expectedStartFrames: expectedStarts,
-                            renderedStartFrames: actual.renderedStartFrames, drySampleHash: actual.dryFoundationSampleHash,
+                            renderedStartFrames: actual.renderedStartFrames,
+                            scoreSteps: originalEvents.map(\.step), barFrameCount: frames,
+                            scoreSwingPercent: plan.dna.rhythm.swingPercent,
+                            independentTimingOracle: "floor((step + (odd ? clamp(2*swing-1,0,6/25) : 0))*frames/16+1/2)",
+                            drySampleHash: actual.dryFoundationSampleHash,
                             peak: actual.peak, rms: actual.rms, expectedComplete: expectedComplete,
                             observedComplete: complete, renderPassesMatch: passMatch))
                     }

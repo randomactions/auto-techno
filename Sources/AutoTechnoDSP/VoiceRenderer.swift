@@ -3786,7 +3786,8 @@ package enum VoiceRenderer {
         return terminalEvidence.evidence
     }
 
-    private static func rumble(
+    // Package-visible so source-support fault controls exercise this same routine.
+    package static func rumble(
         _ output: inout [Float],
         measurement: inout [Float],
         scoreEventIndex: Int,
