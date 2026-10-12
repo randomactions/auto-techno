@@ -2752,3 +2752,32 @@ root/owned-child output. Overfull incoming state and aggregate reservations stil
 refuse before rendering; a third pass remains invalid. No callback, persistent
 state, quality threshold or numeric ceiling changes. Complete allocation,
 streamed selected-capture, RSS/deadline and full qualification gates remain open.
+
+
+## AT-0039 hosted full-verification exception
+
+The user explicitly adopted this exception on 2026-10-12 because the local
+Command Line Tools installation lacks XCTest. AT-0039 alone may satisfy the
+existing full-local-verification gate with complete hosted macOS XCTest and
+Swift Testing execution plus the complete tooling suite and macOS Release app
+build at one exact immutable source revision. This is a location equivalence,
+not a local execution claim or an exception for focused-only checks.
+
+A passed receipt using this route must add an `execution` object to that gate:
+`schema` is `autotechno-at0039-hosted-execution.v1`, `environment` is
+`hosted-macos`, `scope` is `complete-native-suites-and-release-build`, and
+`revision` is the enclosing exact source revision. `receipt` is
+`docs/local/result-records/AT-0039-hosted-macos.json`; `receiptSHA256` binds its
+exact bytes. This object is forbidden on other subjects, gates or statuses.
+The existing result-record and roadmap validators verify this binding through
+`scripts/hosted_macos_verification.py`. The complete receipt must identify the
+successful repository workflow, all eight exact-source native jobs, strict
+recomputed discovery partitions, matching executed identities/counts and separate
+explicit skips, plus successful tooling, Release app and semantic-map steps.
+Map-only jobs, partial jobs, mixed revisions and mere discovery cannot pass.
+
+The separate exact-head CI, algorithmic/adversarial/holdout, Windows, resource,
+lifecycle, app/route and applicable physical-output requirements remain.
+Nothing here supplies missing item-specific quality authority or makes AT-0039
+complete. Human listening remains optional, and other roadmap items retain the
+ordinary local-verification requirement.

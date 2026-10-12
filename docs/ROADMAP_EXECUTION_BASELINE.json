@@ -1,8 +1,8 @@
 {
   "schema": "autotechno-roadmap-contract-baseline.v1",
-  "snapshotVersion": 165,
+  "snapshotVersion": 167,
   "digestAlgorithm": "sha256",
-  "snapshotFingerprint": "aa717dc404f9d67139f26b09c0a121cd72af1fc1dfe51c3f40940775aa93e4f4",
+  "snapshotFingerprint": "a756ec8f829a834844bc4afb0e614791e651c6f5afadd8845adffc28d773d909",
   "documents": [
     {
       "role": "repository-guidance",
@@ -31,8 +31,8 @@
     {
       "role": "runtime-provenance-contract",
       "path": "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
-      "byteCount": 183725,
-      "sha256": "d7e52be466ebb30e0a11aae3084cc59d90981194396db43d9aa14406153fbf29"
+      "byteCount": 185493,
+      "sha256": "8075c06d79a1aabb3cee918b37ea675cc15812f2264750843a4f448efe90afc3"
     },
     {
       "role": "component-license-asset-manifest-source",
@@ -49,14 +49,14 @@
     {
       "role": "result-status-vocabulary-source",
       "path": "docs/RESULT_STATUS_VOCABULARY.json",
-      "byteCount": 6925,
-      "sha256": "f2f7557207809198b5c54a4543016a851f01727957a05cc462fcbe363441786c"
+      "byteCount": 7225,
+      "sha256": "80de3040823f0b219ff2f931f62e50d648c6a2901a838d97f198ae5b4a5f7c84"
     },
     {
       "role": "result-status-vocabulary-rendering",
       "path": "docs/RESULT_STATUS_VOCABULARY.md",
-      "byteCount": 4554,
-      "sha256": "6e6b81e76aeec43f5751c538572d95df9a5a5509b090499e6dde5aaf453405b7"
+      "byteCount": 4854,
+      "sha256": "b724b16d054e4ca9e0c64e136e1ac16de7010a45c065a682a944c597b9fbe054"
     },
     {
       "role": "controlled-listening-protocol-source",
@@ -163,8 +163,8 @@
     {
       "role": "semantic-codebase-map-source",
       "path": "docs/codebase-map.json",
-      "byteCount": 158504,
-      "sha256": "ef550f1dd00d360a73c3ccd488e2e0fc6389369c59a1556594f3209e1449da61"
+      "byteCount": 159129,
+      "sha256": "972822a7c6b20b78c28719ddfb6456cd88770485558c514a57cd2fc2678eb19f"
     },
     {
       "role": "semantic-codebase-map-rendering",

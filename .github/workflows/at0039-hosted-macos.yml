@@ -1,0 +1,81 @@
+name: AT-0039 Complete Hosted macOS Verification
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        type: choice
+        required: true
+        default: complete
+        options: [complete, map-only]
+permissions:
+  contents: read
+concurrency:
+  group: at0039-hosted-macos-${{ github.ref }}-${{ inputs.scope }}
+  cancel-in-progress: false
+jobs:
+  complete:
+    if: inputs.scope == 'complete'
+    name: Complete macOS bank ${{ matrix.bank }}
+    runs-on: macos-15
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        bank: [0, 1, 2, 3, 4, 5, 6, 7]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Verify macOS environment
+        run: |
+          test "$(uname -s)" = Darwin
+          test "$RUNNER_OS" = macOS
+          git rev-parse HEAD
+          sw_vers
+          xcodebuild -version
+          swift --version
+      - name: Build all native tests
+        run: swift build --build-tests --build-path "$RUNNER_TEMP/at0039-tests"
+      - name: Execute complete native bank
+        run: >-
+          python3 scripts/hosted_macos_verification.py --bank ${{ matrix.bank }}
+          --build-path "$RUNNER_TEMP/at0039-tests"
+          --output "$RUNNER_TEMP/at0039-bank-${{ matrix.bank }}"
+      - name: Run complete tooling tests
+        if: matrix.bank == 0
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
+      - name: Build macOS Release app
+        if: matrix.bank == 0
+        run: swift build -c release --product AutoTechno --build-path "$RUNNER_TEMP/at0039-release"
+      - name: Validate codebase map
+        if: matrix.bank == 0
+        run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/at0039-tests"
+  map:
+    if: inputs.scope == 'map-only'
+    name: Generate native map only
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Generate and validate semantic codebase map
+        run: |
+          python3 scripts/codebase_map.py generate --build-path "$RUNNER_TEMP/at0039-map"
+          python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/at0039-map"
+      - name: Emit source-bound generated map
+        run: |
+          python3 - <<'PYMAP'
+          import base64, hashlib, json, pathlib, subprocess
+          raw = pathlib.Path('docs/CODEBASE_MAP.md').read_bytes()
+          source = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          encoded = base64.b64encode(raw).decode('ascii')
+          chunks = [encoded[i:i+8192] for i in range(0, len(encoded), 8192)]
+          for index, chunk in enumerate(chunks):
+              print(json.dumps(dict(schema='autotechno-generated-map-chunk.v1', source=source,
+                  sha256=hashlib.sha256(raw).hexdigest(), bytes=len(raw), index=index,
+                  chunks=len(chunks), payload=chunk), sort_keys=True))
+          PYMAP

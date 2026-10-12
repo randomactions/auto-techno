@@ -10,6 +10,11 @@ import sys
 from pathlib import Path
 from typing import Any, Mapping, Optional, Sequence, TextIO
 
+SCRIPT_DIRECTORY = str(Path(__file__).resolve().parent)
+if SCRIPT_DIRECTORY not in sys.path:
+    sys.path.insert(0, SCRIPT_DIRECTORY)
+import hosted_macos_verification as hosted  # noqa: E402
+
 
 VOCABULARY_SCHEMA = "autotechno-result-status-vocabulary.v1"
 RECORD_SCHEMA = "autotechno-result-record.v1"
@@ -244,7 +249,13 @@ def validate_record(
         if not isinstance(gate_result, dict):
             errors.append(f"{location} must be an object")
             continue
-        _exact_keys(gate_result, set(RECORD_GATE_FIELDS), location, errors)
+        allowed_fields = set(RECORD_GATE_FIELDS)
+        if "execution" in gate_result:
+            allowed_fields.add("execution")
+            errors.extend(hosted.execution_errors(gate_result["execution"],
+                record.get("subject"), record.get("revision"),
+                gate_result.get("id"), gate_result.get("status")))
+        _exact_keys(gate_result, allowed_fields, location, errors)
         identifier = gate_result.get("id")
         if not _nonempty_string(identifier):
             errors.append(f"{location}.id must be a non-empty string")
@@ -467,6 +478,10 @@ def run_validate_record(root: Path, path: Path, output: TextIO) -> int:
         print(f"result record: {exc}", file=output)
         return 1
     errors = validate_vocabulary(vocabulary) + validate_record(record, vocabulary)
+    if not errors:
+        for gate in record["gates"]:
+            if "execution" in gate:
+                errors.extend(hosted.validate_bound_receipt(root, record, gate["execution"]))
     if errors:
         for error in errors:
             print(f"result record: {error}", file=output)
