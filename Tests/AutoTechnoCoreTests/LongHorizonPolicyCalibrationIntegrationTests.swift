@@ -390,6 +390,11 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
         } catch let refused as PhrasePreparationFailure {
           failure = refused.stage + ":" + refused.code; details = Array(refused.details.prefix(24)); break
         } catch { failure = "continuation-refused"; break }
+        do {
+          try Self.writeNativeRouteDivergenceWitness(request: request, prepared: source.prepared)
+        } catch {
+          failure = "native-route-divergence-witness-write-failed"; break
+        }
         if let budget = source.preparationChainResourceBudget {
           peak = max(peak, budget.reservedPeakWorkingByteCount)
         }
@@ -776,20 +781,70 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
       .write(to: directory.appendingPathComponent("actual-journey-\(journey.rootSeed)-\(Int(journey.sampleRate)).json"), options: .atomic)
   }
 
+  /// Opt-in diagnostic at the first differing recorded rejection in the frozen
+  /// Long20 pair. It observes the unmodified prepared decision before recovery;
+  /// it cannot import a journey, admit a candidate, or produce calibration.
+  private static func writeNativeRouteDivergenceWitness(
+    request: PhrasePreparationRequest, prepared: PreparedAutonomousPhrase
+  ) throws {
+    let environment = ProcessInfo.processInfo.environment
+    guard environment["AUTOTECHNO_RUN_LONG_HORIZON_SHARED_PROBE"] == "1",
+      environment["AUTOTECHNO_LONG_HORIZON_DIVERGENCE_PROBE"] == "1",
+      request.sourceState.rootSeed == 112_358, request.key.phraseIndex == 279
+    else { return }
+    guard let directory = environment["AUTOTECHNO_LONG_HORIZON_RESOURCE_DIRECTORY"]
+    else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
+    let decision = prepared.qualityDecision
+    let candidate = try JSONSerialization.jsonObject(
+      with: prepared.selectedCandidateEvidence.deterministicJSON())
+    let witness: [String: Any] = [
+      "schema": "autotechno-native-route-divergence-witness.v1",
+      "rootSeed": request.sourceState.rootSeed,
+      "sampleRate": request.key.sampleRate,
+      "phraseIndex": request.key.phraseIndex,
+      "retryOrdinal": request.key.qualityRetryOrdinal,
+      "retryWave": request.key.qualityRecoveryContext.wave,
+      "sourceCoreFingerprint": request.replayIdentity.sourceStateFingerprint,
+      "requestFingerprint": request.replayIdentity.fingerprint,
+      "planFingerprint": AutonomousCandidateFingerprint.plan(prepared.plan),
+      "sampleHash": prepared.audioPreflight.quality.sampleHash,
+      "commitEligible": prepared.commitEligible,
+      "decision": decision.outcome.rawValue,
+      "reasonCodes": decision.reasonCodes.map(\.rawValue),
+      "qualityDiagnostics": prepared.qualityDiagnosticDetails,
+      "commitDiagnostics": prepared.commitFailureDiagnostics,
+      "candidate": candidate,
+      "calibrationEvidence": false,
+    ]
+    let filename = "native-divergence-112358-\(Int(request.key.sampleRate))-279-"
+      + "\(request.key.qualityRecoveryContext.wave)-\(request.key.qualityRetryOrdinal).json"
+    let data = try JSONSerialization.data(withJSONObject: witness, options: [.sortedKeys])
+    try data.write(to: URL(fileURLWithPath: directory, isDirectory: true)
+      .appendingPathComponent(filename), options: .withoutOverwriting)
+  }
+
   @Test("Probe the actual native bootstrap through the same full-journey owner",
     .enabled(if: ProcessInfo.processInfo.environment["AUTOTECHNO_RUN_LONG_HORIZON_SHARED_PROBE"] == "1"))
   func probeSharedPreparedBootstrap() async throws {
     let primary = try loadPrimary(), binding = try executionBinding()
+    let divergence = ProcessInfo.processInfo.environment["AUTOTECHNO_LONG_HORIZON_DIVERGENCE_PROBE"] == "1"
+    let root: UInt64 = divergence ? 112_358 : 48_291
+    let prefix = divergence ? 280 : 4
     try prepareOutputNamespace()
     for rate in [44_100.0, 48_000.0] {
       let journey = await Task.detached(priority: .userInitiated) {
-        await Self.renderPreparedRoute(rootSeed: 48_291, sampleRate: rate, primary: primary, prefixPhraseCount: 4)
+        await Self.renderPreparedRoute(rootSeed: root, sampleRate: rate, primary: primary, prefixPhraseCount: prefix)
       }.value
       try writeJourney(journey, binding: binding)
       #expect(journey.completedRequestedScope && journey.failureCode == nil)
-      #expect(journey.consumedPhraseCount == 4)
-      #expect(journey.signal.observationCount == 4 && journey.signal.omittedPhraseCount == 0)
-      #expect(journey.effects.phraseCount == 4 && journey.effects.barCount == journey.semantic.observedBarCount)
+      #expect(journey.consumedPhraseCount == prefix)
+      #expect(journey.signal.observationCount == prefix && journey.signal.omittedPhraseCount == 0)
+      #expect(journey.effects.phraseCount == prefix && journey.effects.barCount == journey.semantic.observedBarCount)
+      if divergence {
+        let witness = try outputDirectory().appendingPathComponent(
+          "native-divergence-112358-\(Int(rate))-279-0-0.json")
+        #expect(FileManager.default.fileExists(atPath: witness.path))
+      }
       #expect(try executionBinding() == binding)
     }
   }
