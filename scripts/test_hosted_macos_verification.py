@@ -21,8 +21,8 @@ def fixture(include_retired=False):
     if include_retired:
         discovery['swift-testing'] += '\n' + '\n'.join(hosted.RETIRED_SKIPS.values())
     rows = []
-    for bank in range(8):
-        plan = hosted.plan(discovery, bank, 8)
+    for bank in range(hosted.BANKS):
+        plan = hosted.plan(discovery, bank, hosted.BANKS)
         completed = [dict(selection=s, reportedTests=len(s['identifiers']), explicitlySkippedTests=0,
                           executedTests=len(s['identifiers']), skippedIdentifiers=[], exitCode=0, logSHA256='b'*64) for s in plan['selected']]
         for result in completed:
@@ -32,7 +32,7 @@ def fixture(include_retired=False):
         names = ['Verify macOS environment', 'Build all native tests', 'Execute complete native bank']
         if bank == 0: names += ['Run complete tooling tests', 'Build macOS Release app', 'Validate codebase map']
         rows.append(dict(receipt=dict(schema='autotechno-hosted-macos-bank.v1', source=SOURCE,
-             environment='hosted-macos', bank=bank, banks=8, discovery=discovery, plan=plan, completedSlices=completed),
+             environment='hosted-macos', bank=bank, banks=hosted.BANKS, discovery=discovery, plan=plan, completedSlices=completed),
              job=dict(id=100+bank, run_id=50, head_sha=SOURCE, name=f'hosted-macos / Complete macOS bank {bank}',
                       status='completed', conclusion='success', steps=[dict(name=n,status='completed',conclusion='success') for n in names])))
     return dict(schema=hosted.SCHEMA,source=SOURCE,workflow=dict(id=20,path=hosted.WORKFLOW,state='active'),
@@ -54,6 +54,26 @@ class HostedMacOSVerificationTests(unittest.TestCase):
         self.assertTrue(result['completeNativeSuitesAndReleaseBuild'])
         for key in ['localExecution','automatedQualityQualification','runtimeQualification','item39Complete']:
             self.assertFalse(result[key])
+
+    def test_timeout_repartition_preserves_complete_identity_union(self):
+        bundle = fixture()
+        discovery = bundle['banks'][0]['receipt']['discovery']
+        def identities(banks):
+            return [selection['library'] + ':' + identifier
+                    for bank in range(banks)
+                    for selection in hosted.plan(discovery, bank, banks)['selected']
+                    for identifier in selection['identifiers']]
+        previous, current = identities(8), identities(hosted.BANKS)
+        self.assertEqual(hosted.BANKS, 16)
+        self.assertEqual(sorted(previous), sorted(current))
+        self.assertEqual(len(current), len(set(current)))
+        workflow = (Path(__file__).resolve().parents[1] /
+                    '.github/workflows/at0039-hosted-macos.yml').read_text()
+        self.assertIn('bank: ' + str(list(range(hosted.BANKS))), workflow)
+        self.assertIn('max-parallel: 4', workflow)
+        bundle['banks'] = bundle['banks'][:8]
+        with self.assertRaisesRegex(ValueError, 'all sixteen banks'):
+            hosted.verify(bundle, SOURCE)
 
     def test_partial_mixed_failed_or_falsely_counted_receipts_refuse(self):
         changes = [lambda d:d['banks'].pop(), lambda d:d.__setitem__('source','f'*40),
@@ -155,14 +175,14 @@ class HostedMacOSVerificationTests(unittest.TestCase):
             if path.endswith('/runs/50'): return json.dumps(bundle['run']).encode()
             if path.endswith('/workflows/20'): return json.dumps(bundle['workflow']).encode()
             if '/jobs?' in path:
-                return json.dumps(dict(total_count=8,jobs=[r['job'] for r in bundle['banks']])).encode()
+                return json.dumps(dict(total_count=hosted.BANKS,jobs=[r['job'] for r in bundle['banks']])).encode()
             job=int(path.split('/')[-2]);stream=io.StringIO()
             with contextlib.redirect_stdout(stream):hosted.emit(bundle['banks'][job-100]['receipt'])
             return stream.getvalue().encode()
         with tempfile.TemporaryDirectory() as folder,mock.patch.object(hosted.subprocess,'check_output',side_effect=response):
             out=Path(folder)/'complete'
             self.assertTrue(hosted.collect(50,SOURCE,out)['completeNativeSuitesAndReleaseBuild'])
-            self.assertEqual(len(list(out.glob('bank-*.log.gz'))),8)
+            self.assertEqual(len(list(out.glob('bank-*.log.gz'))),hosted.BANKS)
             with self.assertRaises(ValueError):hosted.collect(50,SOURCE,out)
             calls=0
             def moved(command,**kwargs):

@@ -93,7 +93,7 @@
         "blocked"
       ],
       "releaseClaimRequiredState": "passed",
-      "meaning": "The complete required local suite and release build passed for the exact revision. For AT-0039 only, the user-approved hosted macOS equivalent may satisfy this gate with an explicit hosted execution binding and validated complete native discovery, all eight successful banks, tooling tests and Release app build at the same revision; it never claims local execution or another gate."
+      "meaning": "The complete required local suite and release build passed for the exact revision. For AT-0039 only, the user-approved hosted macOS equivalent may satisfy this gate with an explicit hosted execution binding and validated complete native discovery, all sixteen successful banks, tooling tests and Release app build at the same revision; it never claims local execution or another gate."
     },
     {
       "id": "automated-quality-qualification",

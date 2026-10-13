@@ -18,7 +18,7 @@ from windows_test_plan import plan
 
 SCHEMA = 'autotechno-hosted-macos-verification.v1'
 EXECUTION_SCHEMA = 'autotechno-at0039-hosted-execution.v1'
-BANKS = 8
+BANKS = 16
 WORKFLOW = '.github/workflows/windows-distribution.yml'
 RETIRED_SKIPS = {
     'Legacy random mutation suppression': 'AutoTechnoCoreTests.GeneratedDSPTopologyTests/mutationSuppression()',
@@ -120,7 +120,7 @@ def verify(bundle, source):
     require(workflow.get('path') == WORKFLOW and workflow.get('id') == run.get('workflow_id') and
             workflow.get('state') == 'active' and type(workflow.get('id')) is int, 'authorized workflow')
     require(run.get('repository', {}).get('full_name') == 'randomactions/auto-techno', 'repository binding')
-    rows = bundle['banks']; require(isinstance(rows, list) and len(rows) == BANKS, 'all eight banks')
+    rows = bundle['banks']; require(isinstance(rows, list) and len(rows) == BANKS, 'all sixteen banks')
     seen = set(); discovered = set(); jobs = set(); digests = set(); skipped = 0; executed = 0
     for row in rows:
         require(isinstance(row, dict) and set(row) == {'job', 'receipt'}, 'bank fields')
@@ -311,11 +311,11 @@ def collect(run_id, source, output):
     require(type(listing.get('total_count')) is int and listing['total_count'] <= 100 and
             len(listing.get('jobs', [])) == listing['total_count'], 'complete job listing')
     jobs = [job for job in listing['jobs'] if
-            re.fullmatch(r'hosted-macos / Complete macOS bank [0-7]', job.get('name', ''))]
+            re.fullmatch(r'hosted-macos / Complete macOS bank [0-9]+', job.get('name', ''))]
     require(len(jobs) == BANKS, 'all native bank jobs required')
     rows = []; logs = {}
     for job in sorted(jobs,key=lambda j:j['name']):
-        bank = int(job['name'][-1])
+        bank = int(job['name'].rsplit(' ', 1)[1])
         raw = api(f'jobs/{job["id"]}/logs', raw=True)
         receipt = decode_chunks(raw.decode('utf-8'), source, bank)
         rows.append(dict(job=job, receipt=receipt)); logs[f'bank-{bank}.log.gz'] = gzip.compress(raw,mtime=0)
