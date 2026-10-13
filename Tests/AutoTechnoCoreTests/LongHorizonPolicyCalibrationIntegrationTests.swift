@@ -139,12 +139,91 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
         "AUTOTECHNO_LONG_HORIZON_RESOURCE_DIRECTORY"
       ], !outputDirectory.isEmpty
     else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
-    let directory = URL(fileURLWithPath: outputDirectory, isDirectory: true).standardizedFileURL
-    guard directory.path.hasPrefix(repositoryRoot.appendingPathComponent("docs/local/reports").path + "/")
-    else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
-    try FileManager.default.createDirectory(
-      at: directory, withIntermediateDirectories: true)
+    let directory = try Self.confinedEvidenceDirectory(
+      URL(fileURLWithPath: outputDirectory, isDirectory: true), repositoryRoot: repositoryRoot)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     return directory
+  }
+
+  /// Foundation standardizes an existing /private/tmp path to /tmp, but leaves
+  /// a missing leaf unchanged. Resolve the existing ancestor first, then append
+  /// missing components so the confinement decision survives directory creation.
+  private static func canonicalEvidenceURL(_ url: URL) throws -> URL {
+    var ancestor = url.standardizedFileURL
+    var missing: [String] = []
+    while !FileManager.default.fileExists(atPath: ancestor.path) {
+      let attributes = try? FileManager.default.attributesOfItem(atPath: ancestor.path)
+      guard attributes?[.type] as? FileAttributeType != .typeSymbolicLink else {
+        throw LongHorizonProfessionalPolicyError.invalidEvidence
+      }
+      let parent = ancestor.deletingLastPathComponent()
+      guard parent.path != ancestor.path else {
+        throw LongHorizonProfessionalPolicyError.invalidEvidence
+      }
+      missing.append(ancestor.lastPathComponent); ancestor = parent
+    }
+    return missing.reversed().reduce(ancestor.resolvingSymlinksInPath().standardizedFileURL) {
+      $0.appendingPathComponent($1, isDirectory: true)
+    }
+  }
+
+  private static func confinedEvidenceDirectory(_ directory: URL, repositoryRoot: URL) throws -> URL {
+    let reports = try canonicalEvidenceURL(repositoryRoot.appendingPathComponent("docs/local/reports"))
+    let candidate = try canonicalEvidenceURL(directory)
+    guard candidate.path.hasPrefix(reports.path + "/") else {
+      throw LongHorizonProfessionalPolicyError.invalidEvidence
+    }
+    return candidate
+  }
+
+  @Test("Evidence directory confinement is stable before and after creation and refuses escapes")
+  func evidenceDirectoryConfinement() throws {
+    let manager = FileManager.default
+    let temporary = manager.temporaryDirectory.appendingPathComponent("at0039-evidence-" + UUID().uuidString)
+    let repository = temporary.appendingPathComponent("repository")
+    let reports = repository.appendingPathComponent("docs/local/reports")
+    try manager.createDirectory(at: reports, withIntermediateDirectories: true)
+    defer { try? manager.removeItem(at: temporary) }
+    let alias = temporary.appendingPathComponent("alias")
+    try manager.createSymbolicLink(at: alias, withDestinationURL: repository)
+    let requested = alias.appendingPathComponent("docs/local/reports/fresh/nested")
+    let before = try Self.confinedEvidenceDirectory(requested, repositoryRoot: repository)
+    try manager.createDirectory(at: before, withIntermediateDirectories: true)
+    let after = try Self.confinedEvidenceDirectory(requested, repositoryRoot: repository)
+    #expect(before.path == after.path)
+    let marker = Data("derived-evidence".utf8)
+    try marker.write(to: after.appendingPathComponent("receipt.json"))
+    #expect(try Data(contentsOf: before.appendingPathComponent("receipt.json")) == marker)
+    for escape in [repository, reports, repository.appendingPathComponent("docs/local/reports-extra/leaf"),
+      reports.appendingPathComponent("../outside")] {
+      #expect(throws: LongHorizonProfessionalPolicyError.invalidEvidence) {
+        try Self.confinedEvidenceDirectory(escape, repositoryRoot: repository)
+      }
+    }
+    let outside = temporary.appendingPathComponent("outside")
+    try manager.createDirectory(at: outside, withIntermediateDirectories: true)
+    let link = reports.appendingPathComponent("escape")
+    try manager.createSymbolicLink(at: link, withDestinationURL: outside)
+    #expect(throws: LongHorizonProfessionalPolicyError.invalidEvidence) {
+      try Self.confinedEvidenceDirectory(link.appendingPathComponent("fresh"), repositoryRoot: repository)
+    }
+    let dangling = reports.appendingPathComponent("dangling")
+    try manager.createSymbolicLink(at: dangling, withDestinationURL: temporary.appendingPathComponent("absent"))
+    #expect(throws: LongHorizonProfessionalPolicyError.invalidEvidence) {
+      try Self.confinedEvidenceDirectory(dangling.appendingPathComponent("fresh"), repositoryRoot: repository)
+    }
+    #if os(macOS)
+      // Reproduce Foundation's special /private/tmp normalization, independently
+      // of the general repository-symlink case above.
+      let macRoot = URL(fileURLWithPath: "/private/tmp/at0039-path-" + UUID().uuidString)
+      let macReports = macRoot.appendingPathComponent("docs/local/reports")
+      try manager.createDirectory(at: macReports, withIntermediateDirectories: true)
+      defer { try? manager.removeItem(at: macRoot) }
+      let macRequested = macReports.appendingPathComponent("fresh")
+      let macBefore = try Self.confinedEvidenceDirectory(macRequested, repositoryRoot: macRoot)
+      try manager.createDirectory(at: macBefore, withIntermediateDirectories: true)
+      #expect(try Self.confinedEvidenceDirectory(macRequested, repositoryRoot: macRoot).path == macBefore.path)
+    #endif
   }
 
   @Test("Render one exact diagnostic root")

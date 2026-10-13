@@ -2852,3 +2852,13 @@ score, renderer, primary policy and PCM remain unchanged. Tests cover distinct
 native histories, route-order replay, both-sided metric violations on either
 route, independent effect denominators, material fatigue and tampered evidence.
 Every resource, lifecycle, platform and applicable output requirement remains.
+
+
+The fresh Long Horizon calibration harness canonicalizes an evidence destination
+through its nearest existing ancestor before appending missing path components.
+The same confinement check therefore holds before and after directory creation,
+including macOS `/private/tmp` aliases. It retains confinement below this
+checkout's `docs/local/reports`, rejects outside or dangling symbolic links, and
+adds no capture import, promotion authority, runtime state or PCM change. A
+path failure remains a failed study; missing derived evidence is never rebuilt
+from logs or labeled qualified.
