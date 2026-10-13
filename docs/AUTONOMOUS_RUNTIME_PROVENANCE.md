@@ -2862,3 +2862,27 @@ checkout's `docs/local/reports`, rejects outside or dangling symbolic links, and
 adds no capture import, promotion authority, runtime state or PCM change. A
 path failure remains a failed study; missing derived evidence is never rebuilt
 from logs or labeled qualified.
+
+
+## Complete Windows source verification evidence
+
+The existing eight-bank Windows workflow remains the native execution owner.
+`scripts/hosted_windows_verification.py` fetches a completed exact-source run
+and all eight successful jobs from the known repository, requiring the same
+run attempt, native build, checkout-byte validation and bank-zero Release build.
+It derives execution and named skip counts from original BEGIN/END-bounded job
+output, checks the emitted result against those measurements, and recomputes
+the entire deterministic discovery partition and selectors from the union.
+A missing, failed, duplicated or foreign bank, changed run attempt, unexplained
+skip, altered count or incomplete native summary refuses the complete result.
+
+Original job logs are privately retained with SHA256 identities. PowerShell can
+emit an encoding marker at a later process boundary; parsing removes only
+line-leading markers and retains the unmodified original bytes. Actions adds
+timestamps and transforms stdout line endings, so the verifier does not claim
+to recompute the native Tee-Object file hashes from those transformed logs.
+Reported success means complete Windows source tests and Release compilation
+only. App launch, routes, physical output, resource bounds, primary and Long
+Horizon quality, lifecycle qualification and item completion remain separate.
+The existing roadmap completion refusal is unchanged. No engine, PCM, policy,
+continuation, runtime admission, budget or callback behavior changes.
