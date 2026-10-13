@@ -20,6 +20,7 @@ on:
           - windows-planning-probe
           - windows-planning-math
           - windows-full-banks
+          - windows-primary-readiness
           - modal-continuation
           - prepared-admission
           - corrective-reservation
@@ -45,7 +46,7 @@ jobs:
       scope: ${{ inputs.validation == 'hosted-macos-map' && 'map-only' || inputs.validation == 'hosted-macos-diagnostic' && 'protected-continuation-diagnostic' || inputs.validation == 'hosted-macos-harmonic-tail-diagnostic' && 'harmonic-tail-diagnostic' || inputs.validation == 'hosted-macos-primary-readiness' && 'primary-readiness' || 'complete' }}
 
   validate-windows-source:
-    if: inputs.validation == 'windows' || inputs.validation == 'windows-diagnostics' || inputs.validation == 'windows-recovery-build' || inputs.validation == 'windows-full-banks' || inputs.validation == 'windows-planning-probe' || inputs.validation == 'windows-planning-math' || inputs.validation == ''
+    if: inputs.validation == 'windows-primary-readiness' || inputs.validation == 'windows' || inputs.validation == 'windows-diagnostics' || inputs.validation == 'windows-recovery-build' || inputs.validation == 'windows-full-banks' || inputs.validation == 'windows-planning-probe' || inputs.validation == 'windows-planning-math' || inputs.validation == ''
     name: Windows x64 source validation (${{ matrix.test-library }})
     runs-on: windows-2025
     timeout-minutes: ${{ inputs.validation == 'windows-full-banks' && 360 || inputs.validation == 'windows-recovery-build' && 90 || 60 }}
@@ -53,7 +54,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        test-library: ${{ fromJSON(inputs.validation == 'windows-diagnostics' && '["xctest","swift-testing"]' || inputs.validation == 'windows-planning-math' && '["math"]' || inputs.validation == 'windows-planning-probe' && '["planning"]' || inputs.validation == 'windows-recovery-build' && '["recovery"]' || inputs.validation == 'windows-full-banks' && '["bank-0","bank-1","bank-2","bank-3","bank-4","bank-5","bank-6","bank-7"]' || '["all"]') }}
+        test-library: ${{ fromJSON(inputs.validation == 'windows-primary-readiness' && '["primary"]' || inputs.validation == 'windows-diagnostics' && '["xctest","swift-testing"]' || inputs.validation == 'windows-planning-math' && '["math"]' || inputs.validation == 'windows-planning-probe' && '["planning"]' || inputs.validation == 'windows-recovery-build' && '["recovery"]' || inputs.validation == 'windows-full-banks' && '["bank-0","bank-1","bank-2","bank-3","bank-4","bank-5","bank-6","bank-7"]' || '["all"]') }}
 
     steps:
       - name: Check out source
@@ -98,7 +99,7 @@ jobs:
       # Swift's registered environment may put the WindowsApps python alias
       # ahead of runner tools. Install/select Python after that PATH update.
       - name: Set up Python for complete Windows banks
-        if: startsWith(matrix.test-library, 'bank-')
+        if: startsWith(matrix.test-library, 'bank-') || matrix.test-library == 'primary'
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.13'
@@ -113,6 +114,13 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Unexpected Python runtime." }
           python -m unittest discover -s scripts -p test_windows_test_plan.py
           if ($LASTEXITCODE -ne 0) { throw "Bank-plan regression tests failed." }
+
+      - name: Verify sealed JSON checkout bytes
+        if: startsWith(matrix.test-library, 'bank-') || matrix.test-library == 'primary'
+        shell: pwsh
+        run: |
+          python -m unittest discover -s scripts -p test_resource_checkout.py
+          if ($LASTEXITCODE -ne 0) { throw "Sealed resource checkout-byte verification failed." }
 
       - name: Build and test without distribution
         if: matrix.test-library == 'all'
@@ -143,6 +151,25 @@ jobs:
         run: |
           swift build --build-tests --build-path .build-windows
           if ($LASTEXITCODE -ne 0) { throw "Diagnostic test build failed." }
+
+      - name: Verify installed primary artifacts on Windows
+        if: matrix.test-library == 'primary'
+        timeout-minutes: 15
+        shell: pwsh
+        run: |
+          $discovered = @(swift test --build-path .build-windows list --skip-build --disable-xctest --enable-swift-testing)
+          if ($LASTEXITCODE -ne 0) { throw "Native primary readiness discovery failed." }
+          $required = @('modalEvidencePrecedesPrimaryPolicy', 'representativeRateWorkingSetEnvelope',
+            'bundledV30ArtifactsAreIneligible', 'installedPrimaryRetainsUnavailableLongHorizonHost',
+            'missingArtifactsStayUnavailable', 'primaryBoundaryCancellation')
+          foreach ($test in $required) {
+            if (-not ($discovered | Select-String -SimpleMatch "PrimaryEvaluatorReadinessTests/$test()" -Quiet)) {
+              throw "Required native primary test was not discovered: $test"
+            }
+          }
+          swift test --build-path .build-windows --skip-build --no-parallel --disable-xctest --enable-swift-testing --filter 'PrimaryEvaluatorReadinessTests'
+          if ($LASTEXITCODE -ne 0) { throw "Installed primary native Windows verification failed." }
+          Write-Host "Primary artifact component only; complete final-source platform and runtime gates remain required."
 
       - name: Discover selected test library
         if: matrix.test-library == 'xctest' || matrix.test-library == 'swift-testing'
