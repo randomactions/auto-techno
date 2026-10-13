@@ -284,7 +284,7 @@ struct PhrasePreparationReplayIdentityTests {
 
 @Suite("Canonical prospective successor request", .serialized)
 struct ProspectiveSuccessorRequestTests {
-    @Test("Actual successor PCM uses the exact sealed canonical request at all fixed rates")
+    @Test("Actual successor PCM uses the exact sealed canonical request at both native rates")
     @MainActor
     func canonicalPreparedSuccessorContext() throws {
         try proveCanonicalPreparedSuccessorContext(includeLiveProposal: false)
@@ -301,7 +301,7 @@ struct ProspectiveSuccessorRequestTests {
 
     @MainActor
     private func proveCanonicalPreparedSuccessorContext(includeLiveProposal: Bool) throws {
-        let artifacts = try qualifiedArtifacts(sampleRates: [8_000, 44_100, 48_000])
+        let artifacts = try qualifiedArtifacts()
         let policy = try LongHorizonProfessionalPolicy(profile: artifacts.profile,
             adversarial: artifacts.adversarial, holdout: artifacts.holdout)
         let director = AutonomousSessionDirector(rootSeed: 48_300)
@@ -310,7 +310,7 @@ struct ProspectiveSuccessorRequestTests {
         let stateFingerprint = AutonomousCandidateFingerprint.sessionState(state)
         let incoming = try #require(LongHorizonFutureAdaptationState(startingState: state, policy: policy))
         var rows: [[String: Any]] = []
-        for rate in [8_000.0, 44_100.0, 48_000.0] {
+        for rate in [44_100.0, 48_000.0] {
             let request = Self.request(state: state, rate: rate, horizon: incoming)
             let control = ContextControl()
             let source = try #require(Self.prepare(request,
@@ -399,7 +399,7 @@ struct ProspectiveSuccessorRequestTests {
             #expect(liveSeal.knownSuccessorStartSample == start + Int64(liveSource.audioPreflight.quality.analyzedFrameCount))
         }
         #expect(AutonomousCandidateFingerprint.sessionState(state) == stateFingerprint)
-        let request = Self.request(state: state, rate: 8_000, horizon: incoming)
+        let request = Self.request(state: state, rate: 44_100, horizon: incoming)
         let deniedControl = ContextControl()
         let denied = try #require(Self.prepare(request, evaluator: ContextEvaluator(
             request: request, policy: policy, control: deniedControl, dropProof: true)))

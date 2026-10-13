@@ -2898,3 +2898,14 @@ preparation, callback work, quality policy and continuation are unchanged.
 The explicit hosted `effect-dose-readiness` component runs all six tests in
 that owner with ordinary native Debug modules plus map validation. It provides
 component evidence only; complete platform and item gates remain mandatory.
+
+
+Prospective successor and private adaptation projection tests now construct their
+mechanical policy from exactly the approved 44.1/48 kHz calibration pair. Their
+former synthetic third 8 kHz route correctly fails v21 completeness and cannot
+be treated as a positive calibrated fixture. Both native PCM and exact successor
+identity checks remain intact; explicit three-rate calibration refusal and
+existing wrong-rate request/seal mutations retain negative coverage. This fixes
+fixture applicability, without extending production rate support or relaxing
+any quality gate. The hosted native-history component validates these owners
+and the policy tests separately from complete platform qualification.

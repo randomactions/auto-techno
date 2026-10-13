@@ -167,6 +167,13 @@ struct LongHorizonProfessionalPolicyTests {
 
     let oneRate = makeObservation(rootSeed: 103, sampleRates: [44_100])
     #expect(!oneRate.isComplete)
+    // The former synthetic 8 kHz positive fixture cannot expand the adopted
+    // two-native-history calibration contract or authorize a third rate.
+    let extraRate = makeObservation(rootSeed: 103, sampleRates: [8_000, 44_100, 48_000])
+    #expect(!extraRate.isComplete)
+    #expect(throws: LongHorizonProfessionalPolicyError.insufficientEvidence) {
+      try qualifiedArtifacts(sampleRates: [8_000, 44_100, 48_000])
+    }
   }
 
   @Test("Reduced observations and qualification artifacts replay byte for byte")
@@ -647,10 +654,13 @@ private let longHorizonDevelopmentSeeds: [UInt64] = [
   7, 13, 17, 42, 73, 101, 131,
 ]
 
-func qualifiedArtifacts(sampleRates: [Double] = [44_100, 48_000]) throws -> QualifiedLongHorizonArtifacts {
+func qualifiedArtifacts(
+  sampleRates: [Double] = [44_100, 48_000],
+  developmentSeedOffset: UInt64 = 0
+) throws -> QualifiedLongHorizonArtifacts {
   let development = try LongHorizonPolicyCalibrationCorpus(
     observations: longHorizonDevelopmentSeeds.map {
-      makeObservation(rootSeed: $0, sampleRates: sampleRates)
+      makeObservation(rootSeed: $0 + developmentSeedOffset, sampleRates: sampleRates)
     })
   let profile = try LongHorizonProfessionalProfile(corpus: development)
   let adversarial = try LongHorizonAdversarialSuiteReport(

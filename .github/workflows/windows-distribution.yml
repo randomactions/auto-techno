@@ -14,6 +14,7 @@ on:
           - hosted-macos-map
           - hosted-macos-primary-readiness
           - hosted-macos-effect-dose-readiness
+          - hosted-macos-native-history-readiness
           - hosted-macos-diagnostic
           - hosted-macos-harmonic-tail-diagnostic
           - windows-diagnostics
@@ -41,10 +42,10 @@ concurrency:
 
 jobs:
   hosted-macos:
-    if: inputs.validation == 'complete-hosted-macos' || inputs.validation == 'hosted-macos-map' || inputs.validation == 'hosted-macos-diagnostic' || inputs.validation == 'hosted-macos-harmonic-tail-diagnostic' || inputs.validation == 'hosted-macos-primary-readiness' || inputs.validation == 'hosted-macos-effect-dose-readiness'
+    if: inputs.validation == 'complete-hosted-macos' || inputs.validation == 'hosted-macos-map' || inputs.validation == 'hosted-macos-diagnostic' || inputs.validation == 'hosted-macos-harmonic-tail-diagnostic' || inputs.validation == 'hosted-macos-primary-readiness' || inputs.validation == 'hosted-macos-effect-dose-readiness' || inputs.validation == 'hosted-macos-native-history-readiness'
     uses: ./.github/workflows/at0039-hosted-macos.yml
     with:
-      scope: ${{ inputs.validation == 'hosted-macos-map' && 'map-only' || inputs.validation == 'hosted-macos-diagnostic' && 'protected-continuation-diagnostic' || inputs.validation == 'hosted-macos-harmonic-tail-diagnostic' && 'harmonic-tail-diagnostic' || inputs.validation == 'hosted-macos-primary-readiness' && 'primary-readiness' || inputs.validation == 'hosted-macos-effect-dose-readiness' && 'effect-dose-readiness' || 'complete' }}
+      scope: ${{ inputs.validation == 'hosted-macos-map' && 'map-only' || inputs.validation == 'hosted-macos-diagnostic' && 'protected-continuation-diagnostic' || inputs.validation == 'hosted-macos-harmonic-tail-diagnostic' && 'harmonic-tail-diagnostic' || inputs.validation == 'hosted-macos-primary-readiness' && 'primary-readiness' || inputs.validation == 'hosted-macos-effect-dose-readiness' && 'effect-dose-readiness' || inputs.validation == 'hosted-macos-native-history-readiness' && 'native-history-readiness' || 'complete' }}
 
   validate-windows-source:
     if: inputs.validation == 'windows-primary-readiness' || inputs.validation == 'windows' || inputs.validation == 'windows-diagnostics' || inputs.validation == 'windows-recovery-build' || inputs.validation == 'windows-full-banks' || inputs.validation == 'windows-planning-probe' || inputs.validation == 'windows-planning-math' || inputs.validation == ''

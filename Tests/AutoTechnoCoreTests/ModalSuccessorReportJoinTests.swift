@@ -725,8 +725,9 @@ struct ModalSuccessorReportJoinTests {
     @Test("Private long-horizon projection uses the accepted reducer and seals exact source admission")
     @MainActor
     func preparedValidationLongHorizonProjection() throws {
-        let rates = [8_000.0, 44_100.0, 48_000.0]
-        let artifacts = try qualifiedArtifacts(sampleRates: rates)
+        let rates = [44_100.0, 48_000.0]
+        let referenceRate = rates[0]
+        let artifacts = try qualifiedArtifacts()
         let policy = try LongHorizonProfessionalPolicy(profile: artifacts.profile,
             adversarial: artifacts.adversarial, holdout: artifacts.holdout)
         let director = AutonomousSessionDirector(rootSeed: 48_300)
@@ -759,27 +760,27 @@ struct ModalSuccessorReportJoinTests {
                 liveMasterHeadroom: source.liveMasterHeadroomContinuationState,
                 longHorizonDecision: observed.decision)
             #expect(successor.plan == director.plan(from: acceptedFuture))
-            if rate == 8_000 { captured = projection }
+            if rate == referenceRate { captured = projection }
             rows.append(["sampleRate": rate, "sourceIdentity": projection.sourceIdentityFingerprint,
                 "projectedStateFingerprint": projection.projectedState.fingerprint,
                 "admittedMatchesObserved": true, "canonicalSuccessorPlanMatches": true])
         }
         let seal = try #require(captured)
         for mode in [PreparedValidationTestEvaluator.Mode.missingProof, .unacceptedSuccessor, .reject] {
-            let source = try #require(prepareValidationSource(state: state, plan: plan, rate: 8_000,
+            let source = try #require(prepareValidationSource(state: state, plan: plan, rate: referenceRate,
                 evaluator: PreparedValidationTestEvaluator(startingState: state,
                     control: PreparedValidationControl(), mode: mode)).preparedPhrase)
             #expect(!source.commitEligible && seal.admittedUpdate(for: source,
                 incomingState: state, incomingAdaptation: incoming, policy: policy) == nil)
         }
-        let otherRoute = try #require(prepareValidationSource(state: state, plan: plan, rate: 8_000,
+        let otherRoute = try #require(prepareValidationSource(state: state, plan: plan, rate: referenceRate,
             evaluator: PreparedValidationTestEvaluator(startingState: state,
                 control: PreparedValidationControl(), mode: .actualSuccessor), routeGeneration: 1).preparedPhrase)
         #expect(otherRoute.commitEligible && seal.admittedUpdate(for: otherRoute,
             incomingState: state, incomingAdaptation: incoming, policy: policy) == nil)
         let wrongState = try #require(LongHorizonFutureAdaptationState(
             startingState: AutonomousSessionDirector(rootSeed: 90_909).initialState(), policy: policy))
-        let sameSource = try #require(prepareValidationSource(state: state, plan: plan, rate: 8_000,
+        let sameSource = try #require(prepareValidationSource(state: state, plan: plan, rate: referenceRate,
             evaluator: PreparedValidationTestEvaluator(startingState: state,
                 control: PreparedValidationControl(), mode: .actualSuccessor)).preparedPhrase)
         #expect(sameSource.commitEligible)
@@ -787,13 +788,14 @@ struct ModalSuccessorReportJoinTests {
             incomingAdaptation: wrongState, policy: policy) == nil)
         #expect(seal.admittedUpdate(for: sameSource, incomingState: director.initialState(),
             incomingAdaptation: incoming, policy: policy) == nil)
-        let otherArtifacts = try qualifiedArtifacts()
+        let otherArtifacts = try qualifiedArtifacts(developmentSeedOffset: 1_000)
         let otherPolicy = try LongHorizonProfessionalPolicy(profile: otherArtifacts.profile,
             adversarial: otherArtifacts.adversarial, holdout: otherArtifacts.holdout)
+        #expect(otherPolicy.policyVersion != policy.policyVersion)
         #expect(seal.admittedUpdate(for: sameSource, incomingState: state,
             incomingAdaptation: incoming, policy: otherPolicy) == nil)
         let wrongControl = PreparedValidationControl()
-        let wrong = try #require(prepareValidationSource(state: state, plan: plan, rate: 8_000,
+        let wrong = try #require(prepareValidationSource(state: state, plan: plan, rate: referenceRate,
             evaluator: PreparedValidationTestEvaluator(startingState: state, control: wrongControl,
                 mode: .actualSuccessor, longHorizonState: wrongState, longHorizonPolicy: policy)).preparedPhrase)
         #expect(!wrong.commitEligible && wrongControl.snapshot.projection == nil)

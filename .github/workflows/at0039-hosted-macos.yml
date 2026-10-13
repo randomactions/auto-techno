@@ -11,7 +11,7 @@ on:
         type: choice
         required: true
         default: complete
-        options: [complete, map-only, protected-continuation-diagnostic, harmonic-tail-diagnostic, primary-readiness, effect-dose-readiness]
+        options: [complete, map-only, protected-continuation-diagnostic, harmonic-tail-diagnostic, primary-readiness, effect-dose-readiness, native-history-readiness]
 permissions:
   contents: read
 concurrency:
@@ -58,7 +58,7 @@ jobs:
         if: matrix.bank == 0
         run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/at0039-tests"
   map:
-    if: inputs.scope == 'map-only' || inputs.scope == 'primary-readiness' || inputs.scope == 'effect-dose-readiness'
+    if: inputs.scope == 'map-only' || inputs.scope == 'primary-readiness' || inputs.scope == 'effect-dose-readiness' || inputs.scope == 'native-history-readiness'
     name: Generate native map only
     runs-on: macos-15
     timeout-minutes: 90
@@ -83,6 +83,12 @@ jobs:
         run: >-
           swift test --build-path "$RUNNER_TEMP/at0039-map" --skip-build --no-parallel
           --disable-xctest --enable-swift-testing --filter LongHorizonEffectDoseTests
+      - name: Verify native-history successor fixtures
+        if: inputs.scope == 'native-history-readiness'
+        run: >-
+          swift test --build-path "$RUNNER_TEMP/at0039-map" --skip-build --no-parallel
+          --disable-xctest --enable-swift-testing
+          --filter '(LongHorizonProfessionalPolicyTests|ProspectiveSuccessorRequestTests|ModalSuccessorReportJoinTests[/.]preparedValidationLongHorizonProjection)'
       - name: Emit source-bound generated map
         if: always() && steps.generate-map.outcome == 'success'
         run: |
