@@ -2886,3 +2886,15 @@ only. App launch, routes, physical output, resource bounds, primary and Long
 Horizon quality, lifecycle qualification and item completion remain separate.
 The existing roadmap completion refusal is unchanged. No engine, PCM, policy,
 continuation, runtime admission, budget or callback behavior changes.
+
+
+The effect-dose evidence fixture's native Debug invocation is MainActor-isolated.
+A hosted debugger replay showed its synchronous value-heavy test body entering
+`___chkstk_darwin` from the Swift Testing cooperative worker and exhausting that
+worker's stack before an assertion. The test keeps the same canonical planned
+sentence, prepared render, complete per-bar/family evidence and bounded JSON
+checks. This changes test invocation only; production planning, rendering,
+preparation, callback work, quality policy and continuation are unchanged.
+The explicit hosted `effect-dose-readiness` component runs all six tests in
+that owner with ordinary native Debug modules plus map validation. It provides
+component evidence only; complete platform and item gates remain mandatory.

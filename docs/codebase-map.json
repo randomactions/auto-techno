@@ -1004,7 +1004,8 @@
         "effect-dose accumulator",
         "sealed transient prospective adaptation; source, incoming session/adaptation and policy binding; never accepted before exact source admission",
         "Absent current v21 qualification fingerprint seals keep bundled production artifacts unavailable; historical v16-v20 resources cannot activate current policy",
-        "Report interpretation v3 retains the pending episode through neutral conservative fallback; a different bound episode alone closes it. Same-pass phrase evidence v2 preserves the finite relative-level domain and refuses historical interpretation"
+        "Report interpretation v3 retains the pending episode through neutral conservative fallback; a different bound episode alone closes it. Same-pass phrase evidence v2 preserves the finite relative-level domain and refuses historical interpretation",
+        "LongHorizonEffectDoseTests.detachedSentenceEvidenceIsExactAndBounded is MainActor-isolated at its test invocation boundary to keep the native Debug value-heavy fixture off the cooperative worker stack; all renderer/evidence assertions and production execution ownership remain unchanged. The effect-dose-readiness hosted component runs the complete six-test owner without replacing full native banks."
       ],
       "inputs": [
         "committed semantic trajectory",

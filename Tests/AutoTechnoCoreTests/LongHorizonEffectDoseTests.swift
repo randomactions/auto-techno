@@ -74,6 +74,9 @@ struct LongHorizonEffectDoseTests {
   }
 
   @Test("A planned sentence is bound to exact detached return evidence")
+  // Native Debug's value-heavy fixture exceeds the cooperative worker stack.
+  // Isolate only test setup/assertions; the production preparation is unchanged.
+  @MainActor
   func detachedSentenceEvidenceIsExactAndBounded() throws {
     let witness = try #require(firstPlannedSentence())
     var renderState = RenderState()
