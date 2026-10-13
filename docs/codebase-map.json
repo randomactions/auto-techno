@@ -979,7 +979,7 @@
     {
       "id": "long-horizon-signal-and-future-adaptation",
       "name": "Long-horizon signal analysis and future adaptation",
-      "responsibility": "Accumulate realized signal and effect-dose trajectories, apply the calibrated long-horizon policy, and emit one bounded preserve, recover, or one-per-world material-reframe decision for an eligible unscheduled future phrase. Current observation/corpus v4 and policy v18 consume full accepted semantic/signal/effect-dose evidence at both native rates, bind count geometry and preserve worst physical effects without averaging; sparse historical v16 resources cannot activate pending v18 seals.",
+      "responsibility": "Accumulate realized signal and effect-dose trajectories, retain both complete native histories per root, and apply the same calibrated native judge independently to every semantic, operator and effect gate. Observation/corpus v7 and policy v21 preserve seven development and two disjoint holdout roots; runtime observation/adaptation v5 binds native geometry and material fields. One bounded preserve, recover or one-per-world material-reframe decision applies only to an eligible unscheduled future phrase; pending current seals fail closed.",
       "targets": [
         "AutoTechnoDSP"
       ],
@@ -1003,7 +1003,7 @@
         "signal trajectory accumulator",
         "effect-dose accumulator",
         "sealed transient prospective adaptation; source, incoming session/adaptation and policy binding; never accepted before exact source admission",
-        "Absent current v19 qualification fingerprint seals keep bundled production artifacts unavailable; historical v16-v18 resources cannot activate current policy",
+        "Absent current v21 qualification fingerprint seals keep bundled production artifacts unavailable; historical v16-v20 resources cannot activate current policy",
         "Report interpretation v3 retains the pending episode through neutral conservative fallback; a different bound episode alone closes it. Same-pass phrase evidence v2 preserves the finite relative-level domain and refuses historical interpretation"
       ],
       "inputs": [
@@ -1011,7 +1011,7 @@
         "realized render evidence",
         "versioned long-horizon artifacts",
         "private prepared source preview for detached prospective reduction",
-        "Independent complete native-route runtime observations from actual accepted products; identical semantic/effect geometry and dense signal counts required"
+        "Independent complete native histories from actual accepted products; each route retains its own semantic/effect geometry with dense signal counts and zero omissions"
       ],
       "outputs": [
         "LongHorizonFutureAdaptationUpdate",
@@ -1028,7 +1028,7 @@
         "Native non-retryable candidate-incomplete refusal exposes the existing typed completeness failure count and at most eight named codes within the existing 24-detail bound; no new predicate, retry authorization, state or PCM. The f5dfce0 full native route refused after153 accepted phrases/1652 bars; full v18 qualification remains pending. Exact selected refused instrument vectors are retained as local-only canonical JSON witnesses with fixed output/write failures and no overwriting, import, accepted evidence or promotion authority.",
         "Missing actual signal evidence retains a local-only derived-input witness after refusal: candidate vector, effect dose, score coordination, binding fingerprints and preflight musical scalars. No PCM, continuation restoration, accepted evidence, gate change or overwrite; nonfinite diagnostic values remain explicit strings.",
         "Signal phrase v2/report v3 preserve exact finite effect RMS ratios across the representable positive Double domain, including subnormal tails below -240dB. Absolute safety, source/score/PCM bindings and nil applicability stay unchanged. Runtime observation/adaptation v4 and calibration observation/corpus v5/profile family v19 reject historical interpretation; seals remain unavailable until a fresh native development/adversarial/holdout study passes.",
-        "Native calibration route reduction v6/profile family v20 preserves per-dimension worst physical effect occupancy, tail counts, run length and return level across rates, plus minimum recovery/material diversity, while requiring identical score eligibility and semantic history. Runtime report v4 and signal report v3 remain unchanged; missing v20 artifacts fail closed."
+        "Independent native-history observation/corpus v7 and policy v21 retain each route and require both verdicts to pass without averaging or mixed denominators. The shared native judge includes semantic, operator and material/physical effect gates; adversarial attacks target each rate separately. Runtime observation/adaptation v5 binds counts and material identity. Current seals remain unavailable pending fresh qualification."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/LongHorizonEffectDose.swift",

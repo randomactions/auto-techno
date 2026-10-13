@@ -41,7 +41,10 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
       Self.progress(
         "development root=\(observation.rootSeed) accepted=\(verdict.accepted) "
           + "failures=\(verdict.failedDimensions.map(\.rawValue).joined(separator: ","))")
-      #expect(verdict.accepted)
+      for route in verdict.routeVerdicts {
+        Self.progress("development-native root=\(observation.rootSeed) rate=\(Int(route.sampleRate)) accepted=\(route.verdict.accepted) source=\(route.sourceFingerprint)")
+      }
+      #expect(verdict.allNativeRoutesAccepted)
     }
     let adversarial = try LongHorizonAdversarialSuiteReport(
       profile: profile,
@@ -59,6 +62,9 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
           + "operators=\(journey.verdict.failedOperatorDeltas.count) "
           + "effects=\(journey.verdict.failedEffectFamilies.map(\.rawValue).joined(separator: ","))"
       )
+      for route in journey.verdict.routeVerdicts {
+        Self.progress("holdout-native root=\(journey.rootSeed) rate=\(Int(route.sampleRate)) accepted=\(route.verdict.accepted) source=\(route.sourceFingerprint) failures=\(route.verdict.failedDimensions.map(\.rawValue).joined(separator: ","))")
+      }
       for delta in journey.verdict.failedOperatorDeltas {
         let bound = profile.operatorDeltaBounds.first {
           $0.sampleRate == delta.sampleRate
@@ -121,10 +127,10 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     let directory = try outputDirectory()
     try development.deterministicJSON().write(
       to: directory.appendingPathComponent(
-        "long-horizon-development-corpus-local-v6.json"))
+        "long-horizon-development-corpus-local-v7.json"))
     try holdout.deterministicJSON().write(
       to: directory.appendingPathComponent(
-        "long-horizon-holdout-corpus-local-v6.json"))
+        "long-horizon-holdout-corpus-local-v7.json"))
   }
 
   private func outputDirectory() throws -> URL {
@@ -154,12 +160,12 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     let observation = try await renderObservation(
       rootSeed: rootSeed, primary: primary)
     let url = try outputDirectory().appendingPathComponent(
-      "long-horizon-observation-local-\(rootSeed)-v3.json")
+      "long-horizon-observation-local-\(rootSeed)-v7.json")
     try observation.deterministicJSON().write(to: url)
     Self.progress(
       "diagnostic root=\(rootSeed) source=\(observation.sourceFingerprint) "
-        + "semantic=\(observation.semanticFingerprint) "
-        + "signals=\(observation.signalFingerprints.joined(separator: ","))")
+        + "semantic=\(observation.routes.map(\.semanticFingerprint).joined(separator: ",")) "
+        + "signals=\(observation.routes.map(\.signalFingerprint).joined(separator: ","))")
   }
 
   private func prepareOutputNamespace() throws {

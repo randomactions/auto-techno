@@ -6,9 +6,9 @@ import Foundation
 /// runtime verdict uses only the exact current route rate.
 package enum LongHorizonRuntimePolicySchema {
   package static let observationVersion =
-    "autotechno-long-horizon-runtime-observation.v4"
+    "autotechno-long-horizon-runtime-observation.v5"
   package static let adaptationVersion =
-    "autotechno-long-horizon-future-adaptation.v4"
+    "autotechno-long-horizon-future-adaptation.v5"
   package static let minimumDecisionIntervalBars = 256
 }
 
@@ -126,32 +126,12 @@ package struct LongHorizonRuntimePolicyObservation: Codable, Equatable,
     sampleRate: Double
   ) throws {
     guard calibrationObservation.isComplete,
-      let rateIndex = calibrationObservation.sampleRates.firstIndex(of: sampleRate)
+      let route = calibrationObservation.routes.first(where: { $0.sampleRate == sampleRate })
     else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
-    self.init(
-      engineVersion: calibrationObservation.engineVersion,
-      primaryPolicyVersion: calibrationObservation.primaryPolicyVersion,
-      rootSeed: calibrationObservation.rootSeed,
-      semanticFingerprint: calibrationObservation.semanticFingerprint,
-      observedPhraseCount: calibrationObservation.observedPhraseCount,
-      observedBarCount: calibrationObservation.observedBarCount,
-      semanticValues: calibrationObservation.semanticValues,
-      sampleRate: sampleRate,
-      signalFingerprint: calibrationObservation.signalFingerprints[rateIndex],
-      signalObservationCount:
-        calibrationObservation.signalObservationCounts[rateIndex],
-      signalOmittedPhraseCount:
-        calibrationObservation.signalOmittedPhraseCounts[rateIndex],
-      operatorDeltas: calibrationObservation.operatorDeltas.filter {
-        $0.sampleRate == sampleRate
-      },
-      effects: calibrationObservation.effects)
-    guard isStructurallyComplete else {
-      throw LongHorizonProfessionalPolicyError.invalidEvidence
-    }
+    self = route
   }
 
-  private init(
+  package init(
     engineVersion: String,
     primaryPolicyVersion: String,
     rootSeed: UInt64,
@@ -182,6 +162,8 @@ package struct LongHorizonRuntimePolicyObservation: Codable, Equatable,
     self.effects = effects
     sourceFingerprint = Self.makeFingerprint(
       rootSeed: rootSeed,
+      observedPhraseCount: observedPhraseCount, observedBarCount: observedBarCount,
+      signalObservationCount: signalObservationCount, signalOmittedPhraseCount: signalOmittedPhraseCount,
       semanticFingerprint: semanticFingerprint,
       primaryPolicyVersion: primaryPolicyVersion,
       sampleRate: sampleRate,
@@ -205,23 +187,32 @@ package struct LongHorizonRuntimePolicyObservation: Codable, Equatable,
       && operatorDeltas.count
         == LongHorizonEpisodeOperator.allCases.count
         * LongHorizonSignalMetric.allCases.count
+      && Set(operatorDeltas.map { "\($0.operatorKind.rawValue):\($0.metric.rawValue)" }).count == operatorDeltas.count
       && operatorDeltas.allSatisfy {
         $0.sampleRate == sampleRate && $0.transitionCount > 0
           && $0.meanDelta.isFinite
       }
       && effects.map(\.family) == LongHorizonEffectFamily.allCases
       && effects.allSatisfy {
-        $0.observedBarCount > 0
+        $0.observedBarCount == observedBarCount
           && $0.eligibleBarCount >= 0 && $0.activeBarCount >= 0
           && $0.tailOnlyBarCount >= 0 && $0.recoveryCount >= 0
           && $0.maximumActiveRunBars >= 0
           && $0.wetBarOccupancy.isFinite
           && (0...1).contains($0.wetBarOccupancy)
           && ($0.maximumReturnToSourceDB?.isFinite ?? true)
+          && ($0.family == .generatedGraph
+            ? ($0.materialWorldCount ?? 0) > 0
+              && ($0.meanEffectWorldDistance.map { $0.isFinite && (0...1).contains($0) } ?? false)
+              && ($0.maximumEffectWorldDistance.map { $0.isFinite && (0...1).contains($0) } ?? false)
+            : $0.materialWorldCount == nil && $0.meanEffectWorldDistance == nil
+              && $0.maximumEffectWorldDistance == nil)
       }
       && sourceFingerprint
         == Self.makeFingerprint(
           rootSeed: rootSeed,
+          observedPhraseCount: observedPhraseCount, observedBarCount: observedBarCount,
+          signalObservationCount: signalObservationCount, signalOmittedPhraseCount: signalOmittedPhraseCount,
           semanticFingerprint: semanticFingerprint,
           primaryPolicyVersion: primaryPolicyVersion,
           sampleRate: sampleRate,
@@ -252,6 +243,8 @@ package struct LongHorizonRuntimePolicyObservation: Codable, Equatable,
 
   private static func makeFingerprint(
     rootSeed: UInt64,
+    observedPhraseCount: Int, observedBarCount: Int,
+    signalObservationCount: Int, signalOmittedPhraseCount: Int,
     semanticFingerprint: String,
     primaryPolicyVersion: String,
     sampleRate: Double,
@@ -263,6 +256,8 @@ package struct LongHorizonRuntimePolicyObservation: Codable, Equatable,
     var hasher = LongHorizonRuntimeHasher()
     hasher.mix(LongHorizonRuntimePolicySchema.observationVersion)
     hasher.mix(rootSeed)
+    hasher.mix(observedPhraseCount); hasher.mix(observedBarCount)
+    hasher.mix(signalObservationCount); hasher.mix(signalOmittedPhraseCount)
     hasher.mix(semanticFingerprint)
     hasher.mix(primaryPolicyVersion)
     hasher.mix(sampleRate)
@@ -288,6 +283,9 @@ package struct LongHorizonRuntimePolicyObservation: Codable, Equatable,
       hasher.mix(effect.maximumActiveRunBars)
       hasher.mix(effect.wetBarOccupancy)
       hasher.mix(effect.maximumReturnToSourceDB ?? -Double.greatestFiniteMagnitude)
+      hasher.mix(effect.materialWorldCount ?? -1)
+      hasher.mix(effect.meanEffectWorldDistance ?? -Double.greatestFiniteMagnitude)
+      hasher.mix(effect.maximumEffectWorldDistance ?? -Double.greatestFiniteMagnitude)
     }
     return hasher.hex
   }
@@ -371,10 +369,26 @@ extension LongHorizonProfessionalProfileEvaluator {
         case (let value?, let upper?): value <= upper
         case (_?, nil): false
         }
+      let materialWorldWithinBound: Bool
+      if effect.family == .generatedGraph {
+        materialWorldWithinBound =
+          (effect.materialWorldCount ?? 0) >=
+            (bound.minimumMaterialWorldCount ?? Int.max)
+          && (effect.meanEffectWorldDistance ?? .infinity) <=
+            (bound.maximumMeanEffectWorldDistance ?? -.infinity)
+          && (effect.maximumEffectWorldDistance ?? .infinity) <=
+            (bound.maximumEffectWorldDistance ?? -.infinity)
+      } else {
+        materialWorldWithinBound =
+          effect.materialWorldCount == nil
+          && effect.meanEffectWorldDistance == nil
+          && effect.maximumEffectWorldDistance == nil
+      }
       if effect.wetBarOccupancy > bound.maximumWetBarOccupancy
         || tailOccupancy > bound.maximumTailBarOccupancy
         || effect.maximumActiveRunBars > bound.maximumActiveRunBars
         || !returnWithinBound
+        || !materialWorldWithinBound
       {
         failedEffects.append(effect.family)
         dimensions.insert(.effectFatigue)
