@@ -14,11 +14,20 @@ import shlex
 import subprocess
 import sys
 import zlib
-from windows_test_plan import plan
+from windows_test_plan import plan as native_plan
 
 SCHEMA = 'autotechno-hosted-macos-verification.v1'
 EXECUTION_SCHEMA = 'autotechno-at0039-hosted-execution.v1'
 BANKS = 16
+ISOLATED_IDENTITY = 'swift-testing:ModalSuccessorReportJoinTests/continuousCalibrationMembershipAndFitting()'
+
+
+def plan(discoveries, bank, banks):
+    # The complete bank exceeded GitHub's six-hour limit while this native
+    # fixture was still running. Give it one entire bank; retain every identity,
+    # assertion, native rate, and all sixteen required successful receipts.
+    return native_plan(discoveries, bank, banks, isolated_identity=ISOLATED_IDENTITY)
+
 WORKFLOW = '.github/workflows/windows-distribution.yml'
 RETIRED_SKIPS = {
     'Legacy random mutation suppression': 'AutoTechnoCoreTests.GeneratedDSPTopologyTests/mutationSuppression()',

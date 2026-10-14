@@ -9,9 +9,12 @@ import re
 IDENTIFIER = re.compile(r'^(?P<module>[A-Za-z_][A-Za-z_0-9]*Tests)\.(?P<suite>[A-Za-z_][A-Za-z_0-9]*)/(?P<test>\S.*)$')
 
 
-def plan(discoveries, bank, banks):
+def plan(discoveries, bank, banks, *, isolated_identity=None):
     if type(bank) is not int or type(banks) is not int or not 1 <= banks <= 32 or not 0 <= bank < banks:
         raise ValueError('invalid bank bounds')
+    if isolated_identity is not None and (not isinstance(isolated_identity, str) or
+            not isolated_identity or banks < 2):
+        raise ValueError('invalid isolated native identity')
     if set(discoveries) != {'xctest', 'swift-testing'}:
         raise ValueError('both native frameworks must be discovered')
     all_cases = []
@@ -43,7 +46,11 @@ def plan(discoveries, bank, banks):
                 # Equal suite/method names across modules must stay together:
                 # SwiftPM's cross-framework filter can match either module.
                 identity = library + ':' + suite + '/' + test
-                assignment = int.from_bytes(hashlib.sha256(identity.encode()).digest()[:8], 'big') % banks
+                # Reserve the final bank only when the caller explicitly requests
+                # one expensive identity. Windows keeps its original hash plan.
+                ordinary_banks = banks - 1 if isolated_identity is not None else banks
+                assignment = (banks - 1 if identity == isolated_identity else
+                              int.from_bytes(hashlib.sha256(identity.encode()).digest()[:8], 'big') % ordinary_banks)
                 groups.setdefault(assignment, []).append(case)
             for assignment, selected_cases in sorted(groups.items()):
                 tests = sorted({IDENTIFIER.fullmatch(case)['test'] for case in selected_cases})

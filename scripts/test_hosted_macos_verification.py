@@ -104,6 +104,35 @@ class HostedMacOSVerificationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'all sixteen banks'):
             hosted.verify(bundle, SOURCE)
 
+    def test_expensive_calibration_has_a_dedicated_bank_without_losing_coverage(self):
+        discovery = fixture()['banks'][0]['receipt']['discovery']
+        heavy = 'AutoTechnoCoreTests.ModalSuccessorReportJoinTests/continuousCalibrationMembershipAndFitting()'
+        neighbors = [heavy, heavy.replace('Fitting()', 'FittingExtra()'),
+                     heavy.replace('JoinTests/', 'JoinTestsExtra/'),
+                     heavy.replace('Fitting()', 'Fitting(rate:)')]
+        discovery['swift-testing'] += '\n' + '\n'.join(neighbors)
+        expected = sorted(library + ':' + identity for library, text in discovery.items()
+                          for identity in text.splitlines())
+        actual = []
+        for bank in range(hosted.BANKS):
+            result = hosted.plan(discovery, bank, hosted.BANKS)
+            identities = [row['library'] + ':' + identity for row in result['selected']
+                          for identity in row['identifiers']]
+            actual.extend(identities)
+            if bank == hosted.BANKS - 1:
+                self.assertEqual(identities, ['swift-testing:' + heavy])
+            else:
+                self.assertNotIn('swift-testing:' + heavy, identities)
+            for row in result['selected']:
+                matched = [case for case in discovery[row['library']].splitlines()
+                           if re.search(row['selector'], case)]
+                self.assertEqual(sorted(matched), row['identifiers'])
+            reversed_discovery = {key: '\n'.join(reversed(value.splitlines()))
+                                  for key, value in discovery.items()}
+            self.assertEqual(result, hosted.plan(reversed_discovery, bank, hosted.BANKS))
+        self.assertEqual(sorted(actual), expected)
+        self.assertEqual(len(actual), len(set(actual)))
+
     def test_partial_mixed_failed_or_falsely_counted_receipts_refuse(self):
         changes = [lambda d:d['banks'].pop(), lambda d:d.__setitem__('source','f'*40),
           lambda d:d['run'].__setitem__('conclusion','failure'),

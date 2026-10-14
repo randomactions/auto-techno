@@ -81,6 +81,18 @@ class NativeWindowsBankPlanTests(unittest.TestCase):
         self.assertNotRegex('AutoTechnoCoreTests.OwnerTests/faultXrate:mode:Y', item['selector'])
         self.assertNotRegex(inputs['swift-testing'] + 'Suffix', item['selector'])
 
+    def test_default_windows_assignment_is_unchanged_by_optional_isolation(self):
+        import hashlib
+        for bank in range(8):
+            for row in plan(self.fixture(), bank, 8)['selected']:
+                for case in row['identifiers']:
+                    identity = row['library'] + ':' + row['suite'] + '/' + case.split('/', 1)[1]
+                    expected = int.from_bytes(hashlib.sha256(identity.encode()).digest()[:8], 'big') % 8
+                    self.assertEqual(bank, expected)
+        for value, banks in [('', 8), (True, 8), ('swift-testing:OwnerTests/heavy()', 1)]:
+            with self.assertRaises(ValueError):
+                plan(self.fixture(), 0, banks, isolated_identity=value)
+
     def test_missing_duplicate_unknown_and_invalid_banks_refuse(self):
         for mutate in [lambda d:d.pop('xctest'), lambda d:d.update(xctest=''),
                        lambda d:d.update(xctest=d['xctest']*2),
