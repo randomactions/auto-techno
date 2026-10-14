@@ -896,6 +896,11 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
       "phraseIndex": request.key.phraseIndex,
       "retryOrdinal": request.key.qualityRetryOrdinal,
       "retryWave": request.key.qualityRecoveryContext.wave,
+      "presentedRepeatBars": request.key.qualityRecoveryContext.presentedRepeatBars,
+      "incomingRecoveryIntent": try JSONSerialization.jsonObject(
+        with: JSONEncoder().encode(request.key.qualityRecoveryContext.intent)),
+      "proposedRecoveryIntent": try JSONSerialization.jsonObject(
+        with: JSONEncoder().encode(decision.recoveryIntent)),
       "sourceCoreFingerprint": request.replayIdentity.sourceStateFingerprint,
       "requestFingerprint": request.replayIdentity.fingerprint,
       "planFingerprint": AutonomousCandidateFingerprint.plan(prepared.plan),
@@ -913,7 +918,12 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     let data = try JSONSerialization.data(withJSONObject: witness, options: [.sortedKeys])
     try data.write(to: URL(fileURLWithPath: directory, isDirectory: true)
       .appendingPathComponent(filename), options: .withoutOverwriting)
-    return recovery
+    // One optional actual recovery wave exposes the measured effect of the
+    // canonical retry intent. Acceptance or the next wave stops the diagnostic;
+    // no full study budget, admission rule or production path is changed.
+    return recovery && (prepared.commitEligible ||
+      environment["AUTOTECHNO_LONG_HORIZON_RECOVERY_WAVE_PROBE"] != "1" ||
+      request.key.qualityRecoveryContext.wave >= 1)
   }
 
   @Test("Probe the actual native bootstrap through the same full-journey owner",
