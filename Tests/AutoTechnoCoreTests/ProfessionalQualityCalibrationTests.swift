@@ -1489,6 +1489,7 @@ struct ProfessionalQualityCalibrationTests {
     }
 
     @Test("Pad projections follow varied phrase and modulation populations")
+    @MainActor
     func padPopulationProjectionsAcrossCandidates() throws {
         let director = AutonomousSessionDirector(rootSeed: 91_773)
         var state = director.initialState()
