@@ -1,7 +1,7 @@
 {
   "schema": "autotechno-component-license-asset-manifest.v1",
-  "manifestVersion": 2,
-  "accessDate": "2026-10-12",
+  "manifestVersion": 3,
+  "accessDate": "2026-10-14",
   "scopePolicy": "Covers the repository licence, resolved SwiftPM graph, source-level platform imports and linked libraries, CI actions, active Windows build toolchains, explicit Windows distribution isolation, every tracked resource/licence/media/binary asset, and governed local-only research classes. The dormant project-owned Inno Setup template is not invoked by an active script or workflow and is not a build dependency. Ubiquitous host shell, Git, and operating-system utilities are out of scope unless the repository redistributes them or invokes a separately licensed package. Research citations are evidence, not dependencies or copied assets.",
   "components": [
     {
@@ -48,8 +48,11 @@
       "distribution": "repository-source",
       "provenanceClass": "GREEN-ORIGINAL",
       "disposition": "retain",
-      "bindings": [],
+      "bindings": [
+        "repository-workflow:.github/workflows/at0039-hosted-macos.yml"
+      ],
       "sourceAnchors": [
+        ".github/workflows/at0039-hosted-macos.yml",
         "LICENSE",
         "README.md"
       ]
@@ -315,6 +318,36 @@
       ]
     },
     {
+      "path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v33.json",
+      "kind": "project-generated-qualification-resource",
+      "sha256": "e5d5813b2d60256c1e1dd9351f6072fea4bd0b7e1b62090b85d64f73395c2e9e",
+      "licenseComponent": "auto-techno-project",
+      "origin": "Original engine-v49 primary evidence retained for stale-resource rejection",
+      "role": "Packaged primary adversarial-suite resource revision33; exact artifact owner controls applicability and activation",
+      "distribution": "shipped-runtime",
+      "disposition": "retain",
+      "sourceAnchors": [
+        "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift",
+        "Tests/AutoTechnoCoreTests/PrimaryEvaluatorReadinessTests.swift",
+        "Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationIntegrationTests.swift"
+      ]
+    },
+    {
+      "path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v34.json",
+      "kind": "project-generated-qualification-resource",
+      "sha256": "bc755e2047ba3cc67705d87eadb29cb6ca53223230d00b7ba1a6134573ca6f50",
+      "licenseComponent": "auto-techno-project",
+      "origin": "Original engine-v50 primary evidence from the complete fresh native development/adversarial/holdout study",
+      "role": "Packaged primary adversarial-suite resource revision34; exact artifact owner controls applicability and activation",
+      "distribution": "shipped-runtime",
+      "disposition": "retain",
+      "sourceAnchors": [
+        "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift",
+        "Tests/AutoTechnoCoreTests/PrimaryEvaluatorReadinessTests.swift",
+        "Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationIntegrationTests.swift"
+      ]
+    },
+    {
       "path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v30.json",
       "kind": "project-generated-qualification-resource",
       "sha256": "2a2429b80f8a656b15b97c43b82f56d3b8c597e526f7ac965fdcf9f670ca8bc3",
@@ -329,6 +362,36 @@
       ]
     },
     {
+      "path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v33.json",
+      "kind": "project-generated-qualification-resource",
+      "sha256": "cc36d20ac801b3096c3bff78629989e72219c112cdbb921b146a3b99d38f3b6d",
+      "licenseComponent": "auto-techno-project",
+      "origin": "Original engine-v49 primary evidence retained for stale-resource rejection",
+      "role": "Packaged primary holdout resource revision33; exact artifact owner controls applicability and activation",
+      "distribution": "shipped-runtime",
+      "disposition": "retain",
+      "sourceAnchors": [
+        "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift",
+        "Tests/AutoTechnoCoreTests/PrimaryEvaluatorReadinessTests.swift",
+        "Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationIntegrationTests.swift"
+      ]
+    },
+    {
+      "path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v34.json",
+      "kind": "project-generated-qualification-resource",
+      "sha256": "e68bb3c01dde8f6f0710670f4704f348a09a42353b7601c39e135662712f4bfb",
+      "licenseComponent": "auto-techno-project",
+      "origin": "Original engine-v50 primary evidence from the complete fresh native development/adversarial/holdout study",
+      "role": "Packaged primary holdout resource revision34; exact artifact owner controls applicability and activation",
+      "distribution": "shipped-runtime",
+      "disposition": "retain",
+      "sourceAnchors": [
+        "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift",
+        "Tests/AutoTechnoCoreTests/PrimaryEvaluatorReadinessTests.swift",
+        "Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationIntegrationTests.swift"
+      ]
+    },
+    {
       "path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json",
       "kind": "project-generated-calibration-resource",
       "sha256": "e0fc12e521f456d93ba1f6299cea4c0c2d39613b9b24c739c363178208fca677",
@@ -339,6 +402,36 @@
       "disposition": "retain",
       "sourceAnchors": [
         "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift",
+        "Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationIntegrationTests.swift"
+      ]
+    },
+    {
+      "path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v33.json",
+      "kind": "project-generated-calibration-resource",
+      "sha256": "fa1dac07dd6492b5acc3ff2cbda81a8028fc9f0494b44b3ebed97dbcac6a40ed",
+      "licenseComponent": "auto-techno-project",
+      "origin": "Original engine-v49 primary evidence retained for stale-resource rejection",
+      "role": "Packaged primary profile resource revision33; exact artifact owner controls applicability and activation",
+      "distribution": "shipped-runtime",
+      "disposition": "retain",
+      "sourceAnchors": [
+        "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift",
+        "Tests/AutoTechnoCoreTests/PrimaryEvaluatorReadinessTests.swift",
+        "Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationIntegrationTests.swift"
+      ]
+    },
+    {
+      "path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v34.json",
+      "kind": "project-generated-calibration-resource",
+      "sha256": "ee2178efd6c061652ad8a0927a5c4c79731ebc64a29994869649763e00187902",
+      "licenseComponent": "auto-techno-project",
+      "origin": "Original engine-v50 primary evidence from the complete fresh native development/adversarial/holdout study",
+      "role": "Packaged primary profile resource revision34; exact artifact owner controls applicability and activation",
+      "distribution": "shipped-runtime",
+      "disposition": "retain",
+      "sourceAnchors": [
+        "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift",
+        "Tests/AutoTechnoCoreTests/PrimaryEvaluatorReadinessTests.swift",
         "Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationIntegrationTests.swift"
       ]
     }

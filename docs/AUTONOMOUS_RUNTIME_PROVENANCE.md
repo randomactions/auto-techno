@@ -775,8 +775,16 @@ ignore rule, tracked private research artifact, or mutable GitHub Action selecto
 
 The current macOS executable has no third-party runtime package. Swift Testing
 and Swift Syntax are exact test-only pins. Apple and Windows system frameworks
-remain platform-provided. Every active GitHub Action is pinned to an exact
-reviewed revision. The Windows source-validation path builds and tests in place,
+remain platform-provided. Every external GitHub Action is pinned to an exact
+reviewed revision. A same-repository reusable workflow uses one explicit
+`repository-workflow:` binding owned and source-anchored by the project. Both
+GitHub local reference forms bind the caller's commit; the checker requires a
+flat tracked YAML target, rejects reference suffixes, traversal, missing files
+and symbolic links, and scans external pins inside both YAML extensions. Local
+ownership never waives an external-action pin. Historical v33 and current v34
+primary resources are declared separately with exact unchanged byte hashes;
+manifest presence supplies no activation or quality authority.
+The Windows source-validation path builds and tests in place,
 but does not install Inno Setup, copy Swift/Foundation/Dispatch or MSVC runtime
 DLLs, create an installer or archive, or upload a distribution. The dormant
 project-owned installer template is isolated from every active script and

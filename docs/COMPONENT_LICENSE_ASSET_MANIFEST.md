@@ -3,8 +3,8 @@
 > Generated from `docs/COMPONENT_LICENSE_ASSET_MANIFEST.json`; do not edit by hand.
 
 Schema: `autotechno-component-license-asset-manifest.v1`  
-Manifest version: 2  
-Source access date: 2026-10-12  
+Manifest version: 3  
+Source access date: 2026-10-14  
 
 ## Scope
 
@@ -34,8 +34,14 @@ Covers the repository licence, resolved SwiftPM graph, source-level platform imp
 | `Sources/AutoTechnoDSP/Resources/long-horizon-holdout-v16.json` | project-generated-qualification-resource | Deterministically generated from repository-owned long-horizon corpus and policy code | `shipped-runtime` / `retain` | `268a51b03a3b03e8de22cba81197fcd9e6f700ae4df9e6e64cfa95eb4f453147` |
 | `Sources/AutoTechnoDSP/Resources/long-horizon-professional-profile-v16.json` | project-generated-calibration-resource | Deterministically generated from repository-owned long-horizon corpus and policy code | `shipped-runtime` / `retain` | `32ef16ca5431b2f0b9cb8b9763526fbb1b1cb2cf51fc4be95f96a5ee9726d762` |
 | `Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v30.json` | project-generated-qualification-resource | Deterministically generated from repository-owned primary corpus, renderer, and evaluator code | `shipped-runtime` / `retain` | `247078c111ca043d24f28697c444a996005ed9fc40985a3bd7ed39dce0146417` |
+| `Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v33.json` | project-generated-qualification-resource | Original engine-v49 primary evidence retained for stale-resource rejection | `shipped-runtime` / `retain` | `e5d5813b2d60256c1e1dd9351f6072fea4bd0b7e1b62090b85d64f73395c2e9e` |
+| `Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v34.json` | project-generated-qualification-resource | Original engine-v50 primary evidence from the complete fresh native development/adversarial/holdout study | `shipped-runtime` / `retain` | `bc755e2047ba3cc67705d87eadb29cb6ca53223230d00b7ba1a6134573ca6f50` |
 | `Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v30.json` | project-generated-qualification-resource | Deterministically generated from repository-owned primary corpus, renderer, and evaluator code | `shipped-runtime` / `retain` | `2a2429b80f8a656b15b97c43b82f56d3b8c597e526f7ac965fdcf9f670ca8bc3` |
+| `Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v33.json` | project-generated-qualification-resource | Original engine-v49 primary evidence retained for stale-resource rejection | `shipped-runtime` / `retain` | `cc36d20ac801b3096c3bff78629989e72219c112cdbb921b146a3b99d38f3b6d` |
+| `Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v34.json` | project-generated-qualification-resource | Original engine-v50 primary evidence from the complete fresh native development/adversarial/holdout study | `shipped-runtime` / `retain` | `e68bb3c01dde8f6f0710670f4704f348a09a42353b7601c39e135662712f4bfb` |
 | `Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json` | project-generated-calibration-resource | Deterministically generated from repository-owned primary corpus, renderer, and evaluator code | `shipped-runtime` / `retain` | `e0fc12e521f456d93ba1f6299cea4c0c2d39613b9b24c739c363178208fca677` |
+| `Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v33.json` | project-generated-calibration-resource | Original engine-v49 primary evidence retained for stale-resource rejection | `shipped-runtime` / `retain` | `fa1dac07dd6492b5acc3ff2cbda81a8028fc9f0494b44b3ebed97dbcac6a40ed` |
+| `Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v34.json` | project-generated-calibration-resource | Original engine-v50 primary evidence from the complete fresh native development/adversarial/holdout study | `shipped-runtime` / `retain` | `ee2178efd6c061652ad8a0927a5c4c79731ebc64a29994869649763e00187902` |
 
 ## Local-only artifact classes
 
@@ -73,8 +79,8 @@ Covers the repository licence, resolved SwiftPM graph, source-level platform imp
 - Source: local repository
 - Licence: LICENSE
 - Notice: repository root licence/notice scan on 2026-08-31
-- Repository anchors: `LICENSE`, `README.md`
-- Bindings: none
+- Repository anchors: `.github/workflows/at0039-hosted-macos.yml`, `LICENSE`, `README.md`
+- Bindings: `repository-workflow:.github/workflows/at0039-hosted-macos.yml`
 
 ### GitHub Actions checkout
 

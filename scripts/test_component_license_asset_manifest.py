@@ -199,6 +199,75 @@ class ComponentLicenseAssetManifestTests(unittest.TestCase):
         self.manifest["components"][0]["revision"] = "v4"  # type: ignore[index]
         self.assertTrue(any("must use an exact 40-digit revision" in error for error in self.compare()))
 
+    def add_local_workflow(self, *, tracked: bool = True, declared: bool = True) -> str:
+        path = ".github/workflows/child.yaml"
+        self.write(path, "on:\n  workflow_call:\njobs:\n  build:\n    steps:\n      - uses: actions/checkout@" + "c" * 40 + "\n")
+        self.write(".github/workflows/test.yml",
+                   "jobs:\n  local:\n    uses: ./" + path + "\n")
+        if tracked:
+            subprocess.run(["git", "add", path], cwd=self.root, check=True)
+        if declared:
+            project = next(c for c in self.manifest["components"] if c["kind"] == "project")
+            project["bindings"] = ["repository-workflow:" + path]
+            project["sourceAnchors"] = sorted(project["sourceAnchors"] + [path])
+        return path
+
+    def test_local_workflow_forms_use_explicit_project_ownership(self) -> None:
+        path = self.add_local_workflow()
+        for prefix in ("./", "$/"):
+            with self.subTest(prefix=prefix):
+                self.write(".github/workflows/test.yml", "jobs:\n  local:\n    uses: " + prefix + path + "\n")
+                self.assertEqual(self.compare(), [])
+                self.assertIn("repository-workflow:" + path, inventory.discovered_bindings(self.root))
+                self.assertNotIn("ci-action:" + prefix + path, inventory.discovered_bindings(self.root))
+
+    def test_undeclared_local_workflow_is_rejected(self) -> None:
+        self.add_local_workflow(declared=False)
+        self.assertTrue(any("undeclared dependency bindings" in e for e in self.compare()))
+
+    def test_local_workflow_missing_or_untracked_target_is_rejected(self) -> None:
+        path = self.add_local_workflow(tracked=False)
+        self.assertTrue(any("must be tracked and present" in e for e in self.compare()))
+        subprocess.run(["git", "add", path], cwd=self.root, check=True)
+        (self.root / path).unlink()
+        self.assertTrue(any("must be tracked and present" in e for e in self.compare()))
+
+    def test_local_workflow_requires_one_project_owner_and_source_anchor(self) -> None:
+        path = self.add_local_workflow()
+        project = next(c for c in self.manifest["components"] if c["kind"] == "project")
+        project["sourceAnchors"] = ["LICENSE"]
+        self.assertTrue(any("must anchor its source" in e for e in self.compare()))
+        project["sourceAnchors"] = sorted(["LICENSE", path])
+        foreign = self.manifest["components"][0]
+        foreign["bindings"].append("repository-workflow:" + path)
+        self.assertTrue(any("exactly one project owner" in e for e in self.compare()))
+        project["bindings"] = []
+        self.assertTrue(any("exactly one project owner" in e for e in self.compare()))
+
+    def test_local_workflow_traversal_refs_and_directories_are_rejected(self) -> None:
+        self.add_local_workflow()
+        for reference in ("./.github/workflows/../child.yaml", "./../outside.yml",
+                          "./.github/workflows/sub/child.yml", "./.github/workflows/child.yaml@" + "c" * 40,
+                          "$/.github/workflows/child.yaml@main", "./.github/actions/local"):
+            with self.subTest(reference=reference):
+                self.write(".github/workflows/test.yml", "jobs:\n  local:\n    uses: " + reference + "\n")
+                self.assertTrue(any("flat local YAML path without a ref" in e for e in self.compare()))
+
+    def test_local_workflow_symlink_target_is_rejected(self) -> None:
+        path = self.add_local_workflow()
+        outside = self.root / "outside.yml"
+        outside.write_text("steps:\n  - uses: ignored/private@main\n", encoding="utf-8")
+        target = self.root / path
+        target.unlink()
+        target.symlink_to(outside)
+        self.assertTrue(any("target cannot be a symbolic link" in e for e in self.compare()))
+        self.assertNotIn("ci-action:ignored/private@main", inventory.discovered_bindings(self.root))
+
+    def test_yaml_child_external_actions_still_require_exact_pins(self) -> None:
+        path = self.add_local_workflow()
+        self.write(path, "on:\n  workflow_call:\nsteps:\n  - uses: actions/checkout@main\n")
+        self.assertTrue(any("must use an exact 40-digit revision" in e for e in self.compare()))
+
     def test_undeclared_resolved_pin_is_rejected(self) -> None:
         resolved = json.loads((self.root / "Package.resolved").read_text(encoding="utf-8"))
         resolved["pins"].append({

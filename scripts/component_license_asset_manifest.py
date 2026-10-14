@@ -63,7 +63,7 @@ GOVERNED_EXTENSIONS = {
     ".icns", ".ico",
 }
 DISCOVERED_BINDING_PREFIXES = (
-    "package:", "swift-import:", "linked-library:", "ci-action:",
+    "package:", "swift-import:", "linked-library:", "ci-action:", "repository-workflow:",
 )
 
 
@@ -306,7 +306,27 @@ def direct_packages(root: Path) -> dict[str, dict[str, str]]:
     return result
 
 
-def discovered_bindings(root: Path) -> set[str]:
+def _workflow_files(root: Path) -> list[Path]:
+    directory = root / ".github/workflows"
+    if directory.is_symlink() or directory.parent.is_symlink():
+        return []
+    return sorted(set(directory.glob("*.yml")) | set(directory.glob("*.yaml")))
+
+
+def _workflow_references(root: Path) -> list[tuple[Path, str]]:
+    result: list[tuple[Path, str]] = []
+    for workflow in _workflow_files(root):
+        # Never follow a workflow symlink while discovering dependencies.
+        if workflow.is_symlink() or not workflow.is_file():
+            continue
+        for reference in re.findall(r"(?m)^\s*-?\s*uses:\s*([^\s#]+)",
+                                    workflow.read_text(encoding="utf-8")):
+            result.append((workflow, reference))
+    return result
+
+
+def discovered_bindings(root: Path,
+                        workflow_references: Optional[Sequence[tuple[Path, str]]] = None) -> set[str]:
     bindings: set[str] = set()
     for source in sorted((root / "Sources").rglob("*.swift")):
         for module in re.findall(r"(?m)^import\s+([A-Za-z_][A-Za-z0-9_]*)", source.read_text(encoding="utf-8")):
@@ -317,11 +337,14 @@ def discovered_bindings(root: Path) -> set[str]:
         bindings.add(f"linked-library:{library}")
     for identity in package_pins(root):
         bindings.add(f"package:{identity}")
-    workflow_root = root / ".github/workflows"
-    if workflow_root.exists():
-        for workflow in sorted(workflow_root.glob("*.yml")):
-            for action in re.findall(r"(?m)^\s*-?\s*uses:\s*([^\s#]+)", workflow.read_text(encoding="utf-8")):
-                bindings.add(f"ci-action:{action}")
+    references = _workflow_references(root) if workflow_references is None else workflow_references
+    for _, action in references:
+        if action.startswith(("./", "$/")):
+            # Both documented local forms resolve to the caller's source commit;
+            # they still require an explicit repository-owned binding below.
+            bindings.add("repository-workflow:" + action[2:])
+        else:
+            bindings.add(f"ci-action:{action}")
     return bindings
 
 
@@ -405,7 +428,34 @@ def compare_to_repository(
         for binding in component.get("bindings", [])
         if isinstance(binding, str) and binding.startswith(DISCOVERED_BINDING_PREFIXES)
     }
-    discovered = discovered_bindings(root)
+    tracked = list(known_tracked_paths) if known_tracked_paths is not None else tracked_paths(root)
+    workflow_references = _workflow_references(root)
+    discovered = discovered_bindings(root, workflow_references)
+    workflow_root = root / ".github/workflows"
+    if workflow_root.is_symlink() or workflow_root.parent.is_symlink():
+        errors.append("workflow source directory cannot be a symbolic link")
+    for workflow in _workflow_files(root):
+        if workflow.is_symlink() or not workflow.is_file():
+            errors.append(f"workflow source must be a regular YAML file: {workflow.relative_to(root)}")
+    for binding in sorted(discovered):
+        if not binding.startswith("repository-workflow:"):
+            continue
+        path = binding.removeprefix("repository-workflow:")
+        if not re.fullmatch(r"\.github/workflows/[A-Za-z0-9_.-]+\.ya?ml", path):
+            errors.append(f"repository workflow requires a flat local YAML path without a ref: {binding}")
+            continue
+        target = root / path
+        if any((root / Path(*Path(path).parts[:index])).is_symlink()
+               for index in range(1, len(Path(path).parts) + 1)):
+            errors.append(f"repository workflow target cannot be a symbolic link: {path}")
+        if path not in tracked or not target.is_file():
+            errors.append(f"repository workflow target must be tracked and present: {path}")
+        owners = [component for component in components.values()
+                  if binding in component.get("bindings", [])]
+        if len(owners) != 1 or owners[0].get("kind") != "project":
+            errors.append(f"repository workflow requires exactly one project owner: {binding}")
+        elif path not in owners[0].get("sourceAnchors", []):
+            errors.append(f"repository workflow owner must anchor its source: {path}")
     if declared_bindings != discovered:
         missing = sorted(discovered - declared_bindings)
         stale = sorted(declared_bindings - discovered)
@@ -429,7 +479,6 @@ def compare_to_repository(
                 f"CI action {binding} revision record must equal its workflow pin"
             )
 
-    tracked = list(known_tracked_paths) if known_tracked_paths is not None else tracked_paths(root)
     forbidden = sorted(path for path in tracked if forbidden_local_artifact(path))
     if forbidden:
         errors.append(f"forbidden local artifacts are tracked: {', '.join(forbidden)}")
