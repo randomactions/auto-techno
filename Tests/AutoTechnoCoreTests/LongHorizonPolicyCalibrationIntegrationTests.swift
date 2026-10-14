@@ -895,7 +895,7 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     let candidate = try JSONSerialization.jsonObject(
       with: prepared.selectedCandidateEvidence.deterministicJSON())
     let witness: [String: Any] = [
-      "schema": "autotechno-native-route-divergence-witness.v1",
+      "schema": "autotechno-native-route-divergence-witness.v2",
       "rootSeed": request.sourceState.rootSeed,
       "sampleRate": request.key.sampleRate,
       "phraseIndex": request.key.phraseIndex,
@@ -909,6 +909,14 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
       "sourceCoreFingerprint": request.replayIdentity.sourceStateFingerprint,
       "requestFingerprint": request.replayIdentity.fingerprint,
       "planFingerprint": AutonomousCandidateFingerprint.plan(prepared.plan),
+      "energyCoordination": try JSONSerialization.jsonObject(
+        with: JSONEncoder().encode(prepared.plan.longHorizonEnergyCoordination)),
+      "resolvedRoleBars": prepared.plan.resolvedBars.map { bar in
+        ["bar": bar.performance.bar,
+         "roles": bar.performance.roles.map(\.rawValue),
+         "activeSupportingRoles": bar.narrative.activeSupportingRoles.map(\.rawValue),
+         "arrangementGesture": bar.arrangementGesture.rawValue] as [String: Any]
+      },
       "sampleHash": prepared.audioPreflight.quality.sampleHash,
       "commitEligible": prepared.commitEligible,
       "decision": decision.outcome.rawValue,
