@@ -476,7 +476,9 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
           failure = refused.stage + ":" + refused.code; details = Array(refused.details.prefix(24)); break
         } catch { failure = "continuation-refused"; break }
         do {
-          try Self.writeNativeRouteDivergenceWitness(request: request, prepared: source.prepared)
+          if try Self.writeNativeRouteDivergenceWitness(request: request, prepared: source.prepared) {
+            failure = "diagnostic-recovery-boundary-captured"; break
+          }
         } catch {
           failure = "native-route-divergence-witness-write-failed"; break
         }
@@ -871,12 +873,17 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
   /// it cannot import a journey, admit a candidate, or produce calibration.
   private static func writeNativeRouteDivergenceWitness(
     request: PhrasePreparationRequest, prepared: PreparedAutonomousPhrase
-  ) throws {
+  ) throws -> Bool {
     let environment = ProcessInfo.processInfo.environment
     guard environment["AUTOTECHNO_RUN_LONG_HORIZON_SHARED_PROBE"] == "1",
-      environment["AUTOTECHNO_LONG_HORIZON_DIVERGENCE_PROBE"] == "1",
-      request.sourceState.rootSeed == 112_358, request.key.phraseIndex == 279
-    else { return }
+      environment["AUTOTECHNO_RUN_LONG_HORIZON_CALIBRATION"] != "1"
+    else { return false }
+    let recovery = environment["AUTOTECHNO_LONG_HORIZON_RECOVERY_BOUND_PROBE"] == "1"
+    let root: UInt64 = recovery ? 141_421 : 112_358
+    let target = recovery ? 13 : 279
+    guard recovery || environment["AUTOTECHNO_LONG_HORIZON_DIVERGENCE_PROBE"] == "1",
+      request.sourceState.rootSeed == root, request.key.phraseIndex == target
+    else { return false }
     guard let directory = environment["AUTOTECHNO_LONG_HORIZON_RESOURCE_DIRECTORY"]
     else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
     let decision = prepared.qualityDecision
@@ -901,11 +908,12 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
       "candidate": candidate,
       "calibrationEvidence": false,
     ]
-    let filename = "native-divergence-112358-\(Int(request.key.sampleRate))-279-"
+    let filename = "native-divergence-\(root)-\(Int(request.key.sampleRate))-\(target)-"
       + "\(request.key.qualityRecoveryContext.wave)-\(request.key.qualityRetryOrdinal).json"
     let data = try JSONSerialization.data(withJSONObject: witness, options: [.sortedKeys])
     try data.write(to: URL(fileURLWithPath: directory, isDirectory: true)
       .appendingPathComponent(filename), options: .withoutOverwriting)
+    return recovery
   }
 
   @Test("Probe the actual native bootstrap through the same full-journey owner",
@@ -913,18 +921,39 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
   func probeSharedPreparedBootstrap() async throws {
     let primary = try loadPrimary(), binding = try executionBinding()
     let divergence = ProcessInfo.processInfo.environment["AUTOTECHNO_LONG_HORIZON_DIVERGENCE_PROBE"] == "1"
-    let root: UInt64 = divergence ? 112_358 : 48_291
-    let prefix = divergence ? 280 : 4
+    let recovery = ProcessInfo.processInfo.environment["AUTOTECHNO_LONG_HORIZON_RECOVERY_BOUND_PROBE"] == "1"
+    guard !(recovery && divergence),
+      ProcessInfo.processInfo.environment["AUTOTECHNO_RUN_LONG_HORIZON_CALIBRATION"] != "1"
+    else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
+    let root: UInt64 = recovery ? 141_421 : (divergence ? 112_358 : 48_291)
+    let prefix = recovery ? 14 : (divergence ? 280 : 4)
     try prepareOutputNamespace()
     for rate in [44_100.0, 48_000.0] {
       let journey = await Task.detached(priority: .userInitiated) {
         await Self.renderPreparedRoute(rootSeed: root, sampleRate: rate, primary: primary, prefixPhraseCount: prefix)
       }.value
       try writeJourney(journey, binding: binding)
-      #expect(journey.completedRequestedScope && journey.failureCode == nil)
-      #expect(journey.consumedPhraseCount == prefix)
-      #expect(journey.signal.observationCount == prefix && journey.signal.omittedPhraseCount == 0)
-      #expect(journey.effects.phraseCount == prefix && journey.effects.barCount == journey.semantic.observedBarCount)
+      let acceptedPrefix = recovery ? 13 : prefix
+      if recovery {
+        #expect(!journey.completedRequestedScope)
+        #expect(journey.failureCode == "diagnostic-recovery-boundary-captured")
+        let witness = try outputDirectory().appendingPathComponent(
+          "native-divergence-141421-\(Int(rate))-13-0-0.json")
+        let object = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: witness)) as? [String: Any])
+        #expect(object["calibrationEvidence"] as? Bool == false)
+        if rate == 44_100 {
+          // Bind this fresh diagnostic to the first rejection in the failed
+          // immutable study; no archived state or candidate is imported.
+          #expect(object["requestFingerprint"] as? String == "f007bcabd52c857c")
+          #expect(object["sourceCoreFingerprint"] as? String == "bd1943e4e28778e0")
+          #expect(object["commitEligible"] as? Bool == false)
+        }
+      } else {
+        #expect(journey.completedRequestedScope && journey.failureCode == nil)
+      }
+      #expect(journey.consumedPhraseCount == acceptedPrefix)
+      #expect(journey.signal.observationCount == acceptedPrefix && journey.signal.omittedPhraseCount == 0)
+      #expect(journey.effects.phraseCount == acceptedPrefix && journey.effects.barCount == journey.semantic.observedBarCount)
       if divergence {
         let witness = try outputDirectory().appendingPathComponent(
           "native-divergence-112358-\(Int(rate))-279-0-0.json")
