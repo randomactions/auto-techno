@@ -84,6 +84,42 @@ class HostedMacOSVerificationTests(unittest.TestCase):
         self.assertIn("inputs.scope == 'native-history-readiness' && 180 || 90", workflow)
         self.assertIn('fail-fast: false', workflow)
 
+    def test_calibration_component_preserves_native_failure_after_debugger_replay(self):
+        import os
+        import subprocess
+        import textwrap
+        root = Path(__file__).resolve().parents[1]
+        workflow = (root / '.github/workflows/at0039-hosted-macos.yml').read_text()
+        body = workflow.split("PYTHONPATH=scripts python3 - <<'PYTHON'\n", 1)[1].split(
+            '          PYTHON\n', 1)[0]
+        code = compile(textwrap.dedent(body), '<calibration-component>', 'exec')
+        source = (root / 'Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationTests.swift').read_text()
+        for exit_code, raw in [(0, b'native success\n'), (1, b'assertion failure\n'),
+                               (10, b'Exited with unexpected signal code 10\n')]:
+            with tempfile.TemporaryDirectory() as directory:
+                def run(command, cwd, log):
+                    self.assertIn('--no-parallel', command)
+                    self.assertIn('--skip-build', command)
+                    selector = command[command.index('--filter') + 1]
+                    selected = [name for name in re.findall(r'^    func (\w+)\(', source, re.M)
+                                if re.search(selector, 'ProfessionalQualityCalibrationTests/' + name + '()')]
+                    self.assertEqual(len(selected), 15)
+                    self.assertIn('dottedRhythmCrestPopulationAcrossCandidates', selected)
+                    self.assertIn('kickFoundationPairingPopulationProjectionAcrossCandidates', selected)
+                    log.write_bytes(raw)
+                    return subprocess.CompletedProcess(command, exit_code)
+                with mock.patch.dict(os.environ, RUNNER_TEMP=directory), \
+                     mock.patch.object(hosted, 'run_logged_native', side_effect=run) as native, \
+                     mock.patch.object(hosted, 'diagnose_crash', return_value=0) as debugger:
+                    if exit_code == 0:
+                        exec(code, {})
+                    else:
+                        with self.assertRaisesRegex(ValueError, 'native slice failed'):
+                            exec(code, {})
+                    native.assert_called_once()
+                    self.assertEqual(debugger.call_count, int(exit_code == 10))
+                    self.assertEqual((Path(directory) / 'calibration-fixture-native.log').read_bytes(), raw)
+
     def test_timeout_repartition_preserves_complete_identity_union(self):
         bundle = fixture()
         discovery = bundle['banks'][0]['receipt']['discovery']

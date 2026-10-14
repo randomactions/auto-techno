@@ -870,6 +870,7 @@ struct ProfessionalQualityCalibrationTests {
     }
 
     @Test("Kick-foundation metrics follow varied complete paired-bar populations")
+    @MainActor
     func kickFoundationPairingPopulationProjectionAcrossCandidates() throws {
         var statefulCandidates: [AutonomousCandidateEvaluationVector] = []
         var seenScorePairCounts = Set<Int>()
