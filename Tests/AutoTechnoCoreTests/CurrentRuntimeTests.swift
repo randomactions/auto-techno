@@ -83,7 +83,7 @@ struct CurrentRuntimeTests {
     func longCycleWorldPrimaryIdentityContract() {
         #expect(QualityQualificationContract.schemaVersion == 50)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v49")
+                "autotechno-canonical-engine.v50")
         #expect(AutonomousCandidateEvaluationVector.schemaVersion == 43)
         #expect(ProfessionalQualityObservation.schemaVersion == 21)
         #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 22)
@@ -106,10 +106,10 @@ struct CurrentRuntimeTests {
         #expect(ProfessionalEvidenceReportBank.schemaVersion == 30)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
                 "autotechno-professional-evidence.v30")
-        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v33"))
+        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v34"))
         #expect(ProfessionalQualityPrimaryArtifacts.adversarialResource
-            .hasSuffix("-v33"))
-        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v33"))
+            .hasSuffix("-v34"))
+        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v34"))
     }
 
     @Test("Historical v30 resources remain present but cannot activate the current policy")
@@ -547,8 +547,8 @@ struct RepositorySurfaceTests {
             includingPropertiesForKeys: [.isRegularFileKey]
         ))
         for case let file as URL in docsEnumerator where file.pathExtension == "md" {
-            let relativePath = file.path.replacingOccurrences(
-                of: docs.path + "/", with: ""
+            let relativePath = file.resolvingSymlinksInPath().path.replacingOccurrences(
+                of: docs.resolvingSymlinksInPath().path + "/", with: ""
             )
             guard !relativePath.hasPrefix("history/"),
                   !relativePath.hasPrefix("local/"),
@@ -728,7 +728,7 @@ struct RepositorySurfaceTests {
         }.joined(separator: "\n").lowercased()
 
         for required in [
-            "autotechno-canonical-engine.v49",
+            "autotechno-canonical-engine.v50",
             "quality-contract schema 50",
             "candidate-vector schema 43",
             "candidate-transaction schema 14",
@@ -895,10 +895,11 @@ struct RepositorySurfaceTests {
             includingPropertiesForKeys: [.isRegularFileKey]
         ))
         for case let file as URL in enumerator where file.pathExtension == "md" {
-            let relativePath = file.path.replacingOccurrences(
-                of: docs.path + "/", with: ""
+            let relativePath = file.resolvingSymlinksInPath().path.replacingOccurrences(
+                of: docs.resolvingSymlinksInPath().path + "/", with: ""
             )
-            guard !relativePath.hasPrefix("history/"),
+            guard !relativePath.hasPrefix("local/"),
+                  !relativePath.hasPrefix("history/"),
                   !relativePath.hasPrefix("superpowers/specs/"),
                   !relativePath.hasPrefix("superpowers/plans/") else { continue }
             files.append(file)

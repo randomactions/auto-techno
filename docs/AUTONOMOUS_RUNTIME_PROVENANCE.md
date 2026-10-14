@@ -66,7 +66,7 @@ mistaken for a completed feedback system.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
    primary-evaluation transaction under quality-contract schema 50, candidate-
    vector schema 43, candidate-transaction schema 14, and canonical engine
-   identity `autotechno-canonical-engine.v49`. Each
+   identity `autotechno-canonical-engine.v50`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,

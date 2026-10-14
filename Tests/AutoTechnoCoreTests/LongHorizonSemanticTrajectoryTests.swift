@@ -43,10 +43,10 @@ struct LongHorizonSemanticTrajectoryTests {
         #expect(first.observedBarCount == 7_802)
         #expect(first.observedPhraseCount == 725)
         #expect(first.trajectoryFingerprint == "ba7251e9e8c9e144")
-        // This exact report includes its engine identity. v49 retains the
-        // semantic trajectory while explicitly replacing the v48 wire label.
-        #expect(first.engineVersion == "autotechno-canonical-engine.v49")
-        #expect(stableFingerprint(firstData) == "eb45de7fb11edf26")
+        // Only the engine wire label changes from v49 to v50; replacing that
+        // label in the current JSON reproduces the prior eb45de7fb11edf26 digest.
+        #expect(first.engineVersion == "autotechno-canonical-engine.v50")
+        #expect(stableFingerprint(firstData) == "7a37a6ec4a27cab0")
         #expect(first.phraseKindPhraseCounts.allSatisfy { $0.count > 0 })
         #expect(first.performanceCharacterPhraseCounts.allSatisfy { $0.count > 0 })
         #expect(first.tensionDwell.highBarCount == 629)
