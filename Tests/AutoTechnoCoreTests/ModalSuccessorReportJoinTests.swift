@@ -1299,18 +1299,18 @@ struct ModalSuccessorReportJoinTests {
             "qualification": "diagnostic-not-activated"
         ], options: [.sortedKeys]))
         FileHandle.standardOutput.write(Data([0x0A]))
-        // Full report identity includes render continuation fingerprints. The
-        // typed-v5 parity repair changes the earlier v49 digest 05d18c479efe25a3
-        // without changing PCM. Native run38198883431/job114647681016 records
-        // the current value; retain the engine and missing-population checks.
+        // Full report identity includes engine and render continuation identity.
+        // The native engine50 macOS fixture records the current digest while
+        // retaining every membership, missing-population and fitting check.
         // This one-bank fixture cannot qualify or activate a policy.
-        #expect(bank.engineVersion == "autotechno-canonical-engine.v49")
-        // Exact PCM-derived reports are pinned per supported native platform;
-        // Windows run38198830687/job114647439300 records its own native result.
+        #expect(bank.engineVersion == "autotechno-canonical-engine.v50")
+        // Exact PCM-derived reports are pinned per supported native platform.
+        // The Windows v49 pin remains until a fresh native engine50 result is
+        // available; a macOS observation cannot establish its replacement.
         #if os(Windows)
         #expect(complete.sourceBankFingerprint == "965001781665ad18")
         #else
-        #expect(complete.sourceBankFingerprint == "4e2cb5ddb657fb10")
+        #expect(complete.sourceBankFingerprint == "88cd65cf95d06cdf")
         #endif
         #expect(unsupportedTrainingMetrics == [.upperPercussionTailRenderedTailToAttackDBMean])
         #expect(throws: ProfessionalQualityCalibrationError.invalidMetricSet) {
