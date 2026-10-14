@@ -3,6 +3,7 @@ import copy
 import contextlib
 import io
 import json
+import re
 from pathlib import Path
 import sys
 import tempfile
@@ -54,6 +55,34 @@ class HostedMacOSVerificationTests(unittest.TestCase):
         self.assertTrue(result['completeNativeSuitesAndReleaseBuild'])
         for key in ['localExecution','automatedQualityQualification','runtimeQualification','item39Complete']:
             self.assertFalse(result[key])
+
+    def test_native_history_components_cover_the_same_disjoint_test_identities(self):
+        root = Path(__file__).resolve().parents[1]
+        workflow = (root / '.github/workflows/at0039-hosted-macos.yml').read_text()
+        filters = dict(re.findall(r"^            ([a-z-]+)\) filter='([^']+)';;", workflow, re.M))
+        self.assertEqual(set(filters), {'policy', 'successor', 'live-successor', 'projection'})
+        source = (root / 'Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift').read_text()
+        identities = ['AutoTechnoCoreTests.LongHorizonProfessionalPolicyTests/' + name + '()'
+                      for name in re.findall(r'^  func (\w+)\(', source, re.M)]
+        identities += ['AutoTechnoCoreTests.ProspectiveSuccessorRequestTests/' + name + '()'
+                       for name in ['canonicalPreparedSuccessorContext', 'canonicalPreparedLiveSuccessorContext']]
+        identities += ['AutoTechnoCoreTests.ModalSuccessorReportJoinTests/preparedValidationLongHorizonProjection()']
+        self.assertEqual(len(identities), 21)
+        counts = {key: 0 for key in filters}
+        for identity in identities:
+            owners = [key for key, pattern in filters.items() if re.search(pattern, identity)]
+            self.assertEqual(len(owners), 1, identity)
+            counts[owners[0]] += 1
+            self.assertRegex(identity.replace('/', '.'), filters[owners[0]])
+            self.assertRegex(identity + '/TestFile.swift:1:1', filters[owners[0]])
+        self.assertEqual(counts, dict(policy=18, successor=1, **{'live-successor': 1}, projection=1))
+        for identity in ['AutoTechnoCoreTests.LongHorizonProfessionalPolicyTestsExtra/unrelated()',
+                         'AutoTechnoCoreTests.ProspectiveSuccessorRequestTests/canonicalPreparedSuccessorContextExtra()',
+                         'AutoTechnoCoreTests.ModalSuccessorReportJoinTests/unrelated()']:
+            self.assertFalse(any(re.search(pattern, identity) for pattern in filters.values()))
+        self.assertIn('["policy","successor","live-successor","projection"]', workflow)
+        self.assertIn("inputs.scope == 'native-history-readiness' && 180 || 90", workflow)
+        self.assertIn('fail-fast: false', workflow)
 
     def test_timeout_repartition_preserves_complete_identity_union(self):
         bundle = fixture()

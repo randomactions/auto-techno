@@ -59,9 +59,14 @@ jobs:
         run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/at0039-tests"
   map:
     if: inputs.scope == 'map-only' || inputs.scope == 'primary-readiness' || inputs.scope == 'effect-dose-readiness' || inputs.scope == 'native-history-readiness'
-    name: Generate native map only
+    name: Native map and component (${{ matrix.slice }})
     runs-on: macos-15
-    timeout-minutes: 90
+    timeout-minutes: ${{ inputs.scope == 'native-history-readiness' && 180 || 90 }}
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        slice: ${{ fromJSON(inputs.scope == 'native-history-readiness' && '["policy","successor","live-successor","projection"]' || '["default"]') }}
     steps:
       - name: Check out source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -85,10 +90,20 @@ jobs:
           --disable-xctest --enable-swift-testing --filter LongHorizonEffectDoseTests
       - name: Verify native-history successor fixtures
         if: inputs.scope == 'native-history-readiness'
-        run: >-
-          swift test --build-path "$RUNNER_TEMP/at0039-map" --skip-build --no-parallel
-          --disable-xctest --enable-swift-testing
-          --filter '(LongHorizonProfessionalPolicyTests|ProspectiveSuccessorRequestTests|ModalSuccessorReportJoinTests[/.]preparedValidationLongHorizonProjection)'
+        env:
+          NATIVE_HISTORY_SLICE: ${{ matrix.slice }}
+        run: |
+          case "$NATIVE_HISTORY_SLICE" in
+            policy) filter='(^|\.)LongHorizonProfessionalPolicyTests[./]';;
+            successor) filter='(^|\.)ProspectiveSuccessorRequestTests[./]canonicalPreparedSuccessorContext($|[(/])';;
+            live-successor) filter='(^|\.)ProspectiveSuccessorRequestTests[./]canonicalPreparedLiveSuccessorContext($|[(/])';;
+            projection) filter='(^|\.)ModalSuccessorReportJoinTests[./]preparedValidationLongHorizonProjection($|[(/])';;
+            *) exit 1;;
+          esac
+          echo "BEGIN native-history component: $NATIVE_HISTORY_SLICE"
+          swift test --build-path "$RUNNER_TEMP/at0039-map" --skip-build --no-parallel \
+            --disable-xctest --enable-swift-testing --filter "$filter"
+          echo "END native-history component: $NATIVE_HISTORY_SLICE"
       - name: Emit source-bound generated map
         if: always() && steps.generate-map.outcome == 'success'
         run: |
