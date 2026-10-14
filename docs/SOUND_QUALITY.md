@@ -1837,3 +1837,22 @@ host admission remains unavailable without Long Horizon qualification. Fresh
 independent native Long Horizon histories, complete platform checks, resource,
 lifecycle and applicable physical-output requirements still gate promotion.
 No score, renderer, callback, continuation or fallback behavior changes here.
+
+
+## Streamed diagnostic storage phases
+
+Chain resource v4 preserves the 128 MiB ceiling, two-render limit and complete
+retained-capture charge. The synchronous spool retains a total borrowed-capacity
+ceiling of twice the 32-channel logical bar payload and one 64 KiB write chunk.
+At each streamed bar the renderer checks 21 actual aliases to ordinary charged
+workspace/product/graph/mix owners. Seven protected dry taps and four residual
+arrays remain independently charged and bounded by allocated capacity. Equal
+PCM in another allocation is insufficient; any mismatch refuses delivery.
+
+Render/capture and full-mix analysis are disjoint calls, so only their disjoint
+temporary allowances use a maximum. Incoming state, retained parents, PCM/holds,
+scratch and evidence remain charged. Native initial and corrected root/owned-
+child controls must preserve ordinary PCM and admission identities, verify actual
+capacity against reservation and retain exact selected tap hashes. The bounded
+diagnostic contract does not declare complete allocator/RSS/deadline, lifecycle,
+platform, installed-study or output qualification. Every AT39 gate still applies.

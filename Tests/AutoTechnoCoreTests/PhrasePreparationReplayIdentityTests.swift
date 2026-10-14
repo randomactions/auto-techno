@@ -607,6 +607,33 @@ struct IterativeSuccessorPreparationTests {
         #expect(second.maximumRenderPassCount == 2)
     }
 
+    @Test("Streamed capacity is one bounded bar and chunk while retained captures keep their full charge")
+    func streamedCaptureReservation() throws {
+        for rate in [8_000.0, 44_100.0, 48_000.0] {
+            let budget = AutonomousPreparationChainResourceBudget()
+            for bars in [4, 16] {
+                let ordinary = try #require(budget.reserving(sampleRate: rate, barCount: bars, renderPassCount: 1))
+                let streamed = try #require(budget.reserving(sampleRate: rate, barCount: bars,
+                    renderPassCount: 1, streamedDiagnosticRoleStemCapture: true))
+                let correction = try #require(budget.reserving(sampleRate: rate, barCount: bars,
+                    renderPassCount: 2, streamedDiagnosticRoleStemCapture: true))
+                let frames = Int((240.0 / AutonomousSessionDirector.bpm * rate).rounded())
+                #expect(streamed.reservedPeakWorkingByteCount - ordinary.reservedPeakWorkingByteCount ==
+                    max(0, frames * 11 * 4 * 2 + 64 * 1_024 -
+                        AutonomousFullMixEvidence.maximumAnalysisPeakWorkingByteCount))
+                #expect(correction.reservedPeakWorkingByteCount == streamed.reservedPeakWorkingByteCount)
+                #expect(budget.reserving(sampleRate: rate, barCount: bars,
+                    diagnosticRoleStemCapture: true, streamedDiagnosticRoleStemCapture: true) == nil)
+                let full = try #require(AutonomousPreparationChainResourceBudget(
+                    incomingContinuationNumericByteCount: AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount))
+                #expect(full.reserving(sampleRate: rate, barCount: bars,
+                    streamedDiagnosticRoleStemCapture: true) == nil)
+            }
+        }
+        #expect(DiagnosticRoleStemCaptureSpool.maximumBorrowedNumericCapacityByteCount(framesPerBar: Int.max) == Int.max)
+        #expect(DiagnosticRoleStemCaptureSpool.maximumBorrowedNumericCapacityByteCount(framesPerBar: 0) == Int.max)
+    }
+
     @Test("Root allocated continuation remains reserved exactly once across passes and suspended sources")
     func incomingCapacityReservation() throws {
         let incoming = 3 * 1_024 * 1_024
@@ -631,7 +658,7 @@ struct IterativeSuccessorPreparationTests {
         let occupied = try #require(AutonomousPreparationChainResourceBudget(
             incomingContinuationNumericByteCount: ceiling))
         #expect(occupied.reserving(sampleRate: 8_000, barCount: 4, renderPassCount: 1) == nil)
-        #expect(AutonomousPreparationChainResourceBudget.version == "autotechno-preparation-chain-resource.v3")
+        #expect(AutonomousPreparationChainResourceBudget.version == "autotechno-preparation-chain-resource.v4")
     }
 
     @Test("Unused incoming capacity refuses before PCM, observation or evaluator creation")
@@ -1330,8 +1357,20 @@ struct IterativeSuccessorPreparationTests {
     // Keep them on the main stack; both canonical preparations below remain detached.
     @MainActor
     func selectedStreamedChain() async throws {
+        try await checkSelectedStreamedChain(rate: 8_000)
+    }
+
+    @Test("Native streamed root-child captures preserve exact products within numeric reservations",
+        arguments: [44_100.0, 48_000.0])
+    @MainActor
+    func nativeSelectedStreamedChain(rate: Double) async throws {
+        try await checkSelectedStreamedChain(rate: rate)
+    }
+
+    @MainActor
+    private func checkSelectedStreamedChain(rate: Double) async throws {
         for mode in [Control.Mode.accept, .forceCorrection] {
-            let request = Self.sourceRequest(rate: 8_000)
+            let request = Self.sourceRequest(rate: rate)
             let director = AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed)
             let original = AutonomousCandidateFingerprint.sessionState(request.sourceState)
             let reference: StreamedChainControl = try await Task.detached {
@@ -1359,6 +1398,25 @@ struct IterativeSuccessorPreparationTests {
             #expect(sources.count == 2 && session.isSealed)
             try Self.checkChainStorage(probe, correction: mode == .forceCorrection)
             #expect(Self.reducedControl(result) == reference)
+            let budget = try #require(result.preparationChainResourceBudget)
+            try DiagnosticRoleStemStreamingTests.checkAnalyzerStorage(probe,
+                prefix: "chain.render.analysis", sampleRate: rate)
+            #expect(probe.snapshots.filter { $0.phase.hasPrefix("chain.render.analysis") }.allSatisfy {
+                !$0.ownerRecords.contains { $0.owner.contains(".capture.") && $0.capacityBytes > 0 }
+            })
+            let measured = try #require(probe.snapshots.map(\.numericPlusTypedHeadroomBytes).max())
+            // The observer visits the complete borrowed bar before the sink.
+            // Add its independent maximum encoding chunk conservatively, even
+            // to phases without writes. File bytes are never resident taps.
+            let observedWithWriter = measured + DiagnosticRoleStemCaptureSpool.maximumWriteChunkBytes
+            #expect(observedWithWriter <= budget.reservedPeakWorkingByteCount)
+            #expect(budget.reservedPeakWorkingByteCount <= AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount)
+            for binding in session.bindings {
+                let frames = try #require(binding.draft.records.first?.frameCount)
+                #expect(binding.draft.maximumBorrowedNumericCapacityByteCount <=
+                    DiagnosticRoleStemCaptureSpool.maximumBorrowedNumericCapacityByteCount(framesPerBar: frames))
+                #expect(binding.draft.maximumWriteChunkByteCount <= DiagnosticRoleStemCaptureSpool.maximumWriteChunkBytes)
+            }
             #expect(sources.allSatisfy { $0.diagnosticRoleStemCaptures.isEmpty && $0.commitEligible })
             #expect(session.bindings.count == sources.count)
             #expect(try FileManager.default.contentsOfDirectory(atPath: parent.path).count == sources.count)
@@ -1406,7 +1464,11 @@ struct IterativeSuccessorPreparationTests {
                 "sourceIdentities": session.bindings.map(\.sourceIdentityFingerprint),
                 "transactionFingerprints": session.bindings.map(\.transactionFingerprint),
                 "qualifiedChildIdentity": session.bindings.first?.qualifiedChildIdentityFingerprint ?? "none",
-                "qualification": "mechanical-only-not-installed", "nativeCaptureCapacityQualified": false]
+                "qualification": "mechanical-only-not-installed", "nativeCaptureCapacityQualified": false,
+                "observedNumericAndTypedHeadroomPlusWriterBytes": observedWithWriter,
+                "reservedPeakWorkingByteCount": budget.reservedPeakWorkingByteCount,
+                "snapshots": try JSONSerialization.jsonObject(with: JSONEncoder().encode(probe.snapshots)),
+                "scope": "same-path mechanical numeric capacity; excludes allocator overhead RSS deadlines and installed quality qualification"]
             print("AUTOTECHNO_SELECTED_STREAM_CONTROL " + String(decoding:
                 try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]), as: UTF8.self))
         }
@@ -1436,7 +1498,7 @@ struct IterativeSuccessorPreparationTests {
         }
     }
 
-    @Test("Native full-capture reservations refuse streaming before any attempted file or PCM")
+    @Test("Native retained full captures refuse before any attempted PCM")
     @MainActor
     func nativeStreamResourceRefusal() throws {
         for rate in [44_100.0, 48_000.0] {
@@ -1446,7 +1508,7 @@ struct IterativeSuccessorPreparationTests {
             let session = DiagnosticRoleStemCaptureSession(parentDirectory: parent)
             let control = Control()
             let result = AutonomousPerformancePreparer.prepareChainDiagnosing(request: request, director: director,
-                longHorizonPolicy: nil, diagnosticRoleStemSession: session,
+                longHorizonPolicy: nil, diagnosticRoleStemCapture: true,
                 makeEvaluator: { Evaluator(request: $0, control: control) }, cancellationRequested: { false })
             #expect(result.failure?.code == "resource-bound")
             #expect(control.terminals.isEmpty && session.bindings.isEmpty && !session.isSealed)
@@ -1461,7 +1523,9 @@ struct IterativeSuccessorPreparationTests {
         let parent = try Self.captureParent(); defer { try? FileManager.default.removeItem(at: parent) }
         let request = Self.sourceRequest(rate: 8_000)
         let director = AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed)
-        let bindings: [DiagnosticRoleStemSelectedBinding] = try await Task.detached {
+        let marker = parent.appendingPathComponent("unrelated-marker")
+        try Data([42]).write(to: marker)
+        var bindings: [DiagnosticRoleStemSelectedBinding]? = try await Task.detached {
             let session = DiagnosticRoleStemCaptureSession(parentDirectory: parent)
             let control = Control()
             let outcome = AutonomousPerformancePreparer.prepareChainDiagnosing(request: request, director: director,
@@ -1472,11 +1536,18 @@ struct IterativeSuccessorPreparationTests {
             #expect(session.isSealed)
             return session.bindings
         }.value
-        #expect(bindings.count == 2)
-        for binding in bindings {
+        #expect(bindings?.count == 2)
+        let directories = try #require(bindings?.map { $0.draft.directory })
+        for binding in bindings ?? [] {
             #expect(FileManager.default.fileExists(atPath: binding.draft.directory.path))
             #expect(try binding.draft.readChannel(barIndex: 0, channel: .fullKick).count > 0)
         }
+        // Retain only URLs: the final draft owners must actually be released
+        // before checking cleanup. Parent test teardown cannot prove this.
+        bindings = nil
+        #expect(directories.allSatisfy { !FileManager.default.fileExists(atPath: $0.path) })
+        #expect(try FileManager.default.contentsOfDirectory(atPath: parent.path) == ["unrelated-marker"])
+        #expect(try Data(contentsOf: marker) == Data([42]))
     }
 
     // Native Debug construction exceeds the cooperative-worker stack. Enforce

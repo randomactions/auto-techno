@@ -113,7 +113,7 @@ package struct AutonomousPreparationResourceBudget: Equatable, Sendable {
 /// analyzer and looper workspaces die when each render call unwinds. No qualified
 /// child or physical support requirement is removed to fit this bound.
 package struct AutonomousPreparationChainResourceBudget: Equatable, Sendable {
-    package static let version = "autotechno-preparation-chain-resource.v3"
+    package static let version = "autotechno-preparation-chain-resource.v4"
     package let reservedPeakWorkingByteCount: Int
     package let retainedNumericByteCount: Int
     /// The root request stays alive across the entire chain, even after each
@@ -155,9 +155,11 @@ package struct AutonomousPreparationChainResourceBudget: Equatable, Sendable {
 
     package func reserving(sampleRate: Double, barCount: Int,
         renderPassCount: Int = QualityQualificationContract.maximumRenderPasses,
-        diagnosticRoleStemCapture: Bool = false
+        diagnosticRoleStemCapture: Bool = false,
+        streamedDiagnosticRoleStemCapture: Bool = false
     ) -> Self? {
-        guard let source = AutonomousPreparationResourceBudget(sampleRate: sampleRate,
+        guard !(diagnosticRoleStemCapture && streamedDiagnosticRoleStemCapture),
+            let source = AutonomousPreparationResourceBudget(sampleRate: sampleRate,
             barCount: barCount, renderPassCount: renderPassCount),
             let activeSynthesis = AutonomousPreparationResourceBudget(sampleRate: sampleRate,
                 barCount: barCount, renderPassCount: 1) else { return nil }
@@ -166,11 +168,26 @@ package struct AutonomousPreparationChainResourceBudget: Equatable, Sendable {
         // remain under the unchanged reduced-evidence charge; PCM and ending
         // continuation do not overlap the corrected product. Incoming/root and
         // suspended-parent storage remain charged separately below.
-        // Keep the existing whole-phrase capture charge for every attempt until
-        // the distinct streamed-capture capacity contract is qualified.
+        // In-memory captures retain every bar/pass. The synchronous file sink
+        // instead borrows one bounded bar and writes one bounded byte chunk;
+        // no numeric payload survives in a selected draft. The renderer proves
+        // 21 capture aliases to ordinary charged owners and bounds only the
+        // seven extra protected taps plus four residuals. All ordinary charges
+        // and the spool's independent full borrowed-capacity guard remain.
         let captureBytes = diagnosticRoleStemCapture
-            ? source.phraseFrameCount * 32 * MemoryLayout<Float>.stride * source.renderPassCount : 0
-        let active = activeSynthesis.peakWorkingByteCount.addingReportingOverflow(captureBytes)
+            ? source.phraseFrameCount * 32 * MemoryLayout<Float>.stride * source.renderPassCount
+            : (streamedDiagnosticRoleStemCapture
+                ? DiagnosticRoleStemCaptureSpool.maximumAdditionalNumericCapacityByteCount(
+                    framesPerBar: source.framesPerBar) + DiagnosticRoleStemCaptureSpool.maximumWriteChunkBytes
+                : 0)
+        // The synchronous renderer releases its borrowed taps/write chunk
+        // before product() starts PhraseAudioPreflight. Reserve the larger of
+        // render-with-stream and analysis, not both disjoint workspaces. This
+        // does not reuse scratch/continuation/selected PCM or evidence storage.
+        let additionalCaptureBytes = streamedDiagnosticRoleStemCapture
+            ? max(0, captureBytes - activeSynthesis.analyzerWorkingByteCount)
+            : captureBytes
+        let active = activeSynthesis.peakWorkingByteCount.addingReportingOverflow(additionalCaptureBytes)
         let total = retainedNumericByteCount.addingReportingOverflow(active.partialValue)
         let count = completedSourceCount.addingReportingOverflow(1)
         let passes = completedRenderPassCount.addingReportingOverflow(renderPassCount)

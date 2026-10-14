@@ -764,15 +764,18 @@ package enum AutonomousPerformancePreparer {
         let sampleRate: Double
         let bars: Int
         let capture: Bool
+        let streamedCapture: Bool
         private(set) var value: AutonomousPreparationChainResourceBudget
         private(set) var refused = false
-        init(incoming: AutonomousPreparationChainResourceBudget, sampleRate: Double, bars: Int, capture: Bool) {
+        init(incoming: AutonomousPreparationChainResourceBudget, sampleRate: Double, bars: Int, capture: Bool, streamedCapture: Bool) {
             self.incoming = incoming; self.sampleRate = sampleRate; self.bars = bars; self.capture = capture
+            self.streamedCapture = streamedCapture
             value = incoming
         }
         func claim(_ count: Int) -> Bool {
             guard let next = incoming.reserving(sampleRate: sampleRate, barCount: bars,
-                renderPassCount: count, diagnosticRoleStemCapture: capture) else { refused = true; return false }
+                renderPassCount: count, diagnosticRoleStemCapture: capture,
+                streamedDiagnosticRoleStemCapture: streamedCapture) else { refused = true; return false }
             value = next
             return true
         }
@@ -843,12 +846,11 @@ package enum AutonomousPerformancePreparer {
             if diagnosticRoleStemSession != nil && !evaluator.requiresPreparedValidation {
                 return fail("diagnostic-prepared-validation-required")
             }
-            // Streaming charges the existing full-capture reservation for
-            // every actual source/attempt until unique working-set accounting
-            // is proved. Files do not justify a zero-cost charge or larger cap.
-            let reservedCapture = capture || diagnosticRoleStemSession != nil
+            // Streaming borrows one bar synchronously. Retained legacy captures
+            // still reserve all phrase/pass payloads. Neither mode changes the
+            // ordinary chain, continuation, scratch or analysis reservation.
             let reservation = RenderReservation(incoming: resource, sampleRate: current.key.sampleRate,
-                bars: plan.barCount, capture: reservedCapture)
+                bars: plan.barCount, capture: capture, streamedCapture: diagnosticRoleStemSession != nil)
             if evaluator.requiresPreparedValidation && !reservation.claim(1) {
                 return fail("resource-bound", ["sources=\(resource.sourceCount)",
                     "reserved-bytes=\(resource.reservedPeakWorkingByteCount)", "next-bars=\(plan.barCount)"])
@@ -901,7 +903,7 @@ package enum AutonomousPerformancePreparer {
                 cancellationRequested: cancellationRequested),
                 let retained = resource.retainingCompletedSource(sampleRate: current.key.sampleRate,
                     barCount: plan.barCount, requiresQualifiedSuccessor: needsChild,
-                    diagnosticRoleStemCapture: reservedCapture,
+                    diagnosticRoleStemCapture: capture,
                     retainedContinuationNumericByteCount: numericStorage)
             else { return fail(cancellationRequested() ? "cancelled" : "resource-retention-mismatch") }
             resource = retained

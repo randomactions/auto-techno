@@ -77,6 +77,18 @@ extension AutonomousBarRoleStemCapture {
         }
     }
 
+    /// Fixed order shared with the canonical renderer's ordinary ownership
+    /// witness. These arrays remain in the unchanged ordinary reservation.
+    var streamedSharedChannels: [[Float]] {
+        [full.dryCenterReference, full.dryUpperReference, full.kick,
+         full.foundation, full.modalFoundation, full.percussion, full.upperTonal,
+         full.atmosphere, full.protectedFoundation, full.sourceLeft, full.sourceRight,
+         protectedRhythm.kick, protectedRhythm.percussion,
+         protectedRhythm.sourceLeft, protectedRhythm.sourceRight,
+         graphInputLeft, graphInputRight, processedUpperLeft, processedUpperRight,
+         preClimaxMixLeft, preClimaxMixRight]
+    }
+
     /// Actual borrowed capture storage, deduplicated by live array identity.
     /// Count capacity, not occupied frames; this is not total render/RSS proof.
     package var uniqueNumericCapacityByteCount: Int {
@@ -166,6 +178,51 @@ package enum DiagnosticRoleStemCaptureError: Error { case invalidInput, ioFailur
 /// binds it to its selected candidate and exact owned successor.
 package final class DiagnosticRoleStemCaptureSpool: @unchecked Sendable {
     package static let maximumWriteChunkBytes = 64 * 1_024
+
+    /// Same bound used before rendering and again on the actual borrowed bar.
+    /// Aggregate allocated capacity, including native Array growth. The
+    /// renderer separately checks aliases already covered by ordinary scratch.
+    package static func maximumBorrowedNumericCapacityByteCount(framesPerBar: Int) -> Int {
+        let bytes = framesPerBar.multipliedReportingOverflow(by:
+            DiagnosticRoleStemChannel.allCases.count * MemoryLayout<Float>.stride * 2)
+        return framesPerBar <= 0 || bytes.overflow ? Int.max : bytes.partialValue
+    }
+
+    /// Seven protected dry taps outlive workspace reuse; four residual taps
+    /// are capture-only. The other 21 taps must alias ordinary charged owners.
+    package static func maximumAdditionalNumericCapacityByteCount(framesPerBar: Int) -> Int {
+        let bytes = framesPerBar.multipliedReportingOverflow(by: 11 * MemoryLayout<Float>.stride * 2)
+        return framesPerBar <= 0 || bytes.overflow ? Int.max : bytes.partialValue
+    }
+
+    static func streamedStorageFits(_ capture: AutonomousBarRoleStemCapture,
+        sharedChannels: [[Float]]) -> Bool {
+        let shared = capture.streamedSharedChannels
+        guard shared.count == 21, sharedChannels.count == shared.count,
+            zip(shared, sharedChannels).allSatisfy({ pair in
+                pair.0.withUnsafeBufferPointer { a in
+                    pair.1.withUnsafeBufferPointer { b in
+                        a.baseAddress == b.baseAddress && pair.0.capacity == pair.1.capacity
+                    }
+                }
+            }) else { return false }
+        let additional = [capture.protectedRhythm.dryCenterReference,
+            capture.protectedRhythm.dryUpperReference, capture.protectedRhythm.foundation,
+            capture.protectedRhythm.modalFoundation, capture.protectedRhythm.upperTonal,
+            capture.protectedRhythm.atmosphere, capture.protectedRhythm.protectedFoundation,
+            capture.outputSafetyResidualLeft, capture.outputSafetyResidualRight,
+            capture.terminalProcessingResidualLeft, capture.terminalProcessingResidualRight]
+        var bytes = 0
+        // Summing without deduplication is conservative when dry taps alias.
+        for samples in additional {
+            let next = samples.capacity.multipliedReportingOverflow(by: MemoryLayout<Float>.stride)
+            let total = bytes.addingReportingOverflow(next.partialValue)
+            guard !next.overflow, !total.overflow else { return false }
+            bytes = total.partialValue
+        }
+        return bytes <= maximumAdditionalNumericCapacityByteCount(framesPerBar: capture.frameCount)
+    }
+
     package let directory: URL
     package let planFingerprint: String
     package let sampleRate: Double
@@ -217,7 +274,7 @@ package final class DiagnosticRoleStemCaptureSpool: @unchecked Sendable {
             capture.sampleRate == sampleRate, capture.frameCount == framesPerBar,
             block.left.count == framesPerBar, block.right.count == framesPerBar,
             capture.frameCountsAreAligned, capture.samplesAreFinite,
-            capture.uniqueNumericCapacityByteCount <= framesPerBar * 32 * 4 * 2,
+            capture.uniqueNumericCapacityByteCount <= Self.maximumBorrowedNumericCapacityByteCount(framesPerBar: framesPerBar),
             block.left.allSatisfy(\.isFinite), block.right.allSatisfy(\.isFinite) else {
             failureCode = cancellationRequested() ? "cancelled" : "capture-mismatch"
             discard(); return false

@@ -2952,3 +2952,43 @@ host admission remains unavailable without Long Horizon qualification. Fresh
 independent native Long Horizon histories, complete platform checks, resource,
 lifecycle and applicable physical-output requirements still gate promotion.
 No score, renderer, callback, continuation or fallback behavior changes here.
+
+
+## Bounded streamed-capture reservation
+
+The existing detached RenderReservation and chain resource v4 distinguish
+retained diagnostic captures from the synchronous file-spool session. Retained
+captures keep their complete phrase/pass and suspended-source charges. Streamed
+captures check an independent total borrowed-capacity ceiling of 32 channels
+with up to twice their logical Float storage, plus one 64 KiB writer chunk.
+Unused Array capacity counts; logical length alone cannot establish this bound.
+
+The renderer additionally proves 21 live array aliases to ordinary owners
+already included in the unchanged scratch/product reservation: nine current
+workspace taps, two full source outputs, four protected outputs and six existing
+graph/mix arrays. It charges the seven protected dry taps that survive workspace
+reuse and four capture-only residual arrays separately. Each streamed bar checks
+all 21 pointer-and-capacity relationships and the aggregate allocated capacity
+of those eleven additional arrays before delivery. Equal PCM in a copied array
+cannot establish ownership. An alias or capacity mismatch refuses the render;
+it cannot authorize a smaller reservation or an alternate source.
+
+Rendering/capture returns before PhraseAudioPreflight begins. Its temporary
+arrays and bounded synchronous byte chunk do not survive into that analyzer;
+sealed drafts retain only paths and bounded records. The reservation therefore
+uses the larger of render-plus-incremental-capture and analysis storage. Original
+scratch, hold, incoming continuation, suspended parent, selected PCM and evidence
+allowances remain charged. Initial PCM is released before correction, as in v3.
+The numeric ceiling remains 128 MiB and the work limit remains two renders.
+There is no capture control in ordinary playback or new callback work.
+
+Native initial/corrected root-child controls must preserve ordinary PCM, holds,
+selected attempts, state/transaction identities and exact child ownership,
+inspect render and analysis capacities, and read/hash every selected channel.
+Separate controls reject each equal-PCM shared-buffer copy, missing ownership,
+additional-array overflow and total borrowed-capacity overflow. These establish
+only the bounded diagnostic numeric/lifetime contract; allocator overhead,
+whole-process RSS, deadlines, installed quality populations, Phase1 lifecycle
+and physical-output requirements remain separate. Sealed-file lifetime controls
+release the final draft owners and require owned files to disappear while
+unrelated files survive; test teardown cannot substitute for that check.

@@ -115,6 +115,40 @@ struct DiagnosticRoleStemStreamingTests {
         let firstBlock = try #require(retained.blocks.first)
         let sibling = parent.appendingPathComponent("unrelated-marker")
         try Data([42]).write(to: sibling)
+        // Logical frame geometry and PCM can be unchanged while allocated
+        // capacity exceeds the streamed contract. It must refuse before writing.
+        var oversized = firstCapture.full.dryCenterReference
+        oversized.reserveCapacity(DiagnosticRoleStemCaptureSpool
+            .maximumBorrowedNumericCapacityByteCount(framesPerBar: firstCapture.frameCount) /
+                MemoryLayout<Float>.stride + 1)
+        let originalFull = firstCapture.full
+        let oversizedFull = VoiceRoleStemCapture(
+            dryCenterReference: oversized, dryUpperReference: originalFull.dryUpperReference,
+            kick: originalFull.kick, foundation: originalFull.foundation,
+            modalFoundation: originalFull.modalFoundation, percussion: originalFull.percussion,
+            upperTonal: originalFull.upperTonal, atmosphere: originalFull.atmosphere,
+            protectedFoundation: originalFull.protectedFoundation,
+            sourceLeft: originalFull.sourceLeft, sourceRight: originalFull.sourceRight)
+        let oversizedCapture = AutonomousBarRoleStemCapture(
+            bar: firstCapture.bar, sampleRate: firstCapture.sampleRate,
+            full: oversizedFull, protectedRhythm: firstCapture.protectedRhythm,
+            graphInputLeft: firstCapture.graphInputLeft, graphInputRight: firstCapture.graphInputRight,
+            processedUpperLeft: firstCapture.processedUpperLeft,
+            processedUpperRight: firstCapture.processedUpperRight,
+            preClimaxMixLeft: firstCapture.preClimaxMixLeft, preClimaxMixRight: firstCapture.preClimaxMixRight,
+            outputSafetyResidualLeft: firstCapture.outputSafetyResidualLeft,
+            outputSafetyResidualRight: firstCapture.outputSafetyResidualRight,
+            terminalProcessingResidualLeft: firstCapture.terminalProcessingResidualLeft,
+            terminalProcessingResidualRight: firstCapture.terminalProcessingResidualRight)
+        #expect(oversizedCapture == firstCapture)
+        #expect(oversizedCapture.frameCountsAreAligned && oversizedCapture.samplesAreFinite)
+        #expect(oversizedCapture.uniqueNumericCapacityByteCount > DiagnosticRoleStemCaptureSpool
+            .maximumBorrowedNumericCapacityByteCount(framesPerBar: firstCapture.frameCount))
+        let overCapacity = try DiagnosticRoleStemCaptureSpool(parentDirectory: parent, plan: plan, sampleRate: 8_000)
+        #expect(!overCapacity.append(oversizedCapture, block: firstBlock))
+        #expect(overCapacity.failureCode == "capture-mismatch" && overCapacity.finish() == nil)
+        #expect(!FileManager.default.fileExists(atPath: overCapacity.directory.path))
+        #expect(try Data(contentsOf: sibling) == Data([42]))
         let repeated = try DiagnosticRoleStemCaptureSpool(parentDirectory: parent, plan: plan, sampleRate: 8_000)
         #expect(repeated.append(firstCapture, block: firstBlock))
         #expect(!repeated.append(firstCapture, block: firstBlock))
@@ -129,6 +163,47 @@ struct DiagnosticRoleStemStreamingTests {
         #expect(!wrongRate.append(firstCapture, block: firstBlock))
         #expect(wrongRate.failureCode == "capture-mismatch" && wrongRate.finish() == nil)
         #expect(!FileManager.default.fileExists(atPath: wrongRate.directory.path))
+    }
+
+    @Test("Streamed accounting requires actual aliases and independently bounds additional capacity")
+    func streamedAliasAndIncrementalCapacity() throws {
+        let unit = [Float](repeating: 0, count: 64)
+        func voice(_ center: [Float]) -> VoiceRoleStemCapture {
+            VoiceRoleStemCapture(dryCenterReference: center, dryUpperReference: unit,
+                kick: unit, foundation: unit, modalFoundation: unit, percussion: unit,
+                upperTonal: unit, atmosphere: unit, protectedFoundation: unit,
+                sourceLeft: unit, sourceRight: unit)
+        }
+        func capture(_ protectedCenter: [Float]) -> AutonomousBarRoleStemCapture {
+            AutonomousBarRoleStemCapture(bar: 0, sampleRate: 8_000,
+                full: voice(unit), protectedRhythm: voice(protectedCenter),
+                graphInputLeft: unit, graphInputRight: unit,
+                processedUpperLeft: unit, processedUpperRight: unit,
+                preClimaxMixLeft: unit, preClimaxMixRight: unit,
+                outputSafetyResidualLeft: unit, outputSafetyResidualRight: unit,
+                terminalProcessingResidualLeft: unit, terminalProcessingResidualRight: unit)
+        }
+        let original = capture(unit)
+        let shared = original.streamedSharedChannels
+        #expect(DiagnosticRoleStemCaptureSpool.streamedStorageFits(original, sharedChannels: shared))
+        for index in shared.indices {
+            var altered = shared
+            var equalPCM = altered[index]
+            equalPCM.reserveCapacity(equalPCM.capacity + 1)
+            altered[index] = equalPCM
+            #expect(altered == shared)
+            #expect(!DiagnosticRoleStemCaptureSpool.streamedStorageFits(original, sharedChannels: altered))
+        }
+        #expect(!DiagnosticRoleStemCaptureSpool.streamedStorageFits(original, sharedChannels: Array(shared.dropLast())))
+        var extra = unit
+        extra.reserveCapacity(64 * 11 * 2 + 1)
+        let oversized = capture(extra)
+        #expect(oversized == original)
+        // This input fits the independent full-capture guard but exceeds the
+        // eleven additional-array allowance, so neither guard can replace the other.
+        #expect(oversized.uniqueNumericCapacityByteCount <= DiagnosticRoleStemCaptureSpool
+            .maximumBorrowedNumericCapacityByteCount(framesPerBar: 64))
+        #expect(!DiagnosticRoleStemCaptureSpool.streamedStorageFits(oversized, sharedChannels: shared))
     }
 
     static func checkAnalyzerStorage(_ probe: PreparationWorkingStorageProbe,

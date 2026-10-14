@@ -2734,8 +2734,20 @@ package enum AutonomousPhraseRenderer {
                         terminalProcessingResidualRight:
                             terminalProcessingResidualRight
                     )
-                if diagnosticRoleStemSink != nil { streamedCapture = capture }
-                else { diagnosticRoleStemCaptures.append(capture) }
+                if diagnosticRoleStemSink != nil {
+                    guard DiagnosticRoleStemCaptureSpool.streamedStorageFits(capture, sharedChannels: [
+                        workspace.buffers.output, workspace.buffers.synth, workspace.buffers.kick,
+                        workspace.buffers.foundationStem, workspace.buffers.modalPercussionStem,
+                        workspace.buffers.percussionTextureStem, workspace.buffers.upperTonalStem,
+                        workspace.buffers.atmosphereStem, workspace.buffers.maskingFoundation,
+                        rendered.leftSamples, rendered.rightSamples,
+                        protectedRhythm.audibleKickSamples, protectedRhythm.upperPercussionSamples,
+                        protectedRhythm.leftSamples, protectedRhythm.rightSamples,
+                        graphInputLeft, graphInputRight, pumpedUpper.left, pumpedUpper.right,
+                        preLiveFeedbackLeft, preLiveFeedbackRight
+                    ]) else { return nil }
+                    streamedCapture = capture
+                } else { diagnosticRoleStemCaptures.append(capture) }
             }
             let protectedRhythmSampleHash = ExactPCMFingerprint.stereo(
                 left: protectedRhythm.leftSamples,
