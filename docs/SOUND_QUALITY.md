@@ -1819,3 +1819,21 @@ Engine-v49 primary calibration remains immutable historical evidence. Its
 seals cannot activate engine v50. Fresh complete primary calibration, matching
 Long Horizon qualification and every separate runtime/resource/lifecycle and
 platform/output gate remain required before promotion.
+
+
+## Engine-v50 primary qualification resources
+
+The sole ProfessionalQualityPrimaryArtifacts owner now loads resource revision
+v34 from the complete fresh engine-v50 native study. The existing primary v32
+policy and profile v33 measurement contract are unchanged. All40development
+and6disjoint holdout trajectories completed at44.1and48kHz with644original
+reports and644actual successor receipts; all34adversarial cases and all84
+holdout observations passed. No stored capture was imported into construction.
+The previous engine-v49 resources remain historical rejection fixtures.
+
+This supplies current primary calibration only. The installed-artifact control
+checks the exact three seals, rejects the historical engine and verifies that
+host admission remains unavailable without Long Horizon qualification. Fresh
+independent native Long Horizon histories, complete platform checks, resource,
+lifecycle and applicable physical-output requirements still gate promotion.
+No score, renderer, callback, continuation or fallback behavior changes here.

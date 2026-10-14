@@ -1,23 +1,23 @@
 import Foundation
 
-/// Sole current continuous qualification identity. The retained v33 resources
-/// bind the historical engine-v49 study; engine-v50 qualification is pending.
+/// Sole current continuous qualification identity. The v34 resource bundle
+/// binds the complete fresh engine-v50 study; v33 remains historical evidence.
 /// Explicit offline construction validates the same profile/adversarial/holdout
 /// contract without activating transport or importing calibration banks.
 package struct ProfessionalQualityPrimaryArtifacts: Sendable {
     package static let profileResource =
-        "professional-quality-primary-profile-v33"
+        "professional-quality-primary-profile-v34"
     package static let adversarialResource =
-        "professional-quality-primary-adversarial-suite-v33"
+        "professional-quality-primary-adversarial-suite-v34"
     package static let holdoutResource =
-        "professional-quality-primary-holdout-v33"
-    // Complete frozen a44698c study: 40 development / 6 holdout trajectories,
-    // 34 adversarial cases and 84 accepted holdout observations. These seals
-    // qualified only the engine-v49 primary evaluator. They cannot activate
-    // engine v50; fresh complete primary and Long Horizon studies are required.
-    package static let expectedProfileFingerprint: String? = nil
-    package static let expectedAdversarialSuiteFingerprint: String? = nil
-    package static let expectedHoldoutQualificationFingerprint: String? = nil
+        "professional-quality-primary-holdout-v34"
+    // Fresh frozen 6d8d93a study: 40 development / 6 holdout trajectories,
+    // both native rates, 34 adversarial cases and 84 accepted holdout observations.
+    // The resource revision changes; the primary v32 policy/profile v33 contract
+    // remains intact. These seals do not supply Long Horizon or host admission.
+    package static let expectedProfileFingerprint: String? = "7c2ad1950257b597"
+    package static let expectedAdversarialSuiteFingerprint: String? = "e77bf9664d358c1c"
+    package static let expectedHoldoutQualificationFingerprint: String? = "876fd9f11eae8054"
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport
