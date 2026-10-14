@@ -167,11 +167,14 @@ class HistoryIntegrityTests(unittest.TestCase):
     def test_sample_repeat_attempt_and_ceiling_controls(self):
         document = fixture()
         j = document['journey']
-        j['accountedRepeats'] = [dict(startSample=100, endSample=200, frameCount=100, barCount=1)]
-        j['endSample'] += 100
+        frames = round(240 / 130 * j['sampleRate'])
+        j['accountedRepeats'] = [dict(startSample=frames, endSample=2*frames,
+                                    frameCount=frames, barCount=1)]
+        j['endSample'] += frames
         self.assertEqual(self.verify(document)['accountedRepeats'], 1)
         mutations = [lambda j:j['accountedRepeats'][0].update(frameCount=99),
-                     lambda j:j['accountedRepeats'].append(dict(startSample=150, endSample=250, frameCount=100, barCount=1)),
+                     lambda j:j['accountedRepeats'].append(dict(startSample=frames,
+                         endSample=2*frames, frameCount=frames, barCount=1)),
                      lambda j:j.update(endSample=j['endSample']+1),
                      lambda j:j.update(acceptedFrameCount=j['acceptedFrameCount']+1),
                      lambda j:j.update(newPreparationAttemptCount=1),
@@ -188,6 +191,38 @@ class HistoryIntegrityTests(unittest.TestCase):
             document['journey']['signal'][key] = False
             with self.assertRaises(history.HistoryIntegrityError):
                 self.verify(document)
+
+    def test_repeat_bar_geometry_cannot_be_hidden_by_consistent_frame_totals(self):
+        for rate in (44100, 48000):
+            document = fixture(rate)
+            j = document['journey']
+            frames_per_bar = round(240 / 130 * rate)
+            repeat = dict(startSample=10 * frames_per_bar, endSample=13 * frames_per_bar,
+                          frameCount=3 * frames_per_bar, barCount=3)
+            j['accountedRepeats'] = [repeat]
+            j['endSample'] += repeat['frameCount']
+            self.assertEqual(self.verify(document)['accountedRepeats'], 1)
+            for fault in ('bar-count', 'fractional-bar', 'unaligned-boundary', 'oversized-phrase'):
+                changed = copy.deepcopy(document)
+                journey = changed['journey']
+                row = journey['accountedRepeats'][0]
+                if fault == 'bar-count':
+                    row['barCount'] += 1
+                elif fault == 'fractional-bar':
+                    row['frameCount'] += 1
+                    row['endSample'] += 1
+                    journey['endSample'] += 1
+                elif fault == 'unaligned-boundary':
+                    row['startSample'] += 1
+                    row['endSample'] += 1
+                else:
+                    row['barCount'] = 17
+                    row['frameCount'] = 17 * frames_per_bar
+                    row['endSample'] = row['startSample'] + row['frameCount']
+                    journey['endSample'] += 14 * frames_per_bar
+                with self.subTest(rate=rate, fault=fault), self.assertRaisesRegex(
+                        history.HistoryIntegrityError, 'repeat native bar geometry'):
+                    self.verify(changed)
 
     def test_json_duplicate_nonfinite_and_symlink_refuse(self):
         with tempfile.TemporaryDirectory() as directory:

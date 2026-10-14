@@ -202,7 +202,8 @@ def verify_history(document, binding, roots, primary_policy, engine):
     for key, maximum in (('recentTransitions', 32), ('recentEpisodes', 16)):
         require(isinstance(s.get(key), list) and len(s[key]) <= maximum, 'bounded ' + key)
     accepted = uint(j.get('acceptedFrameCount'), 'accepted frames', 1)
-    require(accepted == bars * round(240 / 130 * rate), 'native accepted frame/bar geometry')
+    frames_per_bar = round(240 / 130 * rate)
+    require(accepted == bars * frames_per_bar, 'native accepted frame/bar geometry')
     repeats = j.get('accountedRepeats')
     require(isinstance(repeats, list), 'repeat records required')
     previous_end = total = 0
@@ -211,7 +212,11 @@ def verify_history(document, binding, roots, primary_policy, engine):
         start = uint(row.get('startSample'), 'repeat start')
         end = uint(row.get('endSample'), 'repeat end', 1)
         frames = uint(row.get('frameCount'), 'repeat frames', 1)
-        uint(row.get('barCount'), 'repeat bars', 1)
+        repeat_bars = uint(row.get('barCount'), 'repeat bars', 1)
+        # The producer repeats a complete accepted phrase, including when
+        # selecting one of its same-length prepared evolution variants.
+        require(repeat_bars <= 16 and frames == repeat_bars * frames_per_bar and
+                start % frames_per_bar == 0, 'repeat native bar geometry')
         require(previous_end <= start and end - start == frames, 'repeat sample accounting/order')
         previous_end = end
         total += frames
