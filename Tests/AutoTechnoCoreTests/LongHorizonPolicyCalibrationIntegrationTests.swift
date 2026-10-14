@@ -881,6 +881,11 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     let recovery = environment["AUTOTECHNO_LONG_HORIZON_RECOVERY_BOUND_PROBE"] == "1"
     let root: UInt64 = recovery ? 141_421 : 112_358
     let target = recovery ? 13 : 279
+    if recovery, request.sourceState.rootSeed == root,
+      environment["AUTOTECHNO_LONG_HORIZON_SPECTRAL_SUPPORT_PROBE"] == "1",
+      prepared.plan.kind == .contrast {
+      try writeSpectralWindowSupport(request: request, prepared: prepared)
+    }
     guard recovery || environment["AUTOTECHNO_LONG_HORIZON_DIVERGENCE_PROBE"] == "1",
       request.sourceState.rootSeed == root, request.key.phraseIndex == target
     else { return false }
@@ -924,6 +929,62 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     return recovery && (prepared.commitEligible ||
       environment["AUTOTECHNO_LONG_HORIZON_RECOVERY_WAVE_PROBE"] != "1" ||
       request.key.qualityRecoveryContext.wave >= 1)
+  }
+
+  /// Offline diagnostic only. Rewindow the exact immutable stereo samples so
+  /// centroid extrema retain their measured level and position. No threshold,
+  /// rendered sample, decision or calibration observation is changed.
+  private static func writeSpectralWindowSupport(
+    request: PhrasePreparationRequest, prepared: PreparedAutonomousPhrase
+  ) throws {
+    let rate = request.key.sampleRate
+    let left = prepared.blocks.flatMap(\.left), right = prepared.blocks.flatMap(\.right)
+    let full = try #require(StreamingPerceptualEvidenceAnalyzer.analyze(
+      left: left, right: right, sampleRate: rate))
+    let size = full.analysisFrameCount, hop = full.hopFrameCount
+    var rows: [(start: Int, centroid: Double, rms: Double)] = []
+    if left.count >= size {
+      for start in stride(from: 0, through: left.count - size, by: hop) {
+        let l = Array(left[start..<start + size]), r = Array(right[start..<start + size])
+        let window = try #require(StreamingPerceptualEvidenceAnalyzer.analyze(
+          left: l, right: r, sampleRate: rate))
+        guard window.activeWindowCount == 1 else { continue }
+        let squareSum = zip(l, r).reduce(0.0) { total, pair in
+          let mono = (Double(pair.0) + Double(pair.1)) * 0.5
+          return total + mono * mono
+        }
+        rows.append((start, window.spectralCentroidMeanHz, sqrt(squareSum / Double(size))))
+      }
+    }
+    #expect(rows.count == full.activeWindowCount)
+    let ordered = rows.sorted { $0.centroid < $1.centroid }
+    let span = (ordered.last?.centroid ?? 0) - (ordered.first?.centroid ?? 0)
+    #expect(abs(span - full.spectralCentroidSpreadHz) < 0.000_001)
+    #expect(abs(full.spectralCentroidSpreadHz -
+      prepared.selectedCandidateEvidence.fullMix.perceptual.spectralCentroidSpreadHz) < 0.000_001)
+    func reduced(_ row: (start: Int, centroid: Double, rms: Double)) -> [String: Any] {
+      ["startFrame": row.start, "centroidHz": row.centroid, "rms": row.rms,
+       "rmsDBFS": row.rms > 0 ? 20 * log10(row.rms) : -Double.greatestFiniteMagnitude]
+    }
+    let witness: [String: Any] = [
+      "schema": "autotechno-spectral-window-support-diagnostic.v1",
+      "rootSeed": request.sourceState.rootSeed, "sampleRate": rate,
+      "phraseIndex": request.key.phraseIndex, "retryWave": request.key.qualityRecoveryContext.wave,
+      "retryOrdinal": request.key.qualityRetryOrdinal, "commitEligible": prepared.commitEligible,
+      "requestFingerprint": request.replayIdentity.fingerprint,
+      "sampleHash": prepared.audioPreflight.quality.sampleHash,
+      "analysisFrameCount": size, "hopFrameCount": hop, "activeWindowCount": rows.count,
+      "centroidSpreadHz": span, "lowestCentroidWindows": ordered.prefix(4).map(reduced),
+      "highestCentroidWindows": ordered.suffix(4).map(reduced),
+      "highestEnergyWindows": rows.sorted { $0.rms > $1.rms }.prefix(4).map(reduced),
+      "qualityDiagnostics": prepared.qualityDiagnosticDetails, "calibrationEvidence": false,
+      "resourceQualification": false,
+    ]
+    let directory = try #require(ProcessInfo.processInfo.environment["AUTOTECHNO_LONG_HORIZON_RESOURCE_DIRECTORY"])
+    let name = "spectral-support-\(request.sourceState.rootSeed)-\(Int(rate))-\(request.key.phraseIndex)-"
+      + "\(request.key.qualityRecoveryContext.wave)-\(request.key.qualityRetryOrdinal).json"
+    try JSONSerialization.data(withJSONObject: witness, options: [.sortedKeys])
+      .write(to: URL(fileURLWithPath: directory).appendingPathComponent(name), options: .withoutOverwriting)
   }
 
   @Test("Probe the actual native bootstrap through the same full-journey owner",
