@@ -704,6 +704,7 @@ struct ProfessionalQualityCalibrationTests {
     }
 
     @Test("Dotted-rhythm crest mean follows selected complete-candidate bars")
+    @MainActor
     func dottedRhythmCrestPopulationAcrossCandidates() throws {
         var candidates: [AutonomousCandidateEvaluationVector] = []
         var selectedBarCounts = Set<Int>()
