@@ -11,7 +11,7 @@ on:
         type: choice
         required: true
         default: complete
-        options: [complete, map-only, protected-continuation-diagnostic, harmonic-tail-diagnostic, primary-readiness, effect-dose-readiness, native-history-readiness, calibration-diagnostic-readiness]
+        options: [complete, map-only, protected-continuation-diagnostic, harmonic-tail-diagnostic, primary-readiness, effect-dose-readiness, native-history-readiness, calibration-diagnostic-readiness, calibration-fixture-readiness]
 permissions:
   contents: read
 concurrency:
@@ -58,7 +58,7 @@ jobs:
         if: matrix.bank == 0
         run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/at0039-tests"
   map:
-    if: inputs.scope == 'map-only' || inputs.scope == 'primary-readiness' || inputs.scope == 'effect-dose-readiness' || inputs.scope == 'native-history-readiness' || inputs.scope == 'calibration-diagnostic-readiness'
+    if: inputs.scope == 'map-only' || inputs.scope == 'primary-readiness' || inputs.scope == 'effect-dose-readiness' || inputs.scope == 'native-history-readiness' || inputs.scope == 'calibration-diagnostic-readiness' || inputs.scope == 'calibration-fixture-readiness'
     name: Native map and component (${{ matrix.slice }})
     runs-on: macos-15
     timeout-minutes: ${{ inputs.scope == 'native-history-readiness' && 180 || 90 }}
@@ -88,6 +88,12 @@ jobs:
         run: >-
           swift test --build-path "$RUNNER_TEMP/at0039-map" --skip-build --no-parallel
           --disable-xctest --enable-swift-testing --filter LongHorizonEffectDoseTests
+      - name: Verify calibration render fixture stack
+        if: inputs.scope == 'calibration-fixture-readiness'
+        run: >-
+          swift test --build-path "$RUNNER_TEMP/at0039-map" --skip-build --no-parallel
+          --disable-xctest --enable-swift-testing
+          --filter 'ProfessionalQualityCalibrationTests[./](conditionalMetricCalibration|deterministicProfile|kickProjectionMatchesEvidence|upperPercussionTailScoreApplicability)($|[(/])'
       - name: Verify calibration diagnostic stack entry
         if: inputs.scope == 'calibration-diagnostic-readiness'
         run: >-

@@ -2362,6 +2362,8 @@ struct ProfessionalQualityCalibrationTests {
     }
 
     @Test("Tail applicability distinguishes absent score events from measured natural-body zero")
+    // Large render fixtures require the test main stack in native Debug builds.
+    @MainActor
     func upperPercussionTailScoreApplicability() throws {
         let director = AutonomousSessionDirector(rootSeed: 91_773)
         var state = director.initialState()
