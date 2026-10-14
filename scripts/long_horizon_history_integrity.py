@@ -105,8 +105,15 @@ def metric_rows(rows, count):
                     math.isfinite(v) for v in values),
                 'finite metric bounds required')
         low, mean, high = values
-        # Accumulated means can differ from a constant extremum by roundoff.
-        epsilon = 1e-12 * max(1, abs(low), abs(high))
+        # The native MetricState adds n values, then divides by Double(n).
+        # gamma_(n+2) covers summation, count conversion and division roundoff;
+        # one scale-relative ulp also covers gradual underflow. Exact zeros
+        # need no allowance. A fixed absolute floor would hide tiny bad means.
+        roundoff = (support + 2) * (math.ulp(1.0) / 2)
+        require(roundoff < 1, 'finite metric roundoff bound unavailable')
+        scale = max(abs(low), abs(high))
+        epsilon = 0.0 if scale == 0 else scale * (roundoff / (1 - roundoff)) + math.ulp(scale)
+        require(math.isfinite(epsilon), 'finite metric roundoff bound unavailable')
         require(low <= high and low - epsilon <= mean <= high + epsilon,
                 'inconsistent metric bounds')
     return missing

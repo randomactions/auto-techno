@@ -136,6 +136,25 @@ class HistoryIntegrityTests(unittest.TestCase):
         self.assertEqual(row['conditionallyUnavailableTransitionObservations'],
                          {'maintain': {history.METRICS[0]: 2}})
 
+    def test_tiny_or_zero_metrics_cannot_hide_an_impossible_mean(self):
+        for observed, impossible in ((1e-100, 1e-80), (0.0, 5e-324)):
+            document = fixture()
+            index = history.METRICS.index('positive-spectral-flux-mean')
+            document['journey']['signal']['metrics'][index].update(
+                minimum=observed, maximum=observed, mean=impossible)
+            with self.subTest(observed=observed), self.assertRaisesRegex(
+                    history.HistoryIntegrityError, 'inconsistent metric bounds'):
+                self.verify(document)
+
+    def test_native_sum_then_divide_roundoff_remains_representable(self):
+        document = fixture()
+        row = document['journey']['signal']['metrics'][0]
+        total = 0.0
+        for _ in range(row['observationCount']):
+            total += 1e-100
+        row.update(minimum=1e-100, maximum=1e-100, mean=total/row['observationCount'])
+        self.verify(document)
+
     def test_bad_recent_hard_gate_route_or_adjacency_refuses(self):
         for key, value in [('hardGatesPassed', False), ('rootSeed', 2),
                            ('sampleRate', 48000), ('phraseIndex', 0), ('startBar', 0),
