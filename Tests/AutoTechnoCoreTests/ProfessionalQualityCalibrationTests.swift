@@ -1183,6 +1183,7 @@ struct ProfessionalQualityCalibrationTests {
     }
 
     @Test("Transient-density span follows varied rendered bar evidence")
+    @MainActor
     func transientDensitySpanAcrossRenderedBars() throws {
         var selected: AutonomousCandidateEvaluationVector?
 
