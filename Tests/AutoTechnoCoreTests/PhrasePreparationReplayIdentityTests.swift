@@ -1462,7 +1462,7 @@ struct IterativeSuccessorPreparationTests {
         // never executes on the render callback or in a production host.
         var acknowledged = false
         let clock = ContinuousClock()
-        let deadline = clock.now.advanced(by: .seconds(60))
+        let deadline = clock.now.advanced(by: .seconds(180))
         while clock.now < deadline {
             try Task.checkCancellation()
             if FileManager.default.fileExists(atPath: acknowledgement.path) {

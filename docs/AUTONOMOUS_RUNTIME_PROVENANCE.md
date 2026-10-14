@@ -3042,10 +3042,11 @@ reservation, numerical limits, score, continuation and fallback are unchanged.
 The diagnostic requires explicit 44.1 or 48 kHz and initial/corrected selection with
 uncompacted system allocation history. It emits a reduced ready receipt only
 after the shared detached preparation returns, retains the actual selected root,
-child and capture owners through external inspection, and checks a 60-second monotonic deadline
+child and capture owners through external inspection, and checks a 180-second monotonic deadline
 for an exact regular-file acknowledgement in its private temporary namespace.
 Invalid configuration, acknowledgement, cancellation or timeout fails the test.
 The rendezvous is test-only and never executes in a production host or callback.
+Its inspection limit is separate from preparation and playback deadlines.
 After acknowledgement it checks every selected 32-channel record. External
 history includes preparation and the inspection rendezvous before acknowledgement;
 these later readback allocations are outside that interval.
