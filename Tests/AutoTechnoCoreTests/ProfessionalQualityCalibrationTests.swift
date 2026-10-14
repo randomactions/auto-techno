@@ -1696,6 +1696,7 @@ struct ProfessionalQualityCalibrationTests {
     }
 
     @Test("Modal event population projections vary across complete candidates")
+    @MainActor
     func modalEventPopulationProjectionAcrossCandidates() throws {
         var candidates: [AutonomousCandidateEvaluationVector] = []
         var populationSignatures = Set<String>()
