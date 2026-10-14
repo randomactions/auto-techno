@@ -1362,6 +1362,8 @@ struct ProfessionalQualityCalibrationTests {
     }
 
     @Test("Active spectral reveal projects rendered eligible events")
+    // Native Debug fixture values exceed the cooperative-worker stack.
+    @MainActor
     func activeSpectralRevealProjectionMatchesEvidence() throws {
         let candidate = try candidateWithActiveSpectralReveal()
         let phraseKind = try #require(AutonomousPhraseKind(
