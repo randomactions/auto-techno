@@ -3000,3 +3000,30 @@ whole-process RSS, deadlines, installed quality populations, Phase1 lifecycle
 and physical-output requirements remain separate. Sealed-file lifetime controls
 release the final draft owners and require owned files to disappear while
 unrelated files survive; test teardown cannot substitute for that check.
+
+
+## Completed native-history integrity audit
+
+The existing `LongHorizonPolicyCalibrationIntegrationTests` producer and
+`LongHorizonSignalTrajectoryAccumulator` retain ownership of the actual shared
+journey and its reduced signal evidence. The read-only
+`scripts/long_horizon_history_integrity.py` command audits completed four-hour
+journey artifacts from a clean exact original source. It rechecks the recorded
+source, test, object, executable and source/runtime resource bytes; reconstructs
+the original input fingerprint with registered primary seals; and binds the
+seven development and two disjoint holdout roots to the compiled producer.
+
+Coverage requires all six operator identities and all sixteen metric identities
+exactly once. Neutral fallback observations retain their absent operator, and
+optional measurements retain their actual support counts rather than synthetic
+zeros. The audit also checks recent hard gates and route/phrase/bar adjacency,
+fixed-130-BPM native frame geometry, repeat/sample accounting, preparation and
+owned-child/refusal counts, the existing numeric ceiling, and origin/verifier
+byte stability. JSON input is bounded and duplicate or nonfinite values refuse.
+
+The output's authority flags remain false. Native execution attestation, complete
+corpus/adversarial/holdout qualification, full typed Swift evidence evaluation,
+allocator/RSS/deadline proof, runtime activation, platform/output verification
+and item acceptance retain their separate owners and requirements. This audit
+starts no capture, writes no producer input, changes no PCM or continuation, and
+never supplies a runtime policy or musical decision.
