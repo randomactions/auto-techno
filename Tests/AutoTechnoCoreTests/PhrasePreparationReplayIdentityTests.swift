@@ -1451,7 +1451,7 @@ struct IterativeSuccessorPreparationTests {
             "products": try JSONSerialization.jsonObject(with: JSONEncoder().encode(Self.reducedControl(result))),
             "inspectionAcknowledgement": acknowledgement.path,
             "ordinaryReferenceRendered": false, "workingStorageSnapshotsEnabled": false,
-            "scope": "one mechanical streamed preparation; external allocation history through ready marker only",
+            "scope": "one mechanical streamed preparation plus inspection rendezvous; excludes post-acknowledgement readback",
             "completeAllocationQualification": false, "rssOrDeadlineQualification": false,
             "installedQualityQualification": false]
         var message = Data("AUTOTECHNO_STREAM_ALLOCATION_READY ".utf8)

@@ -3046,13 +3046,17 @@ child and capture owners through external inspection, and checks a 60-second mon
 for an exact regular-file acknowledgement in its private temporary namespace.
 Invalid configuration, acknowledgement, cancellation or timeout fails the test.
 The rendezvous is test-only and never executes in a production host or callback.
-After acknowledgement it checks every selected 32-channel record. These later
-readback allocations are outside the pre-ready inspection interval.
+After acknowledgement it checks every selected 32-channel record. External
+history includes preparation and the inspection rendezvous before acknowledgement;
+these later readback allocations are outside that interval.
 
 The receipt keeps allocation, RSS/deadline and installed-quality authority false.
 External inspection must independently bind exact source/object/resource and
 executable bytes, native case and process lifetime, complete original tool output
 and cold product identities. Allocation history is distinct from resident or
 physical-footprint evidence; raw VM events may include malloc heap backing and
-cannot be summed as net storage. Profiler overhead and instrumented elapsed time
-cannot qualify ordinary preparation deadlines or authorize reduced admission.
+cannot be summed as net storage. Requested allocation sizes also require
+independent allocated-capacity and allocator-overhead accounting; they cannot
+substitute for the existing unused-capacity charges. Profiler overhead and
+instrumented elapsed time cannot qualify ordinary preparation deadlines or
+authorize reduced admission.
