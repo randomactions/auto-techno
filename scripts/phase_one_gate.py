@@ -20,6 +20,7 @@ SCRIPT_DIRECTORY = str(Path(__file__).resolve().parent)
 if SCRIPT_DIRECTORY not in sys.path:
     sys.path.insert(0, SCRIPT_DIRECTORY)
 import baseline_lifecycle_policy as lifecycle  # noqa: E402
+import performance_envelope_report as performance  # noqa: E402
 
 
 SCHEMA = "autotechno-phase-one-gate.v2"
@@ -36,12 +37,6 @@ ROLE_PCM_PATH = Path(
     "docs/local/reports/pcm-comparisons-v1/role-stems-self.json"
 )
 DEFICIT_PATH = Path("docs/DEFICIT_REGISTER.json")
-TRACE_ARGUMENTS = (
-    "--trace-directory", "docs/local/reports/performance-envelope-v1/live-macos-20260904",
-    "--trace-process", "AutoTechno",
-    "--trace-sample-rate", "44100",
-    "--trace-channel-count", "2",
-)
 
 CHECKS = (
     ("phase-zero", ("phase_zero_gate.py", "check")),
@@ -68,7 +63,7 @@ CHECKS = (
     ("score-motif", ("score_motif_baseline_report.py", "check")),
     ("section-boundary", ("section_boundary_baseline_report.py", "check")),
     ("long-horizon-session", ("session_trajectory_baseline_report.py", "--check")),
-    ("performance-envelope", ("performance_envelope_report.py", "check") + TRACE_ARGUMENTS),
+    ("performance-envelope", ("performance_envelope_report.py", "check")),
     ("deficit-register", ("deficit_register.py", "check")),
 )
 
@@ -195,9 +190,61 @@ def is_relative_path(value: object) -> bool:
     return not path.is_absolute() and "." not in path.parts and ".." not in path.parts
 
 
+def performance_trace_arguments(root: Path) -> tuple[str, ...]:
+    """Select only the exact local trace already bound by the stored report.
+
+    This verifies selection bytes, not performance qualification. The existing
+    subordinate checker still reconstructs the complete report from those XML
+    inputs and current raw/source/contract evidence before the gate can pass.
+    """
+    report = load_json(root / performance.DEFAULT_REPORT, "performance report")
+    if (report.get("schema") != performance.REPORT_SCHEMA or
+            report.get("reportFingerprint") != fingerprint(report, "reportFingerprint")):
+        raise PhaseOneGateError("performance report schema/fingerprint is invalid")
+    live = report.get("liveMacOS")
+    if not isinstance(live, dict) or live.get("availability") != "observed":
+        raise PhaseOneGateError("performance report requires an observed local trace")
+    rate, channels, process = (live.get(name) for name in
+                               ("sampleRate", "channelCount", "processName"))
+    if (type(rate) is not int or rate not in performance.EXPECTED_SAMPLE_RATES or
+            type(channels) is not int or channels != 2 or
+            not isinstance(process, str) or not process.strip() or
+            len(process) > 128 or "\0" in process):
+        raise PhaseOneGateError("performance trace process/native route is invalid")
+    inputs = live.get("inputs")
+    if not isinstance(inputs, list) or len(inputs) != len(performance.TRACE_FILENAMES):
+        raise PhaseOneGateError("performance trace requires every exact XML input")
+    kinds: set[str] = set()
+    directories: set[str] = set()
+    for entry in inputs:
+        if not isinstance(entry, dict) or set(entry) != {"kind", "path", "sha256"}:
+            raise PhaseOneGateError("performance trace input fields are invalid")
+        kind, relative = entry["kind"], entry["path"]
+        if (not isinstance(kind, str) or kind not in performance.TRACE_FILENAMES or
+                kind in kinds or not is_relative_path(relative) or
+                not is_sha(entry["sha256"])):
+            raise PhaseOneGateError("performance trace input identity/path is invalid")
+        path = root / relative
+        if (path.name != performance.TRACE_FILENAMES[kind] or
+                not path.resolve().is_relative_to(root.resolve()) or
+                any((root / parent).is_symlink() for parent in
+                    (Path(relative), *Path(relative).parents)) or
+                not path.is_file() or file_sha256(path) != entry["sha256"]):
+            raise PhaseOneGateError("performance trace input bytes/path changed")
+        kinds.add(kind)
+        directories.add(Path(relative).parent.as_posix())
+    if kinds != set(performance.TRACE_FILENAMES) or len(directories) != 1:
+        raise PhaseOneGateError("performance trace inputs must share one exact directory")
+    return ("--trace-directory", next(iter(directories)),
+            "--trace-process", process, "--trace-sample-rate", str(rate),
+            "--trace-channel-count", str(channels))
+
+
 def run_checks(root: Path, runner: Runner = subprocess.run) -> list[dict[str, str]]:
     results: list[dict[str, str]] = []
     for identifier, arguments in CHECKS:
+        if identifier == "performance-envelope":
+            arguments += performance_trace_arguments(root)
         command = [sys.executable, str(root / "scripts" / arguments[0]), *arguments[1:]]
         result = runner(
             command,

@@ -6,8 +6,10 @@ from __future__ import annotations
 import copy
 import importlib.util
 import io
+import json
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -21,6 +23,26 @@ SPEC.loader.exec_module(gate)
 
 
 class PhaseOneGateTests(unittest.TestCase):
+    def trace_fixture(self, root: Path, rate: int = 48000) -> dict[str, object]:
+        directory = Path("docs/local/reports/performance-envelope-v1/current native trace")
+        (root / directory).mkdir(parents=True)
+        inputs = []
+        for kind, name in gate.performance.TRACE_FILENAMES.items():
+            path = root / directory / name
+            path.write_text("<trace>" + kind + "</trace>")
+            inputs.append({"kind": kind, "path": (directory / name).as_posix(),
+                           "sha256": gate.file_sha256(path)})
+        report = {"schema": gate.performance.REPORT_SCHEMA, "liveMacOS": {
+            "availability": "observed", "sampleRate": rate, "channelCount": 2,
+            "processName": "Auto Techno Fixture", "inputs": inputs,
+        }}
+        self.write_trace_report(root, report)
+        return report
+
+    def write_trace_report(self, root: Path, report: dict[str, object]) -> None:
+        report["reportFingerprint"] = gate.fingerprint(report, "reportFingerprint")
+        (root / gate.performance.DEFAULT_REPORT).write_text(json.dumps(report))
+
     def policy(self) -> dict[str, object]:
         return copy.deepcopy(gate.lifecycle.build_policy())
 
@@ -126,13 +148,121 @@ class PhaseOneGateTests(unittest.TestCase):
             gate.run_checks(Path("/tmp/fixture"), failing)
 
     def test_passing_subordinate_results_are_ordered(self) -> None:
+        commands = []
         def passing(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+            commands.append(args[0])
             return subprocess.CompletedProcess(args=[], returncode=0, stdout="passed")
-        results = gate.run_checks(Path("/tmp/fixture"), passing)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.trace_fixture(root)
+            results = gate.run_checks(root, passing)
+        performance = commands[-2]
+        self.assertEqual(performance[2:], ["check", "--trace-directory",
+            "docs/local/reports/performance-envelope-v1/current native trace",
+            "--trace-process", "Auto Techno Fixture", "--trace-sample-rate", "48000",
+            "--trace-channel-count", "2"])
+        self.assertNotIn("20260904", results[-2]["command"])
         self.assertEqual(
             [item["id"] for item in results],
             [identifier for identifier, _ in gate.CHECKS],
         )
+
+    def test_trace_selection_accepts_both_native_rates(self) -> None:
+        for rate in (44100, 48000):
+            with self.subTest(rate=rate), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                self.trace_fixture(root, rate)
+                arguments = gate.performance_trace_arguments(root)
+                self.assertEqual(arguments[-3:], (str(rate), "--trace-channel-count", "2"))
+
+    def test_changed_trace_bytes_refuse_before_performance_execution(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            report = self.trace_fixture(root)
+            (root / report["liveMacOS"]["inputs"][0]["path"]).write_text("changed")
+            executed = []
+            def passing(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+                executed.append(command)
+                return subprocess.CompletedProcess(command, 0, "passed")
+            with self.assertRaisesRegex(gate.PhaseOneGateError, "bytes/path changed"):
+                gate.run_checks(root, passing)
+            self.assertFalse(any(Path(command[1]).name == "performance_envelope_report.py"
+                                 for command in executed))
+
+    def test_selected_trace_still_requires_independent_subordinate_pass(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.trace_fixture(root)
+            def rejecting(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+                reject = Path(command[1]).name == "performance_envelope_report.py"
+                return subprocess.CompletedProcess(command, int(reject), "invalid current raw evidence")
+            with self.assertRaisesRegex(gate.PhaseOneGateError, "performance-envelope.*invalid current raw"):
+                gate.run_checks(root, rejecting)
+
+    def test_trace_missing_duplicate_and_mixed_directory_inputs_refuse(self) -> None:
+        for mutation in ("missing", "duplicate", "mixed-directory"):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                report = self.trace_fixture(root)
+                inputs = report["liveMacOS"]["inputs"]
+                if mutation == "missing":
+                    inputs.pop()
+                elif mutation == "duplicate":
+                    inputs[1] = copy.deepcopy(inputs[0])
+                else:
+                    original = root / inputs[0]["path"]
+                    moved = original.parent.parent / original.name
+                    original.rename(moved)
+                    inputs[0]["path"] = moved.relative_to(root).as_posix()
+                self.write_trace_report(root, report)
+                with self.assertRaises(gate.PhaseOneGateError):
+                    gate.performance_trace_arguments(root)
+
+    def test_trace_paths_cannot_escape_or_follow_symlinks(self) -> None:
+        for mutation in ("absolute", "traversal", "file-symlink", "directory-symlink"):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                report = self.trace_fixture(root)
+                entry = report["liveMacOS"]["inputs"][0]
+                original = root / entry["path"]
+                if mutation == "absolute":
+                    entry["path"] = str(original)
+                elif mutation == "traversal":
+                    entry["path"] = "../" + entry["path"]
+                elif mutation == "file-symlink":
+                    target = original.with_suffix(".saved")
+                    original.rename(target)
+                    original.symlink_to(target)
+                else:
+                    directory = original.parent
+                    target = directory.with_name("saved trace")
+                    directory.rename(target)
+                    directory.symlink_to(target, target_is_directory=True)
+                self.write_trace_report(root, report)
+                with self.assertRaises(gate.PhaseOneGateError):
+                    gate.performance_trace_arguments(root)
+
+    def test_unobserved_or_invalid_trace_context_refuses(self) -> None:
+        for key, value in (("availability", "unavailable"), ("sampleRate", True),
+                           ("sampleRate", 8000), ("channelCount", True),
+                           ("channelCount", 1), ("processName", ""),
+                           ("processName", "x\0y")):
+            with self.subTest(key=key, value=value), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                report = self.trace_fixture(root)
+                report["liveMacOS"][key] = value
+                self.write_trace_report(root, report)
+                with self.assertRaises(gate.PhaseOneGateError):
+                    gate.performance_trace_arguments(root)
+
+    def test_unsealed_trace_context_refuses(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            report = self.trace_fixture(root)
+            report["liveMacOS"]["sampleRate"] = 44100
+            (root / gate.performance.DEFAULT_REPORT).write_text(json.dumps(report))
+            with self.assertRaisesRegex(gate.PhaseOneGateError, "fingerprint"):
+                gate.performance_trace_arguments(root)
 
     def test_valid_report_passes(self) -> None:
         report = self.report()
