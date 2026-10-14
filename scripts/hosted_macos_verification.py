@@ -22,12 +22,15 @@ BANKS = 16
 ISOLATED_IDENTITIES = (
     'swift-testing:ModalSuccessorReportJoinTests/continuousCalibrationMembershipAndFitting()',
     'swift-testing:FoundationRhythmicRelationTests/algorithmicFullPhraseCompanionFaults()',
+    'swift-testing:FoundationRhythmicRelationTests/algorithmicFullPhrasePumpBassFaults()',
 )
 
 
 def plan(discoveries, bank, banks):
     # The complete bank exceeded GitHub's six-hour limit while this native
-    # fixtures shared a bank with other expensive tests. Isolate each; retain every identity,
+    # fixtures shared a bank with other expensive tests. The pump-bass matrix
+    # alone consumed 10271.424 seconds in the next timed-out bank. Isolate each;
+    # retain every identity,
     # assertion, native rate, and all sixteen required successful receipts.
     return native_plan(discoveries, bank, banks, isolated_identities=ISOLATED_IDENTITIES)
 
