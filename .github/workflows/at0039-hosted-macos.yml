@@ -93,7 +93,7 @@ jobs:
         run: >-
           swift test --build-path "$RUNNER_TEMP/at0039-map" --skip-build --no-parallel
           --disable-xctest --enable-swift-testing
-          --filter 'ProfessionalQualityCalibrationTests[./](conditionalMetricCalibration|deterministicProfile|kickProjectionMatchesEvidence|upperPercussionTailScoreApplicability)($|[(/])'
+          --filter 'ProfessionalQualityCalibrationTests[./](conditionalMetricCalibration|deterministicProfile|kickProjectionMatchesEvidence|upperPercussionTailScoreApplicability|conditionalModalBoundsFromCurrentProfile|holdoutDisjointnessAndAcceptance|modalProjectionMatchesEvidence|windowCoverageCorpusCapacity)($|[(/])'
       - name: Verify calibration diagnostic stack entry
         if: inputs.scope == 'calibration-diagnostic-readiness'
         run: >-

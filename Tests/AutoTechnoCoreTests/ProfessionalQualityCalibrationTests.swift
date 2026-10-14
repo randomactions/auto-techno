@@ -1619,6 +1619,8 @@ struct ProfessionalQualityCalibrationTests {
     }
 
     @Test("Candidate projection matches modal evidence")
+    // Large render fixtures require the test main stack in native Debug builds.
+    @MainActor
     func modalProjectionMatchesEvidence() throws {
         let candidate = try candidateWithModalEvents()
         let phraseKind = try #require(AutonomousPhraseKind(
