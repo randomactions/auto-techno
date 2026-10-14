@@ -6,6 +6,85 @@ import Testing
 
 @Suite("Long-horizon score-owned energy coordination")
 struct LongHorizonEnergyCoordinationTests {
+  @Test("Directed spectral recovery exchanges sparse boundary roles without adding density")
+  func sparseSpectralRecoveryPreservesEpisodeAndDensity() throws {
+    var exchanges = 0
+    for seed: UInt64 in [48_291, 77_777, 90_909, 112_358, 141_421, 173_205, 246_813] {
+      let director = AutonomousSessionDirector(rootSeed: seed)
+      for phrase in 0..<32 {
+        let state = try energyState(operatorKind: .reframe, rootSeed: seed,
+          phraseIndex: phrase, totalBars: phrase * 8,
+          eligibleAtBar: phrase * 8 + 64, openDebt: false)
+        let neutral = director.plan(from: state,
+          qualityRecoveryContext: AutonomousQualityRecoveryContext(wave: 0,
+            ordinal: 1, presentedRepeatBars: 16, intent: .neutral))
+        let context = AutonomousQualityRecoveryContext(wave: 0, ordinal: 1,
+          presentedRepeatBars: 16,
+          intent: AutonomousQualityRecoveryIntent(spectralMovement: .increase))
+        let recovered = director.plan(from: state, qualityRecoveryContext: context)
+        #expect(recovered == director.plan(from: state, qualityRecoveryContext: context))
+        #expect(recovered.longHorizonEnergyCoordination == neutral.longHorizonEnergyCoordination)
+        #expect(recovered.longHorizonSelection == neutral.longHorizonSelection)
+        #expect(recovered.materialWorld == neutral.materialWorld)
+        #expect(recovered.startBar == neutral.startBar)
+        #expect(recovered.presentationStartBar == neutral.presentationStartBar)
+        #expect(recovered.resolvedBars.count == neutral.resolvedBars.count)
+        let focus = recovered.materialWorld.resolvedAxes.focusRole
+        // Compare the first boundary before legacy gear-shift gestures can
+        // independently change the supporting-role continuation.
+        for (original, changed) in zip(neutral.resolvedBars.prefix(4),
+                                       recovered.resolvedBars.prefix(4)) {
+          let before = Set(original.performance.roles), after = Set(changed.performance.roles)
+          #expect(before.count == after.count)
+          #expect(after.contains(.foundation))
+          if before.contains(focus) { #expect(after.contains(focus)) }
+          if before != after {
+            exchanges += 1
+            #expect((changed.performance.bar + 1).isMultiple(of: 4))
+            #expect(before.subtracting(after) == [.motif])
+            #expect(after.subtracting(before) == [.percussion])
+            #expect(changed.narrative.activeSupportingRoles.contains(.percussion))
+            #expect(changed.ensemble.events.contains { $0.voice == .percussion })
+            #expect(!changed.ensemble.events.contains { $0.voice == .motif })
+          }
+        }
+      }
+    }
+    #expect(exchanges > 0)
+  }
+
+  @Test("Sparse exchanges leave initial, non-increase and structural roles unchanged")
+  func sparseRecoveryProtectedRoles() throws {
+    let director = AutonomousSessionDirector(rootSeed: 48_291)
+    var structuralCases = 0
+    for kind in LongHorizonEpisodeOperator.allCases {
+      for phrase in [0, 7, 16] {
+        let state = try energyState(operatorKind: kind,
+          phraseIndex: phrase, totalBars: phrase * 8, eligibleAtBar: 0,
+          openDebt: kind == .payoff)
+        for ordinal in [0, 1, AutonomousQualityRetryContinuation.maximumOrdinal] {
+          let neutral = director.plan(from: state,
+            qualityRecoveryContext: AutonomousQualityRecoveryContext(wave: 0,
+              ordinal: ordinal, presentedRepeatBars: 16, intent: .neutral))
+          for direction in [AutonomousQualityRecoveryDirection.increase, .decrease] {
+            let candidate = director.plan(from: state,
+              qualityRecoveryContext: AutonomousQualityRecoveryContext(wave: 0,
+                ordinal: ordinal, presentedRepeatBars: 16,
+                intent: AutonomousQualityRecoveryIntent(spectralMovement: direction)))
+            let structural = candidate.kind == .majorBreak ||
+              candidate.kind == .energyRelease || candidate.kind == .identityReturn
+            if structural { structuralCases += 1 }
+            if ordinal == 0 || direction == .decrease || structural {
+              #expect(candidate.resolvedBars.map { $0.performance.roles } ==
+                neutral.resolvedBars.map { $0.performance.roles })
+            }
+          }
+        }
+      }
+    }
+    #expect(structuralCases > 0)
+  }
+
   @Test("Every episode target is carried by one exact phrase-boundary projection")
   func everyOperatorCarriesCanonicalTarget() throws {
     var rise: LongHorizonSemanticEnergyVector?
@@ -236,13 +315,14 @@ struct LongHorizonEnergyCoordinationTests {
 
 private func energyState(
   operatorKind: LongHorizonEpisodeOperator,
+  rootSeed: UInt64 = 48_291,
   phraseIndex: Int = 0,
   totalBars: Int = 0,
   eligibleAtBar: Int,
   openDebt: Bool
 ) throws -> AutonomousSessionState {
   let initial = LongHorizonContinuationState.initial(
-    rootSeed: 48_291,
+    rootSeed: rootSeed,
     startingPhraseIndex: phraseIndex,
     startingBar: totalBars
   )
@@ -290,7 +370,7 @@ private func energyState(
       )
     ] : []
   return AutonomousSessionState(
-    rootSeed: 48_291,
+    rootSeed: rootSeed,
     phraseIndex: phraseIndex,
     memory: TemporalMusicalMemory(
       totalBars: totalBars,

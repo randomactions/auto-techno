@@ -2909,3 +2909,28 @@ existing wrong-rate request/seal mutations retain negative coverage. This fixes
 fixture applicability, without extending production rate support or relaxing
 any quality gate. The hosted native-history component validates these owners
 and the policy tests separately from complete platform qualification.
+
+
+## Sparse spectral recovery boundary exchange
+
+Engine v50 extends the existing AutonomousSessionDirector recovery path. When
+a directed spectral-increase retry has a lower-density episode target, an
+unfocused motif role may exchange with the existing percussion role on a
+global four-bar boundary. The foundation, focal role, role count, episode
+target, identity and unscheduled phrase ownership remain unchanged. Ordinal
+zero, structural phrases, non-increase directions and already-percussive bars
+retain their existing role path. The same canonical ensemble, renderer,
+continuation and future-boundary admission process owns the result. No extra
+voice, selector, parameter, callback work or alternate renderer is introduced.
+
+This addresses measured contrast retries whose proposed sparse roles excluded
+percussion, leaving the existing gear-shift response unable to correct spectral
+movement. The score declares the exchanged bar and its ordinary percussion
+events; actual complete PCM and every unchanged primary gate must qualify it.
+A rejected proposal retains the existing coherent-repeat fallback and finite
+recovery bounds. Diagnostic success at one boundary is not qualification.
+
+Engine-v49 primary calibration remains immutable historical evidence. Its
+seals cannot activate engine v50. Fresh complete primary calibration, matching
+Long Horizon qualification and every separate runtime/resource/lifecycle and
+platform/output gate remain required before promotion.

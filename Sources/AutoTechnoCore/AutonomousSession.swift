@@ -2370,24 +2370,44 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             let absoluteBar = start + localBar
             let presentationBar = presentationStart > Int.max - localBar
                 ? Int.max : presentationStart + localBar
-            let proposedRoles = roles(
+            var proposedRoles = roles(
                 kind: kind,
                 focus: focusRole,
                 localBar: localBar,
                 length: length,
                 target: energyTarget
             )
+            let continuationRoles = proposedRoles
+            // Spectral recovery can exchange an unfocused motif bar for the
+            // existing percussion voice at a four-bar boundary. Preserve the
+            // sparse role count, foundation, focal role and episode target;
+            // ordinal zero and protected structural phrases stay unchanged.
+            let sparseRecoveryExchange =
+                !structuralKind && qualityRetryOrdinal > 0 &&
+                qualityRecoveryContext.intent.spectralMovement == .increase &&
+                energyTarget.roleDensity == .lower &&
+                focusRole != .motif && focusRole != .percussion &&
+                (absoluteBar + 1).isMultiple(of: 4) &&
+                proposedRoles.contains(.motif) && !proposedRoles.contains(.percussion)
+            if sparseRecoveryExchange {
+                proposedRoles = PerformanceRole.allCases.filter {
+                    $0 == .percussion || ($0 != .motif && proposedRoles.contains($0))
+                }
+            }
+            let barSupportingRoles = sparseRecoveryExchange
+                ? NarrativeArticulation.supportingRoles(activeSupportingRoles + [.percussion])
+                : activeSupportingRoles
             let narrativeStart = localBar == 0
                 ? state.memory.narrativeEvolution.protagonistPresence
                 : narrativeTrajectory.endpoints[localBar - 1]
             let narrative = NarrativeArticulation(
                 presenceStart: narrativeStart,
                 presenceEnd: narrativeTrajectory.endpoints[localBar],
-                activeSupportingRoles: activeSupportingRoles
+                activeSupportingRoles: barSupportingRoles
             )
             let resolvedRoles = narrativeResolvedRoles(
                 proposed: proposedRoles,
-                activeSupportingRoles: activeSupportingRoles
+                activeSupportingRoles: barSupportingRoles
             )
             if absoluteBar > 0, absoluteBar.isMultiple(of: 16) {
                 let chapterEntropy = SceneDNA.derivedSeed(
@@ -2557,7 +2577,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             ))
             activeSupportingRoles = narrativeSupportingRolesAfterBoundary(
                 current: activeSupportingRoles,
-                proposed: proposedRoles,
+                proposed: continuationRoles,
                 focus: focusRole,
                 kind: kind,
                 gesture: gesture,
