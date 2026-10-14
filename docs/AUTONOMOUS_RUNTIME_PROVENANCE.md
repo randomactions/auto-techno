@@ -3027,3 +3027,32 @@ allocator/RSS/deadline proof, runtime activation, platform/output verification
 and item acceptance retain their separate owners and requirements. This audit
 starts no capture, writes no producer input, changes no PCM or continuation, and
 never supplies a runtime policy or musical decision.
+
+
+## Isolated streamed-chain allocation inspection
+
+The existing `IterativeSuccessorPreparationTests` fixture exposes a default-off
+allocation inspection of exactly one native initial or corrected chain through
+`AutonomousPerformancePreparer`. Its canonical root request, mechanical evaluator,
+streamed session and exact qualified child remain the same as the independent
+PCM/hold/state parity controls. This test process renders no ordinary reference
+and enables no working-storage snapshot observer. Production preparation,
+reservation, numerical limits, score, continuation and fallback are unchanged.
+
+The diagnostic requires explicit 44.1 or 48 kHz and initial/corrected selection with
+uncompacted system allocation history. It emits a reduced ready receipt only
+after the shared detached preparation returns, retains the actual selected root,
+child and capture owners through external inspection, and checks a 60-second monotonic deadline
+for an exact regular-file acknowledgement in its private temporary namespace.
+Invalid configuration, acknowledgement, cancellation or timeout fails the test.
+The rendezvous is test-only and never executes in a production host or callback.
+After acknowledgement it checks every selected 32-channel record. These later
+readback allocations are outside the pre-ready inspection interval.
+
+The receipt keeps allocation, RSS/deadline and installed-quality authority false.
+External inspection must independently bind exact source/object/resource and
+executable bytes, native case and process lifetime, complete original tool output
+and cold product identities. Allocation history is distinct from resident or
+physical-footprint evidence; raw VM events may include malloc heap backing and
+cannot be summed as net storage. Profiler overhead and instrumented elapsed time
+cannot qualify ordinary preparation deadlines or authorize reduced admission.

@@ -1367,6 +1367,131 @@ struct IterativeSuccessorPreparationTests {
         try await checkSelectedStreamedChain(rate: rate)
     }
 
+    private enum AllocationInspectionError: Error {
+        case invalidConfiguration, inspectionTimeout, invalidAcknowledgement
+    }
+
+    private static func allocationInspectionConfiguration(_ environment: [String: String]) throws
+        -> (rate: Double, mode: Control.Mode) {
+        guard environment["MallocStackLoggingNoCompact"] == "1",
+            environment["MallocStackLogging"] == nil,
+            let rate = environment["AUTOTECHNO_STREAM_ALLOCATION_RATE"],
+            ["44100", "48000"].contains(rate),
+            let mode = environment["AUTOTECHNO_STREAM_ALLOCATION_ATTEMPT"],
+            ["initial", "corrected"].contains(mode)
+        else { throw AllocationInspectionError.invalidConfiguration }
+        return (rate == "44100" ? 44_100 : 48_000,
+            mode == "initial" ? .accept : .forceCorrection)
+    }
+
+    @Test("Allocation inspection accepts only one explicit native case and uncompacted history")
+    func allocationInspectionConfiguration() throws {
+        for rate in ["44100", "48000"] {
+            for attempt in ["initial", "corrected"] {
+                let environment = ["MallocStackLoggingNoCompact": "1",
+                    "AUTOTECHNO_STREAM_ALLOCATION_RATE": rate,
+                    "AUTOTECHNO_STREAM_ALLOCATION_ATTEMPT": attempt]
+                let configuration = try Self.allocationInspectionConfiguration(environment)
+                #expect(configuration.rate == Double(rate))
+                #expect((configuration.mode == .forceCorrection) == (attempt == "corrected"))
+                for mutation in [
+                    ["MallocStackLoggingNoCompact": "0"], ["MallocStackLogging": "1"],
+                    ["AUTOTECHNO_STREAM_ALLOCATION_RATE": "8000"],
+                    ["AUTOTECHNO_STREAM_ALLOCATION_RATE": "44100.0"],
+                    ["AUTOTECHNO_STREAM_ALLOCATION_ATTEMPT": "all"],
+                ] {
+                    let invalid = environment.merging(mutation) { _, new in new }
+                    #expect(throws: AllocationInspectionError.self) {
+                        _ = try Self.allocationInspectionConfiguration(invalid)
+                    }
+                }
+            }
+        }
+        #expect(throws: AllocationInspectionError.self) {
+            _ = try Self.allocationInspectionConfiguration([:])
+        }
+    }
+
+    @Test("Inspect a single actual streamed chain without an ordinary reference or owner snapshots",
+        .enabled(if: ProcessInfo.processInfo.environment["AUTOTECHNO_RUN_STREAM_ALLOCATION_INSPECTION"] == "1"))
+    @MainActor
+    func selectedStreamAllocationProcess() async throws {
+        let configuration = try Self.allocationInspectionConfiguration(ProcessInfo.processInfo.environment)
+        let request = Self.sourceRequest(rate: configuration.rate)
+        let original = AutonomousCandidateFingerprint.sessionState(request.sourceState)
+        let director = AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed)
+        let parent = try Self.captureParent()
+        defer { try? FileManager.default.removeItem(at: parent) }
+        let acknowledgement = parent.appendingPathComponent("allocation-inspection-complete")
+        let session = DiagnosticRoleStemCaptureSession(parentDirectory: parent)
+        let control = Control(mode: configuration.mode)
+        // This process performs only the selected streamed preparation. Ordinary
+        // PCM parity belongs to the independent cold control, not its heap peak.
+        let outcome = await Task.detached {
+            AutonomousPerformancePreparer.prepareChainDiagnosing(request: request, director: director,
+                longHorizonPolicy: nil, diagnosticRoleStemSession: session,
+                makeEvaluator: { Evaluator(request: $0, control: control) },
+                cancellationRequested: { false })
+        }.value
+        let result = try #require(outcome.preparedPhrase)
+        let sources = ([result] + result.retainedContinuations).map(\.prepared)
+        let budget = try #require(result.preparationChainResourceBudget)
+        defer { withExtendedLifetime((result, sources, session)) {} }
+        #expect(sources.count == 2 && session.isSealed && session.bindings.count == 2)
+        #expect(sources[0].preparedValidation?.qualifiedSuccessor === sources[1])
+        #expect(sources.allSatisfy { $0.commitEligible && $0.diagnosticRoleStemCaptures.isEmpty })
+        #expect(budget.reservedPeakWorkingByteCount <= AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount)
+        #expect(budget.maximumRenderPassCount == (configuration.mode == .forceCorrection ? 4 : 2))
+        #expect(session.discardedSupersededDraftCount == (configuration.mode == .forceCorrection ? 2 : 0))
+        let report: [String: Any] = ["schema": "autotechno-stream-allocation-inspection.v1",
+            "processID": ProcessInfo.processInfo.processIdentifier,
+            "sampleRate": configuration.rate, "selectedCorrection": configuration.mode == .forceCorrection,
+            "sourceCount": sources.count, "exactChildOwnership": sources[0].preparedValidation?.qualifiedSuccessor === sources[1],
+            "reservedPeakWorkingByteCount": budget.reservedPeakWorkingByteCount,
+            "products": try JSONSerialization.jsonObject(with: JSONEncoder().encode(Self.reducedControl(result))),
+            "inspectionAcknowledgement": acknowledgement.path,
+            "ordinaryReferenceRendered": false, "workingStorageSnapshotsEnabled": false,
+            "scope": "one mechanical streamed preparation; external allocation history through ready marker only",
+            "completeAllocationQualification": false, "rssOrDeadlineQualification": false,
+            "installedQualityQualification": false]
+        var message = Data("AUTOTECHNO_STREAM_ALLOCATION_READY ".utf8)
+        message.append(try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]))
+        message.append(10)
+        try FileHandle.standardError.write(contentsOf: message)
+        // Detached preparation has returned. This bounded test-only rendezvous
+        // never executes on the render callback or in a production host.
+        var acknowledged = false
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(60))
+        while clock.now < deadline {
+            try Task.checkCancellation()
+            if FileManager.default.fileExists(atPath: acknowledgement.path) {
+                let attributes = try FileManager.default.attributesOfItem(atPath: acknowledgement.path)
+                guard attributes[.type] as? FileAttributeType == .typeRegular,
+                    (attributes[.size] as? NSNumber)?.intValue == 8,
+                    try Data(contentsOf: acknowledgement) == Data("observed".utf8)
+                else { throw AllocationInspectionError.invalidAcknowledgement }
+                acknowledged = true
+                break
+            }
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        guard acknowledged else { throw AllocationInspectionError.inspectionTimeout }
+        // Use the same objects after inspection so optimizer lifetime shortening
+        // cannot release selected PCM or its exact child before the ready marker.
+        #expect(AutonomousCandidateFingerprint.sessionState(request.sourceState) == original)
+        #expect(Self.reducedControl(result).sourceIdentities == session.bindings.map { Optional($0.sourceIdentityFingerprint) })
+        for binding in session.bindings {
+            for (ordinal, record) in binding.draft.records.enumerated() {
+                #expect(record.channelFingerprints.count == 32)
+                for channel in DiagnosticRoleStemChannel.allCases {
+                    #expect(try binding.draft.readChannel(barIndex: ordinal, channel: channel).count == record.frameCount)
+                }
+            }
+        }
+        try FileHandle.standardError.write(contentsOf: Data("AUTOTECHNO_STREAM_ALLOCATION_COMPLETE\n".utf8))
+    }
+
     @MainActor
     private func checkSelectedStreamedChain(rate: Double) async throws {
         for mode in [Control.Mode.accept, .forceCorrection] {
