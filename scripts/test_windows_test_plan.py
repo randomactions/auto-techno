@@ -93,6 +93,17 @@ class NativeWindowsBankPlanTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 plan(self.fixture(), 0, banks, isolated_identity=value)
 
+    def test_multiple_isolation_refuses_ambiguous_or_exhausted_banks(self):
+        for identities, banks in [('invalid', 8), ([True], 8), ([''], 8),
+                                  (['a', 'a'], 8), (['a', 'b'], 2)]:
+            with self.assertRaises(ValueError):
+                plan(self.fixture(), 0, banks, isolated_identities=identities)
+        with self.assertRaises(ValueError):
+            plan(self.fixture(), 0, 8, isolated_identity='a', isolated_identities=['b'])
+        for bank in range(8):
+            self.assertEqual(plan(self.fixture(), bank, 8, isolated_identity='swift-testing:ParityTests/compare()'),
+                             plan(self.fixture(), bank, 8, isolated_identities=['swift-testing:ParityTests/compare()']))
+
     def test_missing_duplicate_unknown_and_invalid_banks_refuse(self):
         for mutate in [lambda d:d.pop('xctest'), lambda d:d.update(xctest=''),
                        lambda d:d.update(xctest=d['xctest']*2),

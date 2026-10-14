@@ -9,12 +9,20 @@ import re
 IDENTIFIER = re.compile(r'^(?P<module>[A-Za-z_][A-Za-z_0-9]*Tests)\.(?P<suite>[A-Za-z_][A-Za-z_0-9]*)/(?P<test>\S.*)$')
 
 
-def plan(discoveries, bank, banks, *, isolated_identity=None):
+def plan(discoveries, bank, banks, *, isolated_identity=None, isolated_identities=()):
     if type(bank) is not int or type(banks) is not int or not 1 <= banks <= 32 or not 0 <= bank < banks:
         raise ValueError('invalid bank bounds')
     if isolated_identity is not None and (not isinstance(isolated_identity, str) or
             not isolated_identity or banks < 2):
         raise ValueError('invalid isolated native identity')
+    if (not isinstance(isolated_identities, (tuple, list)) or
+            any(not isinstance(v, str) or not v for v in isolated_identities) or
+            len(set(isolated_identities)) != len(isolated_identities) or
+            (isolated_identity is not None and isolated_identities)):
+        raise ValueError('invalid isolated native identities')
+    isolated = tuple(isolated_identities) if isolated_identity is None else (isolated_identity,)
+    if len(isolated) >= banks:
+        raise ValueError('isolation must retain an ordinary bank')
     if set(discoveries) != {'xctest', 'swift-testing'}:
         raise ValueError('both native frameworks must be discovered')
     all_cases = []
@@ -46,10 +54,10 @@ def plan(discoveries, bank, banks, *, isolated_identity=None):
                 # Equal suite/method names across modules must stay together:
                 # SwiftPM's cross-framework filter can match either module.
                 identity = library + ':' + suite + '/' + test
-                # Reserve the final bank only when the caller explicitly requests
-                # one expensive identity. Windows keeps its original hash plan.
-                ordinary_banks = banks - 1 if isolated_identity is not None else banks
-                assignment = (banks - 1 if identity == isolated_identity else
+                # Reserve one complete bank per expensive identity, in caller
+                # order from the final bank. Windows retains its default plan.
+                ordinary_banks = banks - len(isolated)
+                assignment = (banks - 1 - isolated.index(identity) if identity in isolated else
                               int.from_bytes(hashlib.sha256(identity.encode()).digest()[:8], 'big') % ordinary_banks)
                 groups.setdefault(assignment, []).append(case)
             for assignment, selected_cases in sorted(groups.items()):

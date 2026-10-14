@@ -144,10 +144,11 @@ class HostedMacOSVerificationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'all sixteen banks'):
             hosted.verify(bundle, SOURCE)
 
-    def test_expensive_calibration_has_a_dedicated_bank_without_losing_coverage(self):
+    def test_expensive_fixtures_have_dedicated_banks_without_losing_coverage(self):
         discovery = fixture()['banks'][0]['receipt']['discovery']
         heavy = 'AutoTechnoCoreTests.ModalSuccessorReportJoinTests/continuousCalibrationMembershipAndFitting()'
-        neighbors = [heavy, heavy.replace('Fitting()', 'FittingExtra()'),
+        second = 'AutoTechnoCoreTests.FoundationRhythmicRelationTests/algorithmicFullPhraseCompanionFaults()'
+        neighbors = [second, second.replace('Faults()', 'FaultsExtra()'), heavy, heavy.replace('Fitting()', 'FittingExtra()'),
                      heavy.replace('JoinTests/', 'JoinTestsExtra/'),
                      heavy.replace('Fitting()', 'Fitting(rate:)')]
         discovery['swift-testing'] += '\n' + '\n'.join(neighbors)
@@ -161,8 +162,11 @@ class HostedMacOSVerificationTests(unittest.TestCase):
             actual.extend(identities)
             if bank == hosted.BANKS - 1:
                 self.assertEqual(identities, ['swift-testing:' + heavy])
+            elif bank == hosted.BANKS - 2:
+                self.assertEqual(identities, ['swift-testing:' + second])
             else:
                 self.assertNotIn('swift-testing:' + heavy, identities)
+                self.assertNotIn('swift-testing:' + second, identities)
             for row in result['selected']:
                 matched = [case for case in discovery[row['library']].splitlines()
                            if re.search(row['selector'], case)]
