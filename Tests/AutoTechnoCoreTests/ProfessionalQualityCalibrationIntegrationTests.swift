@@ -1881,6 +1881,8 @@ struct ProfessionalQualityCalibrationIntegrationTests {
     }
 
     @Test("Render one explicitly selected planned boundary")
+    // Offline diagnostic values exceed the native cooperative worker stack in Debug.
+    @MainActor
     func renderSelectedPlannedBoundary() throws {
         guard let rawSeed = ProcessInfo.processInfo.environment[
             "AUTOTECHNO_CALIBRATION_BOUNDARY_SEED"
@@ -1921,6 +1923,8 @@ struct ProfessionalQualityCalibrationIntegrationTests {
     }
 
     @Test("Trace one explicitly selected accumulated journey")
+    // Offline diagnostic values exceed the native cooperative worker stack in Debug.
+    @MainActor
     func traceSelectedAccumulatedJourney() throws {
         guard let rawSeed = ProcessInfo.processInfo.environment[
             "AUTOTECHNO_CALIBRATION_TRACE_SEED"
