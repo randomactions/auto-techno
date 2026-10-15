@@ -1300,7 +1300,7 @@ struct ModalSuccessorReportJoinTests {
         ], options: [.sortedKeys]))
         FileHandle.standardOutput.write(Data([0x0A]))
         // Full report identity includes engine and render continuation identity.
-        // The native engine50 macOS fixture records the current digest while
+        // The native engine51 macOS fixture records the current digest while
         // retaining every membership, missing-population and fitting check.
         // This one-bank fixture cannot qualify or activate a policy.
         #expect(bank.engineVersion == QualityQualificationContract.engineVersion)
@@ -1310,7 +1310,7 @@ struct ModalSuccessorReportJoinTests {
         #if os(Windows)
         #expect(complete.sourceBankFingerprint == "14be4bf52df748ef")
         #else
-        #expect(complete.sourceBankFingerprint == "88cd65cf95d06cdf")
+        #expect(complete.sourceBankFingerprint == "5f97f337cef22b01")
         #endif
         #expect(unsupportedTrainingMetrics == [.upperPercussionTailRenderedTailToAttackDBMean])
         #expect(throws: ProfessionalQualityCalibrationError.invalidMetricSet) {
