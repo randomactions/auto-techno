@@ -182,6 +182,7 @@ jobs:
         shell: pwsh
         env:
           PYTHONPATH: scripts
+          PYTHONIOENCODING: utf-8
         run: |
           @'
           import json, os, subprocess

@@ -3,6 +3,7 @@ import copy
 import contextlib
 import io
 import json
+import os
 import re
 from pathlib import Path
 import sys
@@ -467,6 +468,29 @@ class HostedMacOSVerificationTests(unittest.TestCase):
                 spawn.assert_called_once_with(command, cwd=Path(directory),
                     stdout=hosted.subprocess.PIPE, stderr=hosted.subprocess.STDOUT)
                 emit.assert_not_called()
+
+    def test_focused_windows_utf8_environment_preserves_unicode_and_raw_bytes(self):
+        # Real Python console processes, not a native Swift test or qualification receipt.
+        payload = "\u25ca diagnostic output; \u2714 original bytes\n".encode('utf-8')
+        code = ("import sys; from pathlib import Path; "
+                "sys.path.insert(0, sys.argv[2]); import hosted_macos_verification as h; "
+                "result=h.run_logged_native([sys.executable,'-c',sys.argv[3]], Path.cwd(), Path(sys.argv[1])); "
+                "raise SystemExit(result.returncode)")
+        producer = "import os; os.write(1," + repr(payload) + ")"
+        with tempfile.TemporaryDirectory() as directory:
+            for encoding, expected in [('cp1252', False), ('utf-8', True)]:
+                log = Path(directory)/(encoding+'.log')
+                result = hosted.subprocess.run([sys.executable,'-c',code,str(log),
+                    str(Path(__file__).resolve().parent),producer],
+                    env=dict(os.environ,PYTHONIOENCODING=encoding),stdout=hosted.subprocess.PIPE,
+                    stderr=hosted.subprocess.PIPE,timeout=30)
+                self.assertEqual(log.read_bytes(),payload)
+                if expected:
+                    self.assertEqual(result.returncode,0,result.stderr.decode('utf-8','replace'))
+                    self.assertEqual(result.stdout,payload)
+                else:
+                    self.assertNotEqual(result.returncode,0)
+                    self.assertIn(b'UnicodeEncodeError',result.stderr)
 
     def test_non_native_execution_refuses_before_running_commands(self):
         with mock.patch.object(hosted.platform,'system',return_value='Linux'),mock.patch.object(hosted.subprocess,'check_output') as call:
