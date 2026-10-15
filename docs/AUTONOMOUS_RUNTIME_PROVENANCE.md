@@ -2952,10 +2952,10 @@ Long Horizon qualification and every separate runtime/resource/lifecycle and
 platform/output gate remain required before promotion.
 
 
-## Engine-v50 primary qualification resources
+## Historical engine-v50 primary qualification resources
 
-The sole ProfessionalQualityPrimaryArtifacts owner now loads resource revision
-v34 from the complete fresh engine-v50 native study. The existing primary v32
+The historical ProfessionalQualityPrimaryArtifacts registration loaded resource
+revision v34 from the complete fresh engine-v50 native study. The existing primary v32
 policy and profile v33 measurement contract are unchanged. All40development
 and6disjoint holdout trajectories completed at44.1and48kHz with644original
 reports and644actual successor receipts; all34adversarial cases and all84
@@ -3147,8 +3147,29 @@ The numeric128MiB ceiling and two-render bound are unchanged.
 
 Engine `autotechno-canonical-engine.v51` separates this PCM consequence from the
 original engine-v50 histories. All old studies, installed v34 resource bytes and
-frozen recovery inputs remain unchanged and cannot be retagged. Current primary
-seals are nil; the installed-positive test must continue to fail until fresh
-complete primary qualification supplies actual current authority. Matching Long
+frozen recovery inputs remain unchanged and cannot be retagged. Primary seals were invalidated by the engine change; the installed-positive test
+remained failed until fresh complete primary qualification supplied the v35
+authority documented below. Matching Long
 seals, independent complete histories, full final-source verification and every
 remaining resource/lifecycle/output gate are still mandatory.
+
+
+## Engine-v51 primary qualification resources
+
+The sole `ProfessionalQualityPrimaryArtifacts` owner registers resource revision
+v35 from the complete fresh, frozen9bd42d6 engine-v51 native study. The existing
+primary v32 policy and profile v33 contract are unchanged. All40development and
+6disjoint holdout trajectories completed at44.1and48kHz, retaining644original
+reports and644actual immediate-successor receipts. All34adversarial cases and
+84holdout observations passed. Canonical typed construction imported no archives
+or saved partial state. Retained engine-v49/v50 resources keep historical scope.
+
+The installed positive control must load these exact three seals, admit the
+primary evaluator independently at each native rate, reject historical engines,
+and retain unavailable host admission while matching Long Horizon seals are
+absent. Registration supplies primary calibration only. Fresh independent
+7development/2disjoint holdout Long studies with all18complete native histories,
+final-source applicability, complete allocator/RSS/deadline, lifecycle, platform,
+Release, route/recovery and applicable output gates remain mandatory. This
+resource registration adds no score, renderer, callback, continuation or fallback
+behavior and never imports historical histories into current qualification.

@@ -74,6 +74,11 @@ struct PrimaryEvaluatorReadinessTests {
     @Test("Installed current primary seals do not authorize a host without Long Horizon qualification")
     func installedPrimaryRetainsUnavailableLongHorizonHost() throws {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+        #expect(ProfessionalQualityPrimaryArtifacts.profileResource ==
+            "professional-quality-primary-profile-v35")
+        #expect(artifacts.profile.fingerprint == "267051f651dcfdca")
+        #expect(artifacts.adversarialSuite.fingerprint == "13b17b49e495d050")
+        #expect(artifacts.holdoutQualification.fingerprint == "d0be2dd73e33792b")
         #expect(artifacts.profile.fingerprint == ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint)
         #expect(artifacts.adversarialSuite.fingerprint == ProfessionalQualityPrimaryArtifacts.expectedAdversarialSuiteFingerprint)
         #expect(artifacts.holdoutQualification.fingerprint == ProfessionalQualityPrimaryArtifacts.expectedHoldoutQualificationFingerprint)
