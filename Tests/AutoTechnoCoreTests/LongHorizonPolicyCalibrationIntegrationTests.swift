@@ -1229,7 +1229,7 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     // One optional actual recovery wave exposes the measured effect of the
     // canonical retry intent. Acceptance or the next wave stops the diagnostic;
     // no full study budget, admission rule or production path is changed.
-    return interrupted || recovery && (prepared.commitEligible ||
+    return (interrupted || recovery) && (prepared.commitEligible ||
       environment["AUTOTECHNO_LONG_HORIZON_RECOVERY_WAVE_PROBE"] != "1" ||
       request.key.qualityRecoveryContext.wave >= 1)
   }
@@ -1301,8 +1301,7 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
       environment["AUTOTECHNO_RUN_LONG_HORIZON_CALIBRATION"] != "1",
       environment["AUTOTECHNO_RUN_INTERRUPTED_LONG_ROUTE"] != "1",
       environment["AUTOTECHNO_ASSEMBLE_INTERRUPTED_LONG_STUDY"] != "1",
-      !interrupted || (environment["AUTOTECHNO_LONG_HORIZON_RECOVERY_WAVE_PROBE"] != "1" &&
-        environment["AUTOTECHNO_LONG_HORIZON_SPECTRAL_SUPPORT_PROBE"] != "1")
+      !interrupted || environment["AUTOTECHNO_LONG_HORIZON_SPECTRAL_SUPPORT_PROBE"] != "1"
     else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
     let primary = try loadPrimary(), binding = try executionBinding()
     let root: UInt64 = interrupted ? 173_205 : (recovery ? 141_421 : (divergence ? 112_358 : 48_291))
@@ -1328,8 +1327,14 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
           #expect(object["requestFingerprint"] as? String == "57d0368468c1a30e")
           #expect(object["sourceCoreFingerprint"] as? String == "ad11c409230c8c4d")
           #expect(object["commitEligible"] as? Bool == false)
-          #expect(journey.newPreparationAttemptCount == 15 && journey.ownedChildConsumptionCount == 1)
-          #expect(journey.accountedRepeats.isEmpty)
+          #expect(journey.ownedChildConsumptionCount == 1)
+          if environment["AUTOTECHNO_LONG_HORIZON_RECOVERY_WAVE_PROBE"] == "1" {
+            #expect((15...25).contains(journey.newPreparationAttemptCount))
+            #expect(journey.accountedRepeats.count <= 2)
+          } else {
+            #expect(journey.newPreparationAttemptCount == 15)
+            #expect(journey.accountedRepeats.isEmpty)
+          }
           #expect(object["candidateFingerprint"] as? String == "527d5bc3b2a984ad")
         } else if rate == 44_100 {
           // Bind this fresh diagnostic to the first rejection in the failed

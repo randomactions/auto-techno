@@ -3115,9 +3115,12 @@ candidate to the preserved failed recovery and retains the existing numeric
 quality diagnostics. No saved state or PCM supplies this execution.
 
 This mode cannot mix with other probe scopes, interrupted-route execution or
-assembly; it stops before starting recovery or selecting a repeat. Its15 accepted
-phrases and one consumed protected child are a diagnostic prefix, never a complete
-native history. Historical studies, their harnesses and their original provenance
+assembly. Its default stops before starting recovery or selecting a repeat. The
+existing optional single-wave flag instead records actual serial candidates and
+coherent retained repeats through the first next-wave candidate or earlier
+acceptance, then stops before committing that target. At most25 preparations and
+two repeats may occur. Its15 accepted phrases and one consumed protected child
+are a diagnostic prefix, never a complete native history. Historical studies, their harnesses and their original provenance
 remain immutable. The diagnostic grants no calibration, capacity, deadline,
 platform, runtime or item-completion authority and changes no quality bound,
 production rendering, callback, continuation or musical decision.
