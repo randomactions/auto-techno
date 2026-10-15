@@ -1297,13 +1297,13 @@ struct IterativeSuccessorPreparationTests {
                     #expect(!released.ownerRecords.contains { $0.owner.hasPrefix("attempt.retained-initial") })
                     #expect(probe.snapshots.contains { $0.phase == "chain.reduced" })
                 }
-                let report: [String: Any] = ["schema": "autotechno-chain-storage-control.v2",
+                let report: [String: Any] = ["schema": "autotechno-chain-storage-control.v3",
                     "sampleRate": rate, "sources": sourceIdentities.count, "admitted": outcome.preparedPhrase != nil,
                     "processMemoryBefore": processMemoryBefore,
                     "processMemoryAfter": try DiagnosticRoleStemStreamingTests.nativeProcessMemoryObservation(),
                     "processMemoryAvailable": !processMemoryBefore.isEmpty,
-                    "allocatorScope": "currently-registered-all-malloc-zone-high-water-sum-not-phase-exclusive",
-                    "allocatorExcludes": ["destroyed-zones", "non-malloc-virtual-memory"],
+                    "allocatorScope": "currently-registered-zone-statistics-not-validated-lifetime-peaks",
+                    "allocatorExcludes": ["destroyed-zones", "non-malloc-virtual-memory", "unvalidated-maximum-counter-semantics"],
                     "allocatorCompleteNumericAttribution": false,
                     "selectedCorrection": mode == .forceCorrection, "observations": probe.observationCount,
                     "phaseObservationCounts": probe.phaseObservationCounts,

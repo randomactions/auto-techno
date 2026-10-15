@@ -8,11 +8,52 @@ import Darwin
 
 @Suite("Bounded same-pass diagnostic stem streaming", .serialized)
 struct DiagnosticRoleStemStreamingTests {
-    /// Test-process diagnostic only, outside the renderer and callback. All
-    /// current malloc zones contribute their own (possibly noncoincident) peak;
-    /// destroyed zones and non-malloc VM are outside this allocator measure.
+    @Test("Raw allocator counters cannot be reported as observed lifetime peaks")
+    func allocatorCounterIsNotPeakEvidence() throws {
+        let record = try Self.nativeProcessMemoryObservation()
+        guard !record.isEmpty else { return }
+        #expect(record["currentMallocZoneHighWaterSumBytes"] == nil)
+        #expect(record["allocatorPeakBytes"] is NSNull)
+    }
+
+    @Test("Allocator counters preserve raw values without inventing a validated peak")
+    func allocatorCounterClassification() throws {
+        for (inUse, reported) in [(100, 0), (100, 80), (100, 120), (0, 0), (0, 120)] {
+            let record = Self.processMemoryRecord(blocksInUse: 1,
+                bytesInUse: UInt64(inUse), reportedMaximumBytes: UInt64(reported),
+                reservedBytes: 256, wholeProcessHighWaterBytes: 512)
+            #expect(record["currentMallocZoneHighWaterSumBytes"] == nil)
+            #expect(record["currentMallocZoneReportedMaximumBytes"] as? UInt64 == UInt64(reported))
+            #expect(record["mallocBytesInUse"] as? UInt64 == UInt64(inUse))
+            #expect(record["wholeProcessHighWaterBytes"] as? UInt64 == 512)
+            #expect(record["allocatorPeakAvailability"] as? String == (reported < inUse
+                ? "unavailable-inconsistent-reported-maximum" : "unavailable-unvalidated-reported-maximum"))
+            let decoded = try #require(JSONSerialization.jsonObject(with:
+                JSONSerialization.data(withJSONObject: record)) as? [String: Any])
+            #expect(decoded["allocatorPeakBytes"] is NSNull)
+            #expect(decoded["currentMallocZoneHighWaterSumBytes"] == nil)
+        }
+    }
+
+    static func processMemoryRecord(blocksInUse: UInt64, bytesInUse: UInt64,
+        reportedMaximumBytes: UInt64, reservedBytes: UInt64,
+        wholeProcessHighWaterBytes: UInt64) -> [String: Any] {
+        ["schema": "autotechno-test-process-memory-observation.v2",
+            "mallocBlocksInUse": blocksInUse, "mallocBytesInUse": bytesInUse,
+            "currentMallocZoneReportedMaximumBytes": reportedMaximumBytes,
+            "allocatorPeakBytes": NSNull(),
+            "allocatorPeakAvailability": reportedMaximumBytes < bytesInUse
+                ? "unavailable-inconsistent-reported-maximum" : "unavailable-unvalidated-reported-maximum",
+            "mallocReservedBytes": reservedBytes,
+            "wholeProcessHighWaterBytes": wholeProcessHighWaterBytes]
+    }
+
+    /// Test-process diagnostic only, outside the renderer and callback. A raw
+    /// max_size_in_use counter can be zero despite nonzero current storage.
+    /// Neither a consistent counter nor an inconsistent zero proves a peak;
+    /// destroyed zones and non-malloc VM also remain outside this measure.
     /// RSS remains a separate whole-process monotonic high-water observation.
-    static func nativeProcessMemoryObservation() throws -> [String: UInt64] {
+    static func nativeProcessMemoryObservation() throws -> [String: Any] {
         #if canImport(Darwin)
         var allocation = malloc_statistics_t()
         malloc_zone_statistics(nil, &allocation)
@@ -20,11 +61,11 @@ struct DiagnosticRoleStemStreamingTests {
         guard getrusage(RUSAGE_SELF, &usage) == 0, usage.ru_maxrss >= 0 else {
             throw DiagnosticRoleStemCaptureError.invalidInput
         }
-        return ["mallocBlocksInUse": UInt64(allocation.blocks_in_use),
-            "mallocBytesInUse": UInt64(allocation.size_in_use),
-            "currentMallocZoneHighWaterSumBytes": UInt64(allocation.max_size_in_use),
-            "mallocReservedBytes": UInt64(allocation.size_allocated),
-            "wholeProcessHighWaterBytes": UInt64(usage.ru_maxrss)]
+        return processMemoryRecord(blocksInUse: UInt64(allocation.blocks_in_use),
+            bytesInUse: UInt64(allocation.size_in_use),
+            reportedMaximumBytes: UInt64(allocation.max_size_in_use),
+            reservedBytes: UInt64(allocation.size_allocated),
+            wholeProcessHighWaterBytes: UInt64(usage.ru_maxrss))
         #else
         return [:]
         #endif
@@ -503,13 +544,13 @@ struct DiagnosticRoleStemStreamingTests {
             #expect(samples.count == expectedFrames)
         }
         let control: [String: Any] = [
-            "schema": "autotechno-native-bar-stream-control.v1",
+            "schema": "autotechno-native-bar-stream-control.v2",
             "sampleRate": sampleRate, "barCount": records.count, "channelCount": 32,
             "processMemoryBefore": processMemoryBefore,
             "processMemoryAfter": try Self.nativeProcessMemoryObservation(),
             "processMemoryAvailable": !processMemoryBefore.isEmpty,
-            "allocatorScope": "currently-registered-all-malloc-zone-high-water-sum-not-phase-exclusive",
-            "allocatorExcludes": ["destroyed-zones", "non-malloc-virtual-memory"],
+            "allocatorScope": "currently-registered-zone-statistics-not-validated-lifetime-peaks",
+            "allocatorExcludes": ["destroyed-zones", "non-malloc-virtual-memory", "unvalidated-maximum-counter-semantics"],
             "allocatorCompleteNumericAttribution": false,
             "framesPerBar": expectedFrames,
             "totalFilePayloadByteCount": records.reduce(0) { $0 + $1.payloadByteCount },

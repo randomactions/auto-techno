@@ -2490,13 +2490,21 @@ semantic inputs preserve PCM, replay, evidence and exact child ownership.
 Complete allocation/metadata/chunk lifetime bounds, native corrected selected
 root/child capture, RSS/deadlines and full qualification remain outstanding.
 
-Native detached controls record whole-test-process RSS and the sum of high-water
-statistics across currently registered malloc zones directly in the validator
-process. These diagnostics include runtime/instrumentation overhead, retain no
-PCM or addresses, never run in the callback, and do not feed admission or musical
-decisions. Zone peaks may be noncoincident; destroyed zones and non-malloc VM are
-excluded from that allocator measure. They supplement the named-buffer inventory
-without claiming complete numeric attribution or a qualified capacity bound.
+Native detached controls record whole-test-process RSS and raw statistics for
+currently registered malloc zones directly in the validator process. A reported
+`max_size_in_use` value is not an independently observed lifetime peak. Some
+allocators report zero even while current storage is nonzero. The versioned
+process-memory record retains that raw value, classifies inconsistent or
+unvalidated maxima, and emits an unavailable peak as JSON null. Even a value
+above current usage does not establish complete lifetime coverage.
+
+These diagnostics include runtime/instrumentation overhead, retain no PCM or
+addresses, never run in the callback, and do not feed admission or musical
+decisions. Destroyed zones and non-malloc VM remain outside the zone statistics.
+They supplement the named-buffer inventory without claiming complete numeric
+attribution, allocator overhead or a qualified capacity bound. Older reports
+retain their original schema and source; their raw maximum fields must not be
+retagged as validated peak evidence.
 
 ## Superseded corrective-render storage lifetime
 
