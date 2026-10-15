@@ -1,5 +1,14 @@
 # Sound Quality Contract
 
+Current source uses canonical engine v51 under quality-contract schema50. The
+registered primary v35 resources bind the complete fresh engine-v51 study under
+the unchanged primary v32 policy and continuous v23/profile v33 contract. The
+matching Long Horizon v21 seals require all seven development and two disjoint
+holdout roots to qualify independently at both native rates, with all18complete
+histories. Runtime promotion also requires every separate resource, lifecycle,
+platform and output gate. Historical studies below retain their original versions
+and scope.
+
 The current primary contract is v32 and requires actual prepared continuous
 observation v23/profile v33 validation. A reproduced full native long-horizon
 journey activated a score-owned dotted foundation rhythm after 37 accepted bars;
@@ -26,10 +35,9 @@ The fresh d1259f36c68740d55f5b72bd63424e03cc0732af study completed the same
 and 84/84 accepted holdout observations under contract snapshot 93. Those
 engine-v48 v33 seals were profile eb1eba16cde88415, adversarial
 b76d744054bfa22f and holdout 19742f5c60933b29. They remain historical offline
-evidence. Engine v49 changes wash ownership after final canonical timing and
-polymetric relocation; all three current primary seals are unset until fresh
-complete native qualification. Qualified long-horizon v18 seals, matching paired
-resources and full runtime gates remain pending; production loading stays unavailable.
+evidence. The subsequent engine-v49 wash-ownership change invalidated those
+primary seals. Current engine-v51 primary registration is documented above and
+below; matching Long Horizon v21 and full runtime gates still remain pending.
 
 The native long-horizon producer follows the existing Core finite recovery
 continuation after measured retryable rejection, retaining actual accepted PCM
@@ -38,7 +46,7 @@ separate provenance and contribute no accepted score/signal/effect observations.
 The unchanged gates still admit the actual recovered product. A short recovery
 probe is not full native Long Horizon or combined-memory/device qualification.
 
-Signal report interpretation v2 keeps the pending bound episode across complete
+Historical signal report interpretation v2 kept the pending bound episode across complete
 neutral conservative debt fallback. Such a phrase is counted in global signal
 geometry but has no episode/operator attribution and no completion authority.
 Only a different bound episode closes the prior signal episode. Returning to a
@@ -52,10 +60,11 @@ existing detached AutonomousPerformancePreparer and its protected measured-child
 boundary. Each of the seven development and two disjoint holdout roots must
 complete independently at 44.1 and 48 kHz. Semantic, signal and effect-dose
 accumulators observe the same immutable accepted products; sparse checkpoint
-signals or sampled effect doses cannot satisfy observation/corpus v4. Native
-routes must agree on semantic and effect geometry. Physical effect maxima and
-minimum realized material diversity are non-compensable; the reduction never
-averages a failing route into acceptance. The full evidence counts and route
+signals or sampled effect doses cannot satisfy current observation/corpus v7.
+Each complete native history must independently pass its semantic, signal and
+effect gates; accepted histories may differ across rates. Physical effect maxima
+and minimum realized material diversity are non-compensable. Neither averaging
+nor cross-rate accepted-history equality can authorize acceptance. The full evidence counts and route
 identities are bound into the observation fingerprint.
 
 The offline bootstrap uses the exact qualified primary model with no active
@@ -1906,3 +1915,23 @@ final-source applicability, complete allocator/RSS/deadline, lifecycle, platform
 Release, route/recovery and applicable output gates remain mandatory. This
 resource registration adds no score, renderer, callback, continuation or fallback
 behavior and never imports historical histories into current qualification.
+
+
+## Scoped detached numeric allocation inspection
+
+`PreparationWorkingStorageProbe` remains the detached diagnostic owner. Its optional
+`NumericStorageBorrowObserver` receives one begin/end pair for each physical
+observation and a synchronous borrow of each nonempty numeric buffer while that
+array is pinned. Conditional group maxima do not create another physical visit.
+The receiver must discard address identity within the snapshot and retain neither
+pointers nor PCM. The default nil path has no receiver and preserves the existing
+snapshot encoding, phase counts, aliases, capacities and typed headroom.
+
+This seam lets a local validator identify an actual allocation containing a Swift
+array payload without assuming an object-header layout or passing an interior
+pointer to allocator APIs requiring an allocation base. It returns no value to
+the inventory, admission, evaluator, score, continuation or renderer. Existing
+32phase/4096owner bounds,128MiB numeric ceiling and two-render limit are unchanged.
+Receiver work is detached diagnostic work, never audio callback work or ordinary
+deadline evidence. Observed array extents alone do not cover all transients,
+allocator-internal metadata, complete process memory or current runtime promotion.

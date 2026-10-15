@@ -29,6 +29,17 @@ package struct NumericStorageSnapshot: Codable, Equatable, Sendable {
     }
 }
 
+/// Optional detached diagnostic receiver for the same physical snapshot. Each
+/// pointer is valid only during observeBuffer; do not retain it or PCM. An
+/// implementation may reduce allocator facts while that original owner is
+/// borrowed, then discard address identity before endSnapshot returns. This
+/// receiver supplies no admission, quality, deadline or callback authority.
+package protocol NumericStorageBorrowObserver: AnyObject {
+    func beginSnapshot(phase: String, bar: Int)
+    func observeBuffer(owner: String, base: UnsafeRawPointer, capacityBytes: Int)
+    func endSnapshot(_ snapshot: NumericStorageSnapshot)
+}
+
 /// Detached-only, single-writer registration through nonescaping borrows.
 /// Original owners must remain alive for the complete snapshot. A new inventory
 /// is required for each phase: addresses can be reused after old buffers die.
@@ -40,6 +51,12 @@ package final class NumericStorageInventory {
     package private(set) var uniqueBufferCapacityBytes = 0
     package private(set) var typedMetadataHeadroomBytes = 0
     package private(set) var valid = true
+    private let borrowObserver: (any NumericStorageBorrowObserver)?
+
+    package init() { borrowObserver = nil }
+    fileprivate init(borrowObserver: (any NumericStorageBorrowObserver)?) {
+        self.borrowObserver = borrowObserver
+    }
 
     package func register(_ samples: [Float], owner: String) { registerBuffer(samples, owner: owner) }
     package func register(_ samples: [Double], owner: String) { registerBuffer(samples, owner: owner) }
@@ -58,6 +75,11 @@ package final class NumericStorageInventory {
         samples.withUnsafeBufferPointer { buffer in
             guard samples.capacity > 0 else { return }
             guard let base = buffer.baseAddress else { valid = false; return }
+            // Synchronous and detached-only: the original array remains
+            // borrowed for the entire receiver call. Nothing can replace the
+            // declared capacity, alter ownership, or feed admission from it.
+            borrowObserver?.observeBuffer(owner: owner,
+                base: UnsafeRawPointer(base), capacityBytes: bytes.partialValue)
             let identity = UInt(bitPattern: base)
             if var previous = seen[identity] {
                 alias = previous.owner
@@ -103,6 +125,10 @@ package final class NumericStorageInventory {
 /// It does not cover unobserved transients, analysis, external source ownership,
 /// encoding/metadata heap overhead, writer chunks, RSS or deadlines implicitly.
 package final class PreparationWorkingStorageProbe: @unchecked Sendable {
+    private let borrowObserver: (any NumericStorageBorrowObserver)?
+    package init(borrowObserver: (any NumericStorageBorrowObserver)? = nil) {
+        self.borrowObserver = borrowObserver
+    }
     private var maxima: [String: NumericStorageSnapshot] = [:]
     package private(set) var valid = true
     package private(set) var observationCount = 0
@@ -120,9 +146,11 @@ package final class PreparationWorkingStorageProbe: @unchecked Sendable {
         let missing = names.filter { maxima[$0] == nil }.count
         guard valid, names.allSatisfy({ !$0.isEmpty && $0.utf8.count <= 128 }),
             maxima.count + missing <= Self.maximumPhaseCount else { valid = false; return }
-        let inventory = NumericStorageInventory()
+        borrowObserver?.beginSnapshot(phase: phase, bar: bar)
+        let inventory = NumericStorageInventory(borrowObserver: borrowObserver)
         register(inventory)
         let snapshot = inventory.snapshot(phase: phase, bar: bar)
+        borrowObserver?.endSnapshot(snapshot)
         guard snapshot.valid else { valid = false; return }
         let observations = observationCount.addingReportingOverflow(1)
         let phaseCount = (phaseObservationCounts[phase] ?? 0).addingReportingOverflow(1)

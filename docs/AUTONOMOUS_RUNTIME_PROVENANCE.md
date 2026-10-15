@@ -66,7 +66,7 @@ mistaken for a completed feedback system.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
    primary-evaluation transaction under quality-contract schema 50, candidate-
    vector schema 43, candidate-transaction schema 14, and canonical engine
-   identity `autotechno-canonical-engine.v50`. Each
+   identity `autotechno-canonical-engine.v51`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
@@ -3173,3 +3173,23 @@ final-source applicability, complete allocator/RSS/deadline, lifecycle, platform
 Release, route/recovery and applicable output gates remain mandatory. This
 resource registration adds no score, renderer, callback, continuation or fallback
 behavior and never imports historical histories into current qualification.
+
+
+## Scoped detached numeric allocation inspection
+
+`PreparationWorkingStorageProbe` remains the detached diagnostic owner. Its optional
+`NumericStorageBorrowObserver` receives one begin/end pair for each physical
+observation and a synchronous borrow of each nonempty numeric buffer while that
+array is pinned. Conditional group maxima do not create another physical visit.
+The receiver must discard address identity within the snapshot and retain neither
+pointers nor PCM. The default nil path has no receiver and preserves the existing
+snapshot encoding, phase counts, aliases, capacities and typed headroom.
+
+This seam lets a local validator identify an actual allocation containing a Swift
+array payload without assuming an object-header layout or passing an interior
+pointer to allocator APIs requiring an allocation base. It returns no value to
+the inventory, admission, evaluator, score, continuation or renderer. Existing
+32phase/4096owner bounds,128MiB numeric ceiling and two-render limit are unchanged.
+Receiver work is detached diagnostic work, never audio callback work or ordinary
+deadline evidence. Observed array extents alone do not cover all transients,
+allocator-internal metadata, complete process memory or current runtime promotion.
