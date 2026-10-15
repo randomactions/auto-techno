@@ -125,13 +125,14 @@ class HostedMacOSVerificationTests(unittest.TestCase):
                     selector = command[command.index('--filter') + 1]
                     selected = [name for name in re.findall(r'^    func (\w+)\(', source, re.M)
                                 if re.search(selector, 'ProfessionalQualityCalibrationTests/' + name + '()')]
-                    self.assertEqual(len(selected), 19)
+                    self.assertEqual(len(selected), 20)
                     self.assertIn('dottedRhythmCrestPopulationAcrossCandidates', selected)
                     self.assertIn('kickFoundationPairingPopulationProjectionAcrossCandidates', selected)
                     for name in ['modalEventPopulationProjectionAcrossCandidates',
                                  'padPopulationProjectionsAcrossCandidates',
                                  'preparationEvaluatorAvailability',
-                                 'activeSpectralRevealProjectionMatchesEvidence']:
+                                 'activeSpectralRevealProjectionMatchesEvidence',
+                                 'spectralRevealPopulationAcrossCandidates']:
                         self.assertIn(name, selected)
                     log.write_bytes(raw)
                     return subprocess.CompletedProcess(command, exit_code)

@@ -1402,6 +1402,7 @@ struct ProfessionalQualityCalibrationTests {
     }
 
     @Test("Spectral reveal ratio follows varied eligible event populations")
+    @MainActor
     func spectralRevealPopulationAcrossCandidates() throws {
         var candidates: [AutonomousCandidateEvaluationVector] = []
         var populations = Set<String>()
