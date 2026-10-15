@@ -147,7 +147,11 @@ class ReleaseDeliveryTests(unittest.TestCase):
     def test_complete_unique_inventory_and_safe_owned_paths_required(self):
         self.pack()
         for path in ['/escape','../escape',delivery.ROOT_NAME+'/../escape',delivery.ROOT_NAME+'//AutoTechno',
-                delivery.ROOT_NAME+'/AutoTechno\\escape',delivery.ROOT_NAME+'/foreign/file']:
+                delivery.ROOT_NAME+'/AutoTechno\\escape',delivery.ROOT_NAME+'/foreign/file',
+                delivery.ROOT_NAME+'/'+delivery.BUNDLE_NAME+'/C:/escape.json',
+                delivery.ROOT_NAME+'/'+delivery.BUNDLE_NAME+'/CON.json',
+                delivery.ROOT_NAME+'/'+delivery.BUNDLE_NAME+'/file.json.',
+                delivery.ROOT_NAME+'/'+delivery.BUNDLE_NAME+'/bad\x00name.json']:
             record=copy.deepcopy(self.record);record['files'][0]['path']=path
             with self.subTest(path=path),self.assertRaises(ValueError):self.verify(record=record)
         for mutate in [lambda r:r['files'].append(r['files'][0].copy()),lambda r:r.update(files=r['files'][:1]),

@@ -83,6 +83,10 @@ def artifact_name(source, run, attempt):
 
 def member_name(path):
     require(isinstance(path, str) and 0 < len(path) <= 240 and '\\' not in path, 'bounded normalized member path')
+    components = path.split('/')
+    reserved = {'CON', 'PRN', 'AUX', 'NUL'} | {f'{prefix}{i}' for prefix in ('COM', 'LPT') for i in range(1, 10)}
+    require(all(re.fullmatch('[A-Za-z0-9][A-Za-z0-9_.-]*', part) and not part.endswith('.') and
+                part.split('.')[0].upper() not in reserved for part in components), 'portable owned member components')
     p = PurePosixPath(path)
     require(not p.is_absolute() and p.as_posix() == path and all(x not in ('', '.', '..') for x in p.parts), 'normalized member path')
     require(path == ROOT_NAME + '/AutoTechno' or path.startswith(ROOT_NAME + '/' + BUNDLE_NAME + '/'), 'release executable/resource ownership')
