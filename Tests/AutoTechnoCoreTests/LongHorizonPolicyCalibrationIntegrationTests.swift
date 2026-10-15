@@ -12,6 +12,286 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
   ]
   private let holdoutRoots: [UInt64] = [271_828, 314_159]
 
+  private static func boundedRecoveryInput(_ path: String, maximumBytes: Int) throws -> Data {
+    let attributes = try FileManager.default.attributesOfItem(atPath: path)
+    guard attributes[.type] as? FileAttributeType == .typeRegular,
+      let size = attributes[.size] as? NSNumber, size.intValue > 0, size.intValue <= maximumBytes else {
+      throw LongHorizonProfessionalPolicyError.invalidEvidence
+    }
+    let handle = try FileHandle(forReadingFrom: URL(fileURLWithPath: path))
+    defer { try? handle.close() }
+    let data = try handle.read(upToCount: maximumBytes + 1) ?? Data()
+    guard !data.isEmpty, data.count <= maximumBytes else {
+      throw LongHorizonProfessionalPolicyError.invalidEvidence
+    }
+    return data
+  }
+
+  @Test("Recovery requests refuse empty, oversized and symbolic-link input")
+  func boundedRecoveryRequestInput() throws {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let path = directory.appendingPathComponent("request.json")
+    try Data("{}".utf8).write(to: path)
+    #expect(try Self.boundedRecoveryInput(path.path, maximumBytes: 2) == Data("{}".utf8))
+    for data in [Data(), Data("123".utf8)] {
+      try data.write(to: path)
+      #expect(throws: LongHorizonProfessionalPolicyError.invalidEvidence) {
+        try Self.boundedRecoveryInput(path.path, maximumBytes: 2)
+      }
+    }
+    let link = directory.appendingPathComponent("alias.json")
+    try Data("{}".utf8).write(to: path)
+    try FileManager.default.createSymbolicLink(at: link, withDestinationURL: path)
+    #expect(throws: LongHorizonProfessionalPolicyError.invalidEvidence) {
+      try Self.boundedRecoveryInput(link.path, maximumBytes: 2)
+    }
+  }
+
+  /// The explicitly approved interrupted-study exception renders a missing
+  /// route from initial state. It never reads a saved journey or runtime state.
+  private struct InterruptedRouteRequest: Codable, Sendable {
+    let schema: String
+    let rootSeed: UInt64
+    let sampleRate: Int
+    let originalSource: String
+    let originalInputBinding: String
+    let harnessSource: String
+    let recoveryInputBinding: String
+    let manifestSHA256: String
+    let buildMetadataSHA256: String
+    let primaryPolicyVersion: String
+    let preservedCompleteHistoryCount: Int
+    let freshCompleteRoute: Bool
+
+    func validate() throws {
+      func hex(_ value: String, count: Int) -> Bool {
+        value.utf8.count == count && value.utf8.allSatisfy {
+          (48...57).contains($0) || (97...102).contains($0)
+        }
+      }
+      let missing = rootSeed == 141_421 && sampleRate == 48_000 ||
+        [173_205, 246_813, 271_828, 314_159].contains(rootSeed) &&
+          [44_100, 48_000].contains(sampleRate)
+      guard schema == "autotechno-interrupted-long-route-request.v1", missing,
+        originalSource == "5b81cefa3cf491b644dcee64a28cbefdd7bbc17d",
+        originalInputBinding == "d1f562e91f703a86",
+        hex(harnessSource, count: 40), harnessSource != originalSource,
+        hex(recoveryInputBinding, count: 16), recoveryInputBinding != originalInputBinding,
+        hex(manifestSHA256, count: 64), hex(buildMetadataSHA256, count: 64),
+        primaryPolicyVersion == LongHorizonProfessionalPolicySchema.requiredPrimaryPolicyVersion,
+        preservedCompleteHistoryCount == 9, freshCompleteRoute
+      else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
+    }
+  }
+
+  @Test("Interrupted-study route selection refuses completed, foreign and retagged inputs")
+  func interruptedRouteSelection() throws {
+    let base: [String: Any] = [
+      "schema": "autotechno-interrupted-long-route-request.v1",
+      "rootSeed": 141_421, "sampleRate": 48_000,
+      "originalSource": "5b81cefa3cf491b644dcee64a28cbefdd7bbc17d",
+      "originalInputBinding": "d1f562e91f703a86",
+      "harnessSource": String(repeating: "a", count: 40),
+      "recoveryInputBinding": "1111111111111111",
+      "manifestSHA256": String(repeating: "b", count: 64),
+      "buildMetadataSHA256": String(repeating: "c", count: 64),
+      "primaryPolicyVersion": LongHorizonProfessionalPolicySchema.requiredPrimaryPolicyVersion,
+      "preservedCompleteHistoryCount": 9, "freshCompleteRoute": true]
+    func check(_ object: [String: Any]) throws {
+      try JSONDecoder().decode(InterruptedRouteRequest.self,
+        from: JSONSerialization.data(withJSONObject: object)).validate()
+    }
+    for (root, rates) in [(141_421, [48_000]), (173_205, [44_100, 48_000]),
+      (246_813, [44_100, 48_000]), (271_828, [44_100, 48_000]), (314_159, [44_100, 48_000])] {
+      for rate in rates {
+        var object = base; object["rootSeed"] = root; object["sampleRate"] = rate
+        try check(object)
+      }
+    }
+    let invalid: [(String, Any)] = [
+      ("rootSeed", 48_291), ("sampleRate", 44_100), ("sampleRate", 8_000),
+      ("originalSource", String(repeating: "0", count: 40)),
+      ("originalInputBinding", "foreign"), ("harnessSource", "unresolved"),
+      ("recoveryInputBinding", "d1f562e91f703a86"), ("manifestSHA256", ""),
+      ("buildMetadataSHA256", ""), ("primaryPolicyVersion", "foreign"),
+      ("preservedCompleteHistoryCount", 8), ("freshCompleteRoute", false)]
+    for (key, value) in invalid {
+      var object = base; object[key] = value
+      #expect(throws: LongHorizonProfessionalPolicyError.invalidEvidence) { try check(object) }
+    }
+  }
+
+  @Test("Render only one explicitly approved missing native Long-study route")
+  func renderInterruptedStudyRoute() async throws {
+    let environment = ProcessInfo.processInfo.environment
+    guard environment["AUTOTECHNO_RUN_INTERRUPTED_LONG_ROUTE"] == "1" else { return }
+    #if DEBUG
+      throw LongHorizonProfessionalPolicyError.invalidEvidence
+    #endif
+    guard environment["AUTOTECHNO_RUN_LONG_HORIZON_CALIBRATION"] != "1",
+      let path = environment["AUTOTECHNO_INTERRUPTED_LONG_ROUTE_REQUEST"]
+    else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
+    let data = try Self.boundedRecoveryInput(path, maximumBytes: 16_384)
+    let request = try JSONDecoder().decode(InterruptedRouteRequest.self, from: data)
+    try request.validate()
+    let primary = try loadPrimary()
+    guard primary.evaluator.policyVersion == request.primaryPolicyVersion else {
+      throw LongHorizonProfessionalPolicyError.profileMismatch
+    }
+    try prepareOutputNamespace()
+    let journey = await Task.detached(priority: .userInitiated) {
+      await Self.renderPreparedRoute(rootSeed: request.rootSeed,
+        sampleRate: Double(request.sampleRate), primary: primary)
+    }.value
+    // The supervisor authenticates the frozen production objects/resources and
+    // separately bound harness before and after this process. These labels do
+    // not substitute the original study binding for the new executable inputs.
+    guard try Self.boundedRecoveryInput(path, maximumBytes: 16_384) == data else {
+      throw LongHorizonProfessionalPolicyError.invalidEvidence
+    }
+    try writeJourney(journey, binding: request.recoveryInputBinding, recovery: [
+      "schema": "autotechno-interrupted-long-route-provenance.v1",
+      "originalSource": request.originalSource,
+      "originalInputBinding": request.originalInputBinding,
+      "harnessSource": request.harnessSource,
+      "manifestSHA256": request.manifestSHA256,
+      "buildMetadataSHA256": request.buildMetadataSHA256,
+      "routeOrigin": "fresh-complete-execution-from-initial-state"])
+    guard journey.completedRequestedScope, journey.endsAtClosedLeaf,
+      journey.failureCode == nil else { throw LongHorizonProfessionalPolicyError.insufficientEvidence }
+    Self.progress("recovered-missing root=\(request.rootSeed) rate=\(request.sampleRate) "
+      + "binding=\(request.recoveryInputBinding) original=\(request.originalInputBinding)")
+  }
+
+  private struct InterruptedAssembly: Decodable {
+    struct Route: Decodable {
+      let rootSeed: UInt64
+      let sampleRate: Int
+      let path: String
+      let origin: String
+    }
+    let schema: String
+    let provenance: InterruptedRouteRequest
+    let routes: [Route]
+  }
+
+  private struct RecordedJourney: Decodable {
+    let schema: String
+    let inputBindingFingerprint: String
+    let primaryPolicyVersion: String
+    let journey: PreparedRouteJourney
+    let archiveImport: Bool
+    let runtimeActivation: Bool
+    let fullRuntimeQualification: Bool
+    let longHorizonQualification: Bool
+    let capacityOrOutputQualification: Bool
+    let recoveryProvenance: [String: String]?
+  }
+
+  @Test("Assemble the explicitly declared interrupted study through canonical qualification")
+  func assembleInterruptedStudy() throws {
+    let environment = ProcessInfo.processInfo.environment
+    guard environment["AUTOTECHNO_ASSEMBLE_INTERRUPTED_LONG_STUDY"] == "1" else { return }
+    #if DEBUG
+      throw LongHorizonProfessionalPolicyError.invalidEvidence
+    #endif
+    guard let path = environment["AUTOTECHNO_INTERRUPTED_LONG_ASSEMBLY_REQUEST"],
+      environment["AUTOTECHNO_RUN_INTERRUPTED_LONG_ROUTE"] != "1",
+      environment["AUTOTECHNO_RUN_LONG_HORIZON_CALIBRATION"] != "1"
+    else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
+    let requestData = try Self.boundedRecoveryInput(path, maximumBytes: 65_536)
+    let request = try JSONDecoder().decode(InterruptedAssembly.self, from: requestData)
+    try request.provenance.validate()
+    guard request.schema == "autotechno-interrupted-long-study-assembly-request.v1",
+      request.routes.count == 18 else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
+    let primary = try loadPrimary()
+    guard primary.evaluator.policyVersion == request.provenance.primaryPolicyVersion else {
+      throw LongHorizonProfessionalPolicyError.profileMismatch
+    }
+    var seen: Set<String> = [], inputs: [(URL, Data)] = [], observations: [UInt64: [LongHorizonRuntimePolicyObservation]] = [:]
+    var totalBytes = 0, originals = 0, fresh = 0
+    for row in request.routes {
+      guard (developmentRoots + holdoutRoots).contains(row.rootSeed),
+        [44_100, 48_000].contains(row.sampleRate),
+        seen.insert("\(row.rootSeed)/\(row.sampleRate)").inserted else {
+        throw LongHorizonProfessionalPolicyError.invalidEvidence
+      }
+      let url = URL(fileURLWithPath: row.path)
+      let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+      guard attributes[.type] as? FileAttributeType == .typeRegular,
+        let size = attributes[.size] as? NSNumber, size.intValue > 0,
+        size.intValue <= 64 * 1024 * 1024 - totalBytes else {
+        throw LongHorizonProfessionalPolicyError.invalidEvidence
+      }
+      let data = try Data(contentsOf: url); totalBytes += data.count
+      let recorded = try JSONDecoder().decode(RecordedJourney.self, from: data)
+      let journey = recorded.journey
+      guard recorded.schema == "autotechno-long-horizon-shared-journey.v2",
+        recorded.primaryPolicyVersion == primary.evaluator.policyVersion,
+        !recorded.archiveImport, !recorded.runtimeActivation, !recorded.fullRuntimeQualification,
+        !recorded.longHorizonQualification, !recorded.capacityOrOutputQualification,
+        journey.rootSeed == row.rootSeed, journey.sampleRate == Double(row.sampleRate),
+        journey.completedRequestedScope, journey.endsAtClosedLeaf, journey.failureCode == nil,
+        journey.requestedPrefixPhraseCount == nil, journey.requestedMinimumBars == 7_800 else {
+        throw LongHorizonProfessionalPolicyError.invalidEvidence
+      }
+      let missing = row.rootSeed == 141_421 && row.sampleRate == 48_000 ||
+        [173_205, 246_813, 271_828, 314_159].contains(row.rootSeed)
+      if missing {
+        fresh += 1
+        let p = request.provenance
+        guard row.origin == "fresh-recovery-execution",
+          recorded.inputBindingFingerprint == p.recoveryInputBinding,
+          recorded.recoveryProvenance == [
+            "schema": "autotechno-interrupted-long-route-provenance.v1",
+            "originalSource": p.originalSource, "originalInputBinding": p.originalInputBinding,
+            "harnessSource": p.harnessSource, "manifestSHA256": p.manifestSHA256,
+            "buildMetadataSHA256": p.buildMetadataSHA256,
+            "routeOrigin": "fresh-complete-execution-from-initial-state"] else {
+          throw LongHorizonProfessionalPolicyError.invalidEvidence
+        }
+      } else {
+        originals += 1
+        guard row.origin == "preserved-original", recorded.recoveryProvenance == nil,
+          recorded.inputBindingFingerprint == request.provenance.originalInputBinding else {
+          throw LongHorizonProfessionalPolicyError.invalidEvidence
+        }
+      }
+      inputs.append((url, data))
+      observations[row.rootSeed, default: []].append(try LongHorizonRuntimePolicyObservation(
+        semanticReport: journey.semantic, signalReport: journey.signal,
+        effectReport: journey.effects, primaryPolicyVersion: primary.evaluator.policyVersion))
+    }
+    guard originals == 9, fresh == 9 else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
+    func corpus(_ roots: [UInt64]) throws -> LongHorizonPolicyCalibrationCorpus {
+      try LongHorizonPolicyCalibrationCorpus(observations: roots.map { root in
+        let routes = (observations[root] ?? []).sorted { $0.sampleRate < $1.sampleRate }
+        return try LongHorizonPolicyObservation(routeObservations: routes)
+      })
+    }
+    try prepareOutputNamespace()
+    let development = try corpus(developmentRoots), holdout = try corpus(holdoutRoots)
+    try writeCorpora(development: development, holdout: holdout)
+    try qualifyAndWriteArtifacts(development: development, holdoutCorpus: holdout) {
+      guard try Self.boundedRecoveryInput(path, maximumBytes: 65_536) == requestData else { return false }
+      return try inputs.allSatisfy { try Data(contentsOf: $0.0) == $0.1 }
+    }
+    let declaration: [String: Any] = ["schema": "autotechno-interrupted-long-study-assembly.v1",
+      "originalSource": request.provenance.originalSource,
+      "originalInputBinding": request.provenance.originalInputBinding,
+      "harnessSource": request.provenance.harnessSource,
+      "recoveryInputBinding": request.provenance.recoveryInputBinding,
+      "manifestSHA256": request.provenance.manifestSHA256,
+      "buildMetadataSHA256": request.provenance.buildMetadataSHA256,
+      "preservedOriginalHistories": originals, "freshCompleteHistories": fresh,
+      "declaredOriginalEvidenceAssembly": true, "originalHistoriesRetagged": false,
+      "finalSourceApplicability": false, "runtimeQualification": false, "item39Complete": false]
+    try JSONSerialization.data(withJSONObject: declaration, options: [.sortedKeys])
+      .write(to: outputDirectory().appendingPathComponent("interrupted-study-assembly.json"), options: .withoutOverwriting)
+  }
+
   /// Deliberately expensive and opt-in. Each root supplies a complete
   /// full canonical journey through the shared detached preparation owner.
   /// Every accepted phrase supplies semantic, signal and effect-dose evidence
@@ -33,6 +313,16 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     let corpora = try await calibrationCorpora()
     let development = corpora.development
     let holdoutCorpus = corpora.holdout
+    try qualifyAndWriteArtifacts(development: development, holdoutCorpus: holdoutCorpus) {
+      try executionBinding() == binding
+    }
+  }
+
+  /// One canonical fit/qualification path for both an uninterrupted producer
+  /// and the explicitly declared assembly of this interrupted study.
+  private func qualifyAndWriteArtifacts(development: LongHorizonPolicyCalibrationCorpus,
+    holdoutCorpus: LongHorizonPolicyCalibrationCorpus, validateInputs: () throws -> Bool
+  ) throws {
     let profile = try LongHorizonProfessionalProfile(corpus: development)
     let profileEvaluator = try LongHorizonProfessionalProfileEvaluator(
       profile: profile)
@@ -92,7 +382,7 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     #expect(holdout.qualified)
     #expect(holdout.journeys.allSatisfy { $0.verdict.accepted })
     #expect(!policy.policyVersion.isEmpty)
-    guard adversarial.passed, holdout.qualified, try executionBinding() == binding
+    guard adversarial.passed, holdout.qualified, try validateInputs()
     else { throw LongHorizonProfessionalPolicyError.insufficientEvidence }
     try writeArtifacts(
       profile: profile, adversarial: adversarial, holdout: holdout)
@@ -853,9 +1143,11 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     return try LongHorizonPolicyObservation(routeObservations: routes)
   }
 
-  private func writeJourney(_ journey: PreparedRouteJourney, binding: String) throws {
+  private func writeJourney(_ journey: PreparedRouteJourney, binding: String,
+    recovery: [String: String]? = nil
+  ) throws {
     let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-    let object: [String: Any] = ["schema": "autotechno-long-horizon-shared-journey.v2",
+    var object: [String: Any] = ["schema": "autotechno-long-horizon-shared-journey.v2",
       "inputBindingFingerprint": binding, "primaryPolicyVersion": LongHorizonProfessionalPolicySchema.requiredPrimaryPolicyVersion,
       "journey": try JSONSerialization.jsonObject(with: encoder.encode(journey)),
       "sourceScope": "current-shared-preparation-primary-only-bootstrap-with-core-recovery",
@@ -863,6 +1155,7 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
       "memoryScope": "numeric-reservation-covers-preparation-chain-not-combined-held-playback",
       "archiveImport": false, "runtimeActivation": false, "fullRuntimeQualification": false,
       "longHorizonQualification": false, "capacityOrOutputQualification": false]
+    if let recovery { object["recoveryProvenance"] = recovery }
     let directory = try outputDirectory()
     try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys, .withoutEscapingSlashes])
       .write(to: directory.appendingPathComponent("actual-journey-\(journey.rootSeed)-\(Int(journey.sampleRate)).json"), options: .atomic)

@@ -3069,3 +3069,37 @@ independent allocated-capacity and allocator-overhead accounting; they cannot
 substitute for the existing unused-capacity charges. Profiler overhead and
 instrumented elapsed time cannot qualify ordinary preparation deadlines or
 authorize reduced admission.
+
+
+## Explicitly declared recovery of an interrupted offline Long study
+
+An explicit user approval may authorize completing this interrupted study without
+recapturing its nine completed native histories. Their original JSON, input
+bindings, source and hashes remain immutable original-candidate evidence. The
+bounded test-only recovery entry point renders only the nine approved missing
+route pairs from initial state through the unchanged `renderPreparedRoute` owner
+and exact frozen production objects/resources. A partial route is rendered in
+full; its old prefix or lost runtime state is never imported into execution.
+
+The recovery supervisor verifies the original clean source, all recorded compiled
+inputs and runtime resources, primary seals, seven-development/two-disjoint-
+holdout cohort, complete original-history integrity and exact missing-pair set.
+It separately binds the new optimized test harness, executable and route requests.
+Every completed fresh route retains its new recovery input binding and explicit
+original-candidate/harness provenance. Native completion and unchanged inputs are
+required before each result is accepted. Missing, duplicate, foreign, modified,
+partial or falsely fresh artifacts refuse; no completed original is retagged.
+
+Only all eighteen complete histories may enter the explicitly declared assembly.
+The same canonical corpus/profile/adversarial/holdout qualification path used by
+uninterrupted generation evaluates each native history independently. Original
+files are never rewritten, observations are not averaged across rates or roots,
+and failed or absent evidence cannot manufacture qualified policy artifacts.
+The assembly declares nine preserved originals and nine fresh complete executions.
+This bounded exception does not admit arbitrary archives, change production
+continuation, add another renderer/profile selector, or relax a quality gate.
+
+An assembled original-candidate study is not evidence of final-source applicability.
+Installation/seal validation and all current source, resource/allocator/RSS/deadline,
+lifecycle, platform, Release, route/recovery and physical-output gates remain
+separate mandatory requirements before runtime promotion or item completion.
