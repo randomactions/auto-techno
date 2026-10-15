@@ -41,6 +41,27 @@ def fixture(include_retired=False):
                          event='workflow_dispatch',repository=dict(full_name='randomactions/auto-techno')),banks=rows)
 
 
+def native_log(receipt, timestamped=False):
+    """Synthetic original stdout paired with transport; never execution evidence."""
+    lines = []
+    for result in receipt['completedSlices']:
+        selected = result['selection']
+        lines.append(f"BEGIN native slice {receipt['bank']}:{selected['library']}:{selected['suite']}")
+        for identity in result['skippedIdentifiers']:
+            name = next(name for name, case in hosted.ALLOWED_SKIPS.items() if case == identity)
+            lines.append(f'Test "{name}" skipped.')
+        count = result['reportedTests']
+        lines.append(f'Executed {count} tests, with 0 failures' if selected['library'] == 'xctest'
+                     else f'Test run with {count} tests passed')
+    stream = io.StringIO()
+    with contextlib.redirect_stdout(stream):
+        hosted.emit(receipt)
+    lines.extend(stream.getvalue().splitlines())
+    if timestamped:
+        lines = ['2026-10-15T08:00:00.0000000Z ' + line for line in lines]
+    return ('\n'.join(lines) + '\n').encode()
+
+
 def execution(raw):
     return dict(schema=hosted.EXECUTION_SCHEMA,environment='hosted-macos',
                 scope='complete-native-suites-and-release-build',revision=SOURCE,
@@ -304,14 +325,24 @@ class HostedMacOSVerificationTests(unittest.TestCase):
             if path.endswith('/workflows/20'): return json.dumps(bundle['workflow']).encode()
             if '/jobs?' in path:
                 return json.dumps(dict(total_count=hosted.BANKS,jobs=[r['job'] for r in bundle['banks']])).encode()
-            job=int(path.split('/')[-2]);stream=io.StringIO()
-            with contextlib.redirect_stdout(stream):hosted.emit(bundle['banks'][job-100]['receipt'])
-            return stream.getvalue().encode()
+            job=int(path.split('/')[-2])
+            return native_log(bundle['banks'][job-100]['receipt'], timestamped=True)
         with tempfile.TemporaryDirectory() as folder,mock.patch.object(hosted.subprocess,'check_output',side_effect=response):
             out=Path(folder)/'complete'
             self.assertTrue(hosted.collect(50,SOURCE,out)['completeNativeSuitesAndReleaseBuild'])
             self.assertEqual(len(list(out.glob('bank-*.log.gz'))),hosted.BANKS)
             with self.assertRaises(ValueError):hosted.collect(50,SOURCE,out)
+            def receipt_only(command, **kwargs):
+                if command[-1].endswith('/logs'):
+                    job = int(command[-1].split('/')[-2]); stream = io.StringIO()
+                    with contextlib.redirect_stdout(stream):
+                        hosted.emit(bundle['banks'][job-100]['receipt'])
+                    return stream.getvalue().encode()
+                return response(command, **kwargs)
+            with mock.patch.object(hosted.subprocess, 'check_output', side_effect=receipt_only):
+                with self.assertRaisesRegex(ValueError, 'original native boundaries'):
+                    hosted.collect(50, SOURCE, Path(folder)/'receipt-only')
+                self.assertFalse((Path(folder)/'receipt-only').exists())
             calls=0
             def moved(command,**kwargs):
                 nonlocal calls
@@ -324,6 +355,47 @@ class HostedMacOSVerificationTests(unittest.TestCase):
             with mock.patch.object(hosted.subprocess,'check_output',side_effect=moved):
                 with self.assertRaises(ValueError):hosted.collect(50,SOURCE,Path(folder)/'moved')
                 self.assertFalse((Path(folder)/'moved').exists())
+
+    def test_original_native_summaries_and_receipt_must_agree(self):
+        receipt = fixture()['banks'][0]['receipt']
+        expected = sum(row['executedTests'] for row in receipt['completedSlices'])
+        for timestamped in [False, True]:
+            decoded, counts = hosted.parse_bank(native_log(receipt, timestamped), SOURCE, 0)
+            self.assertEqual(decoded, receipt)
+            self.assertEqual(counts, dict(executedTests=expected, explicitlySkippedTests=0))
+        total_skips = 0
+        for row in fixture(include_retired=True)['banks']:
+            receipt = row['receipt']
+            decoded, counts = hosted.parse_bank(native_log(receipt), SOURCE, receipt['bank'])
+            self.assertEqual(decoded, receipt)
+            total_skips += counts['explicitlySkippedTests']
+        self.assertEqual(total_skips, 2)
+
+    def test_receipt_only_or_altered_native_summaries_cannot_supply_execution(self):
+        receipt = fixture()['banks'][0]['receipt']; raw = native_log(receipt)
+        stream = io.StringIO()
+        with contextlib.redirect_stdout(stream):
+            hosted.emit(receipt)
+        changes = [stream.getvalue().encode(), b'',
+                   raw.replace(b'Executed ', b'Missing ', 1),
+                   raw.replace(b'with 0 failures', b'with 1 failures', 1),
+                   raw.replace(b'BEGIN native slice 0:', b'BEGIN native slice 1:', 1),
+                   b'BEGIN native slice 0:foreign:Suite\n' + raw,
+                   raw + b'BEGIN native slice 0:foreign:Suite\n',
+                   raw.replace(b'BEGIN native slice', b'ABSENT native slice', 1),
+                   raw.replace(b'Executed ', b'Missing ', 1) + b'Executed 8 tests, with 0 failures\n']
+        altered = copy.deepcopy(receipt); altered['completedSlices'][0]['executedTests'] += 1
+        changes.append(native_log(altered))
+        altered = copy.deepcopy(receipt); altered['completedSlices'][0]['exitCode'] = False
+        changes.append(native_log(altered))
+        altered = copy.deepcopy(receipt); altered['plan']['selected'][0]['selector'] = '.*'
+        changes.append(native_log(altered))
+        for index, bad in enumerate(changes):
+            with self.subTest(index=index), self.assertRaises(ValueError):
+                hosted.parse_bank(bad, SOURCE, 0)
+        for source, bank in [('f'*40, 0), (SOURCE, 1), (SOURCE, True)]:
+            with self.subTest(source=source, bank=bank), self.assertRaises(ValueError):
+                hosted.parse_bank(raw, source, bank)
 
     def test_debugger_replay_is_bounded_literal_and_has_no_receipt(self):
         selector = 'IterativeSuccessorPreparationTests[/.]protectedBoundaryRefusal'

@@ -209,6 +209,69 @@ def summarize_log(raw, library, expected, identifiers):
     return dict(reportedTests=expected, explicitlySkippedTests=skips, executedTests=expected-skips, skippedIdentifiers=skipped_ids)
 
 
+def parse_bank(raw, source, bank):
+    """Recompute execution counts from original stdout, never receipt JSON alone."""
+    require(isinstance(raw, bytes) and 0 < len(raw) <= 64 * 1024 * 1024,
+            'bounded original native log')
+    require(isinstance(source, str) and re.fullmatch('[0-9a-f]{40}', source), 'exact native source')
+    require(type(bank) is int and 0 <= bank < BANKS, 'native bank index')
+    log = raw.decode('utf-8')
+    receipt = decode_chunks(log, source, bank)
+    require(isinstance(receipt, dict) and set(receipt) == {
+        'schema', 'source', 'environment', 'bank', 'banks', 'discovery', 'plan', 'completedSlices'},
+        'receipt fields')
+    require(receipt['schema'] == 'autotechno-hosted-macos-bank.v1' and
+            receipt['source'] == source and receipt['environment'] == 'hosted-macos' and
+            type(receipt['bank']) is int and receipt['bank'] == bank and
+            type(receipt['banks']) is int and receipt['banks'] == BANKS, 'native bank source/scope')
+    expected = plan(receipt['discovery'], bank, BANKS)
+    require(receipt['plan'] == expected, 'recomputed original native plan')
+    completed = receipt['completedSlices']
+    require(isinstance(completed, list) and len(completed) == len(expected['selected']),
+            'complete original native slices')
+    # The producer emits BEGIN before each native process and chunks only after
+    # every process exits successfully. Bound the final body at that transport,
+    # so later workflow summaries cannot replace missing native output.
+    transport = None; offset = 0
+    for line in log.splitlines(keepends=True):
+        start = line.find('{')
+        if start >= 0:
+            try:
+                value = strict_json(line[start:])
+            except ValueError:
+                value = None
+            if isinstance(value, dict) and value.get('schema') == 'autotechno-hosted-receipt-chunk.v1':
+                transport = offset
+                break
+        offset += len(line)
+    require(transport is not None, 'native receipt transport required')
+    markers = list(re.finditer(r'(?m)^(?:\d{4}-\d\d-\d\dT\S+ )?'
+                              r'BEGIN native slice ([^\r\n]+)\r?\n', log))
+    require(len(markers) == len(completed) and all(m.start() < transport for m in markers),
+            'complete ordered original native boundaries')
+    counts = dict(executedTests=0, explicitlySkippedTests=0)
+    for index, (selection, result, marker) in enumerate(zip(expected['selected'], completed, markers)):
+        require(isinstance(result, dict) and set(result) == {
+            'selection', 'reportedTests', 'explicitlySkippedTests', 'executedTests',
+            'skippedIdentifiers', 'exitCode', 'logSHA256'}, 'original native slice fields')
+        require(result['selection'] == selection and type(result['exitCode']) is int and
+                result['exitCode'] == 0, 'successful original native selection')
+        require(marker.group(1) == f"{bank}:{selection['library']}:{selection['suite']}",
+                'ordered original native execution')
+        end = markers[index + 1].start() if index + 1 < len(markers) else transport
+        measured = summarize_log(log[marker.end():end], selection['library'],
+                                 len(selection['identifiers']), selection['identifiers'])
+        for key, value in measured.items():
+            require(result[key] == value and (key == 'skippedIdentifiers' or type(result[key]) is int),
+                    'measured original native count: ' + key)
+        require(re.fullmatch('[0-9a-f]{64}', str(result['logSHA256'])), 'native slice digest')
+        # Actions timestamps transform stdout; do not claim to recompute the
+        # producer's untransformed per-process file hash from this job log.
+        for key in counts:
+            counts[key] += measured[key]
+    return receipt, counts
+
+
 def emit(value):
     raw = json.dumps(value, sort_keys=True, separators=(',', ':')).encode()
     encoded = base64.b64encode(zlib.compress(raw)).decode(); size = 4096
@@ -333,7 +396,7 @@ def collect(run_id, source, output):
     for job in sorted(jobs,key=lambda j:j['name']):
         bank = int(job['name'].rsplit(' ', 1)[1])
         raw = api(f'jobs/{job["id"]}/logs', raw=True)
-        receipt = decode_chunks(raw.decode('utf-8'), source, bank)
+        receipt, _ = parse_bank(raw, source, bank)
         rows.append(dict(job=job, receipt=receipt)); logs[f'bank-{bank}.log.gz'] = gzip.compress(raw,mtime=0)
     bundle = dict(schema=SCHEMA,source=source,run=run,workflow=workflow,banks=rows)
     result = verify(bundle,source)
