@@ -57,6 +57,23 @@ jobs:
       - name: Validate codebase map
         if: matrix.bank == 0
         run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/at0039-tests"
+      - name: Package macOS Release validation artifact
+        if: matrix.bank == 0
+        run: |
+          binary_directory="$(swift build -c release --show-bin-path --build-path "$RUNNER_TEMP/at0039-release")"
+          python3 scripts/macos_release_delivery.py pack \
+            --bin-directory "$binary_directory" --output "$RUNNER_TEMP/at0039-release-delivery"
+      - name: Upload macOS Release validation artifact
+        if: matrix.bank == 0
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: at0039-macos-release-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/at0039-release-delivery/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          overwrite: false
+          include-hidden-files: false
   map:
     if: inputs.scope == 'map-only' || inputs.scope == 'primary-readiness' || inputs.scope == 'effect-dose-readiness' || inputs.scope == 'native-history-readiness' || inputs.scope == 'calibration-diagnostic-readiness' || inputs.scope == 'calibration-fixture-readiness'
     name: Native map and component (${{ matrix.slice }})
