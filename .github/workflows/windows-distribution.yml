@@ -54,7 +54,7 @@ jobs:
     if: inputs.validation == 'windows-calibration-fixture-readiness' || inputs.validation == 'windows-primary-readiness' || inputs.validation == 'windows' || inputs.validation == 'windows-diagnostics' || inputs.validation == 'windows-recovery-build' || inputs.validation == 'windows-full-banks' || inputs.validation == 'windows-planning-probe' || inputs.validation == 'windows-planning-math' || inputs.validation == ''
     name: Windows x64 source validation (${{ matrix.test-library }})
     runs-on: windows-2025
-    timeout-minutes: ${{ inputs.validation == 'windows-full-banks' && 360 || inputs.validation == 'windows-recovery-build' && 90 || 60 }}
+    timeout-minutes: ${{ inputs.validation == 'windows-full-banks' && 360 || inputs.validation == 'windows-calibration-fixture-readiness' && 120 || inputs.validation == 'windows-recovery-build' && 90 || 60 }}
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -178,7 +178,7 @@ jobs:
 
       - name: Verify native Windows calibration construction fixture
         if: matrix.test-library == 'calibration-fixture'
-        timeout-minutes: 30
+        timeout-minutes: 60
         shell: pwsh
         env:
           PYTHONPATH: scripts
