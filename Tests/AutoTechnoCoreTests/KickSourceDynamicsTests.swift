@@ -626,6 +626,57 @@ struct KickSourceDynamicsTests {
         }
     }
 
+    @Test("Directed relaxed-kick recovery reaches the native crest interval within existing source bounds")
+    func directedRelaxedKickCrestRecoveryRoom() throws {
+        let director = AutonomousSessionDirector(rootSeed: 173_205)
+        let plan = director.plan(from: director.initialState())
+        let source = try #require(plan.resolvedBars.first {
+            $0.ensemble.events.contains { $0.voice == .kick }
+        })
+        let context = KickMorphologyEpisodeContext(episodeID: 0x4B49_434B,
+            episodeIndex: 3, operatorKind: .reframe,
+            startedAtPresentationBar: 1_024, previousOperatorKind: .maintain)
+        // The actual Long refusal requests more source crest reduction from
+        // the held relaxed material. These are source-local controls, not a
+        // complete prepared phrase, calibrated verdict or study history.
+        for rate in [44_100.0, 48_000.0] {
+            var insideInterval = 0
+            for ordinal in 0...AutonomousQualityRetryContinuation.maximumOrdinal {
+                let articulation = KickMorphologyResolver.articulation(
+                    sessionSeed: plan.scene.seed, absoluteBar: 40,
+                    presentationBar: 1_064, episodeContext: context,
+                    qualityRetryOrdinal: ordinal,
+                    qualityRecoveryIntent: AutonomousQualityRecoveryIntent(
+                        kickCrestReduction: .increase))
+                #expect(articulation.isComplete)
+                #expect(articulation.episodeID == context.episodeID)
+                #expect(articulation.fromHome == .relaxed && articulation.toHome == .relaxed)
+                let neutral = KickMorphologyResolver.articulation(
+                    sessionSeed: plan.scene.seed, absoluteBar: 40,
+                    presentationBar: 1_064, episodeContext: context)
+                if ordinal == 0 { #expect(articulation == neutral) }
+                let rendered = render(resolved: replacingMorphology(source, with: articulation),
+                    plan: plan, sampleRate: rate, layer: .protectedRhythm)
+                let evidence = rendered.kickMix.sourceDynamics
+                #expect(AutonomousKickSourceDynamicsEvidence(render: evidence).isComplete(
+                    sampleRate: rate, expectedEventCount: rendered.kickMix.renderedKickEventCount))
+                let crest = 20 * log10(evidence.inputCrestFactor / evidence.outputCrestFactor)
+                let within = (1.2144946063546112...1.493816067026296).contains(crest)
+                if within { insideInterval += 1 }
+                let row: [String: Any] = ["sampleRate": Int(rate), "ordinal": ordinal,
+                    "crestReductionDB": crest, "insideOriginalInterval": within,
+                    "presence": evidence.presenceScaleStart, "bodyDrive": evidence.bodyDriveStart,
+                    "outputRMS": evidence.outputRMS, "outputSampleHash": evidence.outputSampleHash,
+                    "qualityQualification": false]
+                print("AUTOTECHNO_RELAXED_KICK_CONTROL " + String(decoding:
+                    try JSONSerialization.data(withJSONObject: row, options: [.sortedKeys]), as: UTF8.self))
+            }
+            // Each native rate must independently retain a usable serial
+            // proposal. No cross-rate averaging or verdict substitution.
+            #expect(insideInterval > 0)
+        }
+    }
+
     private struct LegacyOracle {
         let sampleCount: Int
         let sampleHash: String

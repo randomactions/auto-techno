@@ -3124,3 +3124,31 @@ are a diagnostic prefix, never a complete native history. Historical studies, th
 remain immutable. The diagnostic grants no calibration, capacity, deadline,
 platform, runtime or item-completion authority and changes no quality bound,
 production rendering, callback, continuation or musical decision.
+
+
+## Bounded directed kick source-presence restoration
+
+`KickMorphologyResolver` remains the canonical owner of unscheduled kick retries.
+For an existing calibrated kick-crest increase, `qualityRetryAdjusted` restores
+the same complete-source `presenceScale` toward its existing balanced value of1
+using the existing positive pressure. It preserves episode identity, authored
+home, note events and original source-domain bounds. Ordinal zero is identical;
+neutral and decrease intents retain the former arithmetic. The selected score
+continues through the same VoiceRenderer source transfer, typed source binding,
+physical evidence and primary judge. There is no extra source, DSP decision,
+state accumulator, retry wave, render pass, callback work or selectable profile.
+
+This adds missing source-control room rather than weakening a calibrated floor.
+Each native rate must independently retain an eligible source-local proposal;
+that component result cannot admit a full phrase or activate a resource. Only
+actual complete prepared validation can advance accepted continuation. Rejected
+proposals retain the existing bounded serial retry and coherent-repeat fallback.
+The numeric128MiB ceiling and two-render bound are unchanged.
+
+Engine `autotechno-canonical-engine.v51` separates this PCM consequence from the
+original engine-v50 histories. All old studies, installed v34 resource bytes and
+frozen recovery inputs remain unchanged and cannot be retagged. Current primary
+seals are nil; the installed-positive test must continue to fail until fresh
+complete primary qualification supplies actual current authority. Matching Long
+seals, independent complete histories, full final-source verification and every
+remaining resource/lifecycle/output gate are still mandatory.

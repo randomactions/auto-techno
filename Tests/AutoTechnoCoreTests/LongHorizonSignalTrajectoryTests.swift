@@ -314,7 +314,7 @@ struct LongHorizonSignalTrajectoryTests {
     // Signal phrase v2 and report v3 bind the finite relative-level domain.
     // Engine v50 preserves the neutral plan identities, fixture values and
     // episode ordering. Both native hosts share this versioned trajectory oracle.
-    #expect(QualityQualificationContract.engineVersion == "autotechno-canonical-engine.v50")
+    #expect(QualityQualificationContract.engineVersion == "autotechno-canonical-engine.v51")
     #expect(report.trajectoryFingerprint == "1e90955e389c8215")
     #expect(encoded.count < 500_000)
     print(

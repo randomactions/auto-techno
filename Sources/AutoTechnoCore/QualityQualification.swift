@@ -19,9 +19,9 @@ package enum QualityQualificationContract {
     /// lineage and the retained cross-phrase consequences.
     package static let schemaVersion = 50
     package static let reasonCodeVersion = 1
-    /// Version 50 binds sparse, score-owned boundary exchanges during
-    /// directed spectral recovery; earlier primary seals remain historical.
-    package static let engineVersion = "autotechno-canonical-engine.v50"
+    /// Version 51 binds bounded source-presence restoration during directed
+    /// kick crest recovery; earlier primary seals remain historical.
+    package static let engineVersion = "autotechno-canonical-engine.v51"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1

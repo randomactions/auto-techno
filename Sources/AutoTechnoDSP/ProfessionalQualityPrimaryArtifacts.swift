@@ -1,7 +1,7 @@
 import Foundation
 
-/// Sole current continuous qualification identity. The v34 resource bundle
-/// binds the complete fresh engine-v50 study; v33 remains historical evidence.
+/// Sole current continuous qualification identity. The retained v34 resources
+/// bind the historical engine-v50 study; engine-v51 qualification is pending.
 /// Explicit offline construction validates the same profile/adversarial/holdout
 /// contract without activating transport or importing calibration banks.
 package struct ProfessionalQualityPrimaryArtifacts: Sendable {
@@ -13,11 +13,12 @@ package struct ProfessionalQualityPrimaryArtifacts: Sendable {
         "professional-quality-primary-holdout-v34"
     // Fresh frozen 6d8d93a study: 40 development / 6 holdout trajectories,
     // both native rates, 34 adversarial cases and 84 accepted holdout observations.
-    // The resource revision changes; the primary v32 policy/profile v33 contract
-    // remains intact. These seals do not supply Long Horizon or host admission.
-    package static let expectedProfileFingerprint: String? = "7c2ad1950257b597"
-    package static let expectedAdversarialSuiteFingerprint: String? = "e77bf9664d358c1c"
-    package static let expectedHoldoutQualificationFingerprint: String? = "876fd9f11eae8054"
+    // The primary v32 policy/profile v33 contract remains intact. Those seals
+    // cannot activate engine v51; fresh complete primary and Long Horizon
+    // qualification must supply new authority without retagging old resources.
+    package static let expectedProfileFingerprint: String? = nil
+    package static let expectedAdversarialSuiteFingerprint: String? = nil
+    package static let expectedHoldoutQualificationFingerprint: String? = nil
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport

@@ -228,7 +228,7 @@ signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
 candidate uses quality-contract schema 50, candidate-vector schema 43,
 candidate-transaction schema 14, and canonical engine identity
-`autotechno-canonical-engine.v50`. Its explicit modal, tuned-inharmonic,
+`autotechno-canonical-engine.v51`. Its explicit modal, tuned-inharmonic,
 deliberate-dissonance, and indefinite-pitch rules are defined in
 [`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md). It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
@@ -1859,3 +1859,29 @@ child controls must preserve ordinary PCM and admission identities, verify actua
 capacity against reservation and retain exact selected tap hashes. The bounded
 diagnostic contract does not declare complete allocator/RSS/deadline, lifecycle,
 platform, installed-study or output qualification. Every AT39 gate still applies.
+
+
+## Directed kick source-presence recovery
+
+Engine v51 extends the existing Core-owned kick morphology retry. A calibrated
+crest-reduction increase may restore the complete source's authored presence
+toward the existing balanced bound, in proportion to the same bounded positive
+retry pressure. Body, sub and click retain one common source and the same fixed
+source dynamics; no new renderer, instrument, selector or musical coordinate is
+added. Ordinal zero, neutral intent and decrease intent retain their previous
+parameter path. The resolved score, same-pass kick-source evidence and existing
+calibrated judge own the complete consequence.
+
+The measured deficit is insufficient crest-control room in held relaxed source
+material despite directed body-drive retries. The source-local native regression
+requires a serial proposal within the original interval independently at each
+rate; it is not a full phrase verdict or quality qualification. Every other
+primary bound still applies, including rejection of an excessive later proposal.
+Presence remains in its existing0.45...1domain, retry pressure remains bounded,
+and the same unscheduled future-boundary/correction/fallback contract applies.
+No accepted continuation advances from rejected PCM.
+
+Engine-v50 studies and v34 resources retain historical authority. Their seals
+are unavailable for engine v51 until fresh complete native primary qualification,
+matching independent Long qualification and every resource, lifecycle, platform
+and applicable output gate establish current-source applicability.

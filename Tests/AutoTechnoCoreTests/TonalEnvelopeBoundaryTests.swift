@@ -44,7 +44,7 @@ struct TonalEnvelopeBoundaryTests {
     func washFollowsRelocatedFinalAnchor() throws {
         let plan = nativeRefusalScore()
         #expect(plan.phraseIndex == 153 && plan.startBar == 1_652)
-        #expect(QualityQualificationContract.engineVersion == "autotechno-canonical-engine.v50")
+        #expect(QualityQualificationContract.engineVersion == "autotechno-canonical-engine.v51")
         #expect(AutonomousCandidateFingerprint.plan(plan) == "31b0c8d89a9dc03f")
         let bar = try #require(synth(plan).bars.first { $0.bar == 1_663 })
         let anchors = bar.upperNotes.filter { $0.role == .anchor }

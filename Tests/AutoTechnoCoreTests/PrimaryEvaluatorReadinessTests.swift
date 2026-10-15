@@ -48,20 +48,22 @@ struct PrimaryEvaluatorReadinessTests {
         #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
             try historicalV30PrimaryArtifacts()
         }
-        // The last complete native study is still valid historical evidence,
-        // but its engine-v49 artifacts cannot authorize the engine-v50 owner.
-        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
-            let resources = PackagedResourceBundle.current
-            let profile = try #require(resources.url(
-                forResource: "professional-quality-primary-profile-v33", withExtension: "json"))
-            let adversarial = try #require(resources.url(
-                forResource: "professional-quality-primary-adversarial-suite-v33", withExtension: "json"))
-            let holdout = try #require(resources.url(
-                forResource: "professional-quality-primary-holdout-v33", withExtension: "json"))
-            _ = try ProfessionalQualityPrimaryArtifacts(
-                profileData: Data(contentsOf: profile),
-                adversarialSuiteData: Data(contentsOf: adversarial),
-                holdoutQualificationData: Data(contentsOf: holdout))
+        // Completed engine-v49/v50 studies retain historical authority only.
+        // Neither resource revision may activate the engine-v51 owner.
+        for revision in ["v33", "v34"] {
+            #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+                let resources = PackagedResourceBundle.current
+                let profile = try #require(resources.url(
+                    forResource: "professional-quality-primary-profile-\(revision)", withExtension: "json"))
+                let adversarial = try #require(resources.url(
+                    forResource: "professional-quality-primary-adversarial-suite-\(revision)", withExtension: "json"))
+                let holdout = try #require(resources.url(
+                    forResource: "professional-quality-primary-holdout-\(revision)", withExtension: "json"))
+                _ = try ProfessionalQualityPrimaryArtifacts(
+                    profileData: Data(contentsOf: profile),
+                    adversarialSuiteData: Data(contentsOf: adversarial),
+                    holdoutQualificationData: Data(contentsOf: holdout))
+            }
         }
         for sampleRate in [8_000.0, 12_000.0, 44_100.0, 48_000.0] {
             #expect(ProfessionalQualityPreparationEvaluator(
@@ -72,10 +74,10 @@ struct PrimaryEvaluatorReadinessTests {
     @Test("Installed current primary seals do not authorize a host without Long Horizon qualification")
     func installedPrimaryRetainsUnavailableLongHorizonHost() throws {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-        #expect(artifacts.profile.fingerprint == "7c2ad1950257b597")
-        #expect(artifacts.adversarialSuite.fingerprint == "e77bf9664d358c1c")
-        #expect(artifacts.holdoutQualification.fingerprint == "876fd9f11eae8054")
-        #expect(artifacts.profile.engineVersion == "autotechno-canonical-engine.v50")
+        #expect(artifacts.profile.fingerprint == ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint)
+        #expect(artifacts.adversarialSuite.fingerprint == ProfessionalQualityPrimaryArtifacts.expectedAdversarialSuiteFingerprint)
+        #expect(artifacts.holdoutQualification.fingerprint == ProfessionalQualityPrimaryArtifacts.expectedHoldoutQualificationFingerprint)
+        #expect(artifacts.profile.engineVersion == QualityQualificationContract.engineVersion)
         #expect(artifacts.profile.sourceTrajectoryCount == 40)
         #expect(artifacts.adversarialSuite.cases.count == 34)
         #expect(artifacts.holdoutQualification.acceptedObservationCount == 84)

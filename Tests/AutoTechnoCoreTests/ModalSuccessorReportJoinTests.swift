@@ -1303,7 +1303,7 @@ struct ModalSuccessorReportJoinTests {
         // The native engine50 macOS fixture records the current digest while
         // retaining every membership, missing-population and fitting check.
         // This one-bank fixture cannot qualify or activate a policy.
-        #expect(bank.engineVersion == "autotechno-canonical-engine.v50")
+        #expect(bank.engineVersion == QualityQualificationContract.engineVersion)
         // Exact PCM-derived reports are pinned per supported native platform.
         // The native engine50 Windows bank supplies its own observed digest;
         // platform-specific observations do not substitute for one another.

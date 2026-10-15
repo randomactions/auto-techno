@@ -45,7 +45,7 @@ struct LongHorizonSemanticTrajectoryTests {
         #expect(first.trajectoryFingerprint == "ba7251e9e8c9e144")
         // Only the engine wire label changes from v49 to v50; replacing that
         // label in the current JSON reproduces the prior eb45de7fb11edf26 digest.
-        #expect(first.engineVersion == "autotechno-canonical-engine.v50")
+        #expect(first.engineVersion == "autotechno-canonical-engine.v51")
         #expect(stableFingerprint(firstData) == "7a37a6ec4a27cab0")
         #expect(first.phraseKindPhraseCounts.allSatisfy { $0.count > 0 })
         #expect(first.performanceCharacterPhraseCounts.allSatisfy { $0.count > 0 })

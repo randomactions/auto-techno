@@ -203,7 +203,8 @@
       "evidence": [
         "score-side relation and event fingerprints",
         "kick episode, material, progress, and presence provenance",
-        "resampled source recipe, source hash, and output hash"
+        "resampled source recipe, source hash, and output hash",
+        "Engine v51 extends the existing KickMorphologyResolver retry path: only a directed kick-crest increase restores the already-owned complete-source presenceScale toward its existing balanced bound using bounded positive retry pressure. Ordinal zero and neutral/decrease arithmetic remain unchanged; the same resolved score, VoiceRenderer source transfer, typed source evidence and primary judge own the consequence. KickSourceDynamicsTests independently exercises both native rates, actual PCM/source evidence and source-domain bounds. No new persistent state, renderer, musical coordinate, callback operation, retry wave or render pass; original engine-v50 studies/resources remain historical and current primary seals are unavailable until fresh complete qualification."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoCore/ClimaxHang.swift",
