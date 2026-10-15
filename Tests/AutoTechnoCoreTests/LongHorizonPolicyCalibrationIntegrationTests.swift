@@ -1172,14 +1172,15 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
       environment["AUTOTECHNO_RUN_LONG_HORIZON_CALIBRATION"] != "1"
     else { return false }
     let recovery = environment["AUTOTECHNO_LONG_HORIZON_RECOVERY_BOUND_PROBE"] == "1"
-    let root: UInt64 = recovery ? 141_421 : 112_358
-    let target = recovery ? 13 : 279
+    let interrupted = environment["AUTOTECHNO_LONG_HORIZON_INTERRUPTED_REFUSAL_PROBE"] == "1"
+    let root: UInt64 = interrupted ? 173_205 : (recovery ? 141_421 : 112_358)
+    let target = interrupted ? 15 : (recovery ? 13 : 279)
     if recovery, request.sourceState.rootSeed == root,
       environment["AUTOTECHNO_LONG_HORIZON_SPECTRAL_SUPPORT_PROBE"] == "1",
       prepared.plan.kind == .contrast {
       try writeSpectralWindowSupport(request: request, prepared: prepared)
     }
-    guard recovery || environment["AUTOTECHNO_LONG_HORIZON_DIVERGENCE_PROBE"] == "1",
+    guard interrupted || recovery || environment["AUTOTECHNO_LONG_HORIZON_DIVERGENCE_PROBE"] == "1",
       request.sourceState.rootSeed == root, request.key.phraseIndex == target
     else { return false }
     guard let directory = environment["AUTOTECHNO_LONG_HORIZON_RESOURCE_DIRECTORY"]
@@ -1202,6 +1203,7 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
       "sourceCoreFingerprint": request.replayIdentity.sourceStateFingerprint,
       "requestFingerprint": request.replayIdentity.fingerprint,
       "planFingerprint": AutonomousCandidateFingerprint.plan(prepared.plan),
+      "candidateFingerprint": prepared.selectedCandidateEvidence.fingerprint,
       "energyCoordination": try JSONSerialization.jsonObject(
         with: JSONEncoder().encode(prepared.plan.longHorizonEnergyCoordination)),
       "resolvedRoleBars": prepared.plan.resolvedBars.map { bar in
@@ -1227,7 +1229,7 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     // One optional actual recovery wave exposes the measured effect of the
     // canonical retry intent. Acceptance or the next wave stops the diagnostic;
     // no full study budget, admission rule or production path is changed.
-    return recovery && (prepared.commitEligible ||
+    return interrupted || recovery && (prepared.commitEligible ||
       environment["AUTOTECHNO_LONG_HORIZON_RECOVERY_WAVE_PROBE"] != "1" ||
       request.key.qualityRecoveryContext.wave >= 1)
   }
@@ -1291,29 +1293,45 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
   @Test("Probe the actual native bootstrap through the same full-journey owner",
     .enabled(if: ProcessInfo.processInfo.environment["AUTOTECHNO_RUN_LONG_HORIZON_SHARED_PROBE"] == "1"))
   func probeSharedPreparedBootstrap() async throws {
-    let primary = try loadPrimary(), binding = try executionBinding()
-    let divergence = ProcessInfo.processInfo.environment["AUTOTECHNO_LONG_HORIZON_DIVERGENCE_PROBE"] == "1"
-    let recovery = ProcessInfo.processInfo.environment["AUTOTECHNO_LONG_HORIZON_RECOVERY_BOUND_PROBE"] == "1"
-    guard !(recovery && divergence),
-      ProcessInfo.processInfo.environment["AUTOTECHNO_RUN_LONG_HORIZON_CALIBRATION"] != "1"
+    let environment = ProcessInfo.processInfo.environment
+    let divergence = environment["AUTOTECHNO_LONG_HORIZON_DIVERGENCE_PROBE"] == "1"
+    let recovery = environment["AUTOTECHNO_LONG_HORIZON_RECOVERY_BOUND_PROBE"] == "1"
+    let interrupted = environment["AUTOTECHNO_LONG_HORIZON_INTERRUPTED_REFUSAL_PROBE"] == "1"
+    guard [divergence, recovery, interrupted].filter({ $0 }).count <= 1,
+      environment["AUTOTECHNO_RUN_LONG_HORIZON_CALIBRATION"] != "1",
+      environment["AUTOTECHNO_RUN_INTERRUPTED_LONG_ROUTE"] != "1",
+      environment["AUTOTECHNO_ASSEMBLE_INTERRUPTED_LONG_STUDY"] != "1",
+      !interrupted || (environment["AUTOTECHNO_LONG_HORIZON_RECOVERY_WAVE_PROBE"] != "1" &&
+        environment["AUTOTECHNO_LONG_HORIZON_SPECTRAL_SUPPORT_PROBE"] != "1")
     else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
-    let root: UInt64 = recovery ? 141_421 : (divergence ? 112_358 : 48_291)
-    let prefix = recovery ? 14 : (divergence ? 280 : 4)
+    let primary = try loadPrimary(), binding = try executionBinding()
+    let root: UInt64 = interrupted ? 173_205 : (recovery ? 141_421 : (divergence ? 112_358 : 48_291))
+    let prefix = interrupted ? 16 : (recovery ? 14 : (divergence ? 280 : 4))
     try prepareOutputNamespace()
-    for rate in [44_100.0, 48_000.0] {
+    for rate in interrupted ? [44_100.0] : [44_100.0, 48_000.0] {
       let journey = await Task.detached(priority: .userInitiated) {
         await Self.renderPreparedRoute(rootSeed: root, sampleRate: rate, primary: primary, prefixPhraseCount: prefix)
       }.value
       try writeJourney(journey, binding: binding)
-      let acceptedPrefix = recovery ? 13 : prefix
-      if recovery {
+      let acceptedPrefix = interrupted ? 15 : (recovery ? 13 : prefix)
+      if interrupted || recovery {
         #expect(!journey.completedRequestedScope)
         #expect(journey.failureCode == "diagnostic-recovery-boundary-captured")
+        let target = interrupted ? 15 : 13
         let witness = try outputDirectory().appendingPathComponent(
-          "native-divergence-141421-\(Int(rate))-13-0-0.json")
+          "native-divergence-\(root)-\(Int(rate))-\(target)-0-0.json")
         let object = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: witness)) as? [String: Any])
         #expect(object["calibrationEvidence"] as? Bool == false)
-        if rate == 44_100 {
+        if interrupted {
+          // Independently reproduce the failed recovery's first refusal from
+          // initial state. The incomplete witness has no study authority.
+          #expect(object["requestFingerprint"] as? String == "57d0368468c1a30e")
+          #expect(object["sourceCoreFingerprint"] as? String == "ad11c409230c8c4d")
+          #expect(object["commitEligible"] as? Bool == false)
+          #expect(journey.newPreparationAttemptCount == 15 && journey.ownedChildConsumptionCount == 1)
+          #expect(journey.accountedRepeats.isEmpty)
+          #expect(object["candidateFingerprint"] as? String == "527d5bc3b2a984ad")
+        } else if rate == 44_100 {
           // Bind this fresh diagnostic to the first rejection in the failed
           // immutable study; no archived state or candidate is imported.
           #expect(object["requestFingerprint"] as? String == "f007bcabd52c857c")

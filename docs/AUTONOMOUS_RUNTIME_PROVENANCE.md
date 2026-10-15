@@ -3103,3 +3103,21 @@ An assembled original-candidate study is not evidence of final-source applicabil
 Installation/seal validation and all current source, resource/allocator/RSS/deadline,
 lifecycle, platform, Release, route/recovery and physical-output gates remain
 separate mandatory requirements before runtime promotion or item completion.
+
+
+## Initial-state interrupted-route refusal witness
+
+The existing default-off shared-bootstrap probe can replay root173205 at44.1kHz
+from initial Core/render/graph state and stop at its first phrase15 candidate.
+It uses the same unchanged full-journey owner, primary evaluator and exact-child
+consumption. The witness binds the actual request, incoming Core and selected
+candidate to the preserved failed recovery and retains the existing numeric
+quality diagnostics. No saved state or PCM supplies this execution.
+
+This mode cannot mix with other probe scopes, interrupted-route execution or
+assembly; it stops before starting recovery or selecting a repeat. Its15 accepted
+phrases and one consumed protected child are a diagnostic prefix, never a complete
+native history. Historical studies, their harnesses and their original provenance
+remain immutable. The diagnostic grants no calibration, capacity, deadline,
+platform, runtime or item-completion authority and changes no quality bound,
+production rendering, callback, continuation or musical decision.
