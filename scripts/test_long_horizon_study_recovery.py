@@ -179,6 +179,23 @@ class FrozenBuildControls(unittest.TestCase):
 
     def test_same_frozen_linkage_and_complete_module_resource_inputs_pass(self):self.verify()
 
+    def test_forwarded_c_search_path_module_map_and_macro_executable_are_bound(self):
+        include=self.origin/'include';include.mkdir();header=include/'support.h';header.write_text('header')
+        module_map=include/'module.modulemap';module_map.write_text('module')
+        plugin=self.origin/'macro-tool';plugin.write_text('macro binary fixture')
+        command=self.command+['-Xcc','-I','-Xcc',str(include),'-Xcc','-fmodule-map-file='+str(module_map),
+                              '-load-plugin-executable',str(plugin)+'#Macro']
+        support=recovery.compiler_support(command)
+        self.assertEqual(support[str(header)],recovery.sha(header))
+        self.assertEqual(support[str(module_map)],recovery.sha(module_map))
+        self.assertEqual(support[str(plugin)],recovery.sha(plugin))
+        header.write_text('changed');self.assertNotEqual(support,recovery.compiler_support(command))
+
+    def test_later_module_in_previously_missing_search_directory_changes_binding(self):
+        missing=self.origin/'absent';command=self.command+['-I',str(missing)]
+        before=recovery.compiler_support(command);missing.mkdir();(missing/'new.swiftmodule').write_text('new')
+        self.assertNotEqual(before,recovery.compiler_support(command))
+
     def test_changed_production_or_test_membership_and_runtime_bundle_refuse(self):
         baseline=copy.deepcopy(self.metadata)
         for mutate in [lambda m:m['inputs']['sources'].update({'Sources/Core.swift':'0'*64}),

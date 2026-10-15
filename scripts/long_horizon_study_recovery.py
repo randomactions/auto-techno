@@ -53,11 +53,27 @@ def canonical_route(source):
 
 def compiler_support(command):
     paths = {Path(value) for value in command if value.endswith('/main.swift')}
-    for index, value in enumerate(command[:-1]):
-        if value == '-I':
-            directory = Path(command[index + 1])
-            require(directory.is_dir(), 'original compiler module directory missing')
-            paths.update(path for path in directory.rglob('*') if path.is_file())
+    swift, clang, index = [], [], 0
+    while index < len(command):
+        if command[index] == '-Xcc':
+            require(index + 1 < len(command), 'missing forwarded C argument')
+            clang.append(command[index + 1]); index += 2
+        else:
+            swift.append(command[index]); index += 1
+    for arguments in (swift, clang):
+        for index, value in enumerate(arguments):
+            if value == '-I':
+                require(index + 1 < len(arguments), 'missing module search path')
+                directory = Path(arguments[index + 1])
+                # An unused nonexistent search directory is valid swiftc input.
+                # Any module appearing there later changes the complete map.
+                require(not directory.exists() or directory.is_dir(), 'invalid compiler module directory')
+                paths.update(path for path in directory.rglob('*') if path.is_file())
+            elif value.startswith('-fmodule-map-file='):
+                paths.add(Path(value.split('=', 1)[1]))
+            elif value == '-load-plugin-executable':
+                require(index + 1 < len(arguments), 'missing compiler macro executable')
+                paths.add(Path(arguments[index + 1].split('#', 1)[0]))
     return {str(path): sha(path) for path in sorted(paths)}
 
 
