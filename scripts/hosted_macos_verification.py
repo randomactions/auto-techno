@@ -45,6 +45,7 @@ RETIRED_SKIPS = {
 # optimized qualification run. Ordinary full-suite discovery includes them,
 # but a skip supplies no evidence for their separate quality/resource gates.
 DIAGNOSTIC_SKIPS = {
+    'Inspect a single actual streamed chain without an ordinary reference or owner snapshots': 'AutoTechnoCoreTests.IterativeSuccessorPreparationTests/selectedStreamAllocationProcess()',
     'Retained continuous model exercises actual calibrated prepared admission': 'AutoTechnoCoreTests.ContinuousPrimaryPreparedAdmissionTests/retainedModelPreparedAdmission()',
     'Probe the actual native bootstrap through the same full-journey owner': 'AutoTechnoCoreTests.LongHorizonPolicyCalibrationIntegrationTests/probeSharedPreparedBootstrap()',
     'Probe actual native recovery past the frozen structural-debt refusal': 'AutoTechnoCoreTests.LongHorizonPolicyCalibrationIntegrationTests/probeNativeCoreRecovery()',

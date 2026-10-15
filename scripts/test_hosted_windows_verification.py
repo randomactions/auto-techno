@@ -14,11 +14,13 @@ from hosted_macos_verification import ALLOWED_SKIPS
 SOURCE = 'a' * 40
 
 
-def fixture(with_skip=False):
+def fixture(with_skip=False, allocation_diagnostic=False):
     discovery = {library: '\n'.join(f'AutoTechnoCoreTests.OwnerTests/test{i}()' for i in range(64))
                  for library in ('xctest', 'swift-testing')}
     if with_skip:
         discovery['swift-testing'] += '\n' + next(iter(ALLOWED_SKIPS.values()))
+    if allocation_diagnostic:
+        discovery['swift-testing'] += '\nAutoTechnoCoreTests.IterativeSuccessorPreparationTests/selectedStreamAllocationProcess()'
     rows, logs = [], {}
     for bank in range(hosted.BANKS):
         selected = hosted.plan(discovery, bank, hosted.BANKS)
@@ -80,6 +82,24 @@ class HostedWindowsVerificationTests(unittest.TestCase):
         self.assertEqual(result['executedTests'], 128)
         self.assertEqual(result['explicitlySkippedTests'], 1)
         self.assertEqual(result['discoveredTests'], 129)
+
+    def test_allocation_diagnostic_skip_supplies_no_execution_or_quality_credit(self):
+        bundle, logs = fixture(allocation_diagnostic=True)
+        result = hosted.verify(bundle, SOURCE, logs)
+        self.assertEqual((result['discoveredTests'], result['executedTests'],
+                          result['explicitlySkippedTests']), (129, 128, 1))
+        for key in ('runtimeQualification', 'automatedQualityQualification', 'item39Complete'):
+            self.assertFalse(result[key])
+        for bank, raw in logs.items():
+            if b'Inspect a single actual streamed chain' in raw:
+                replace_record(bundle, logs, 'autotechno-windows-test-bank-result.v2',
+                               lambda row: next(s for s in row['completedSlices']
+                                                if s['explicitlySkippedTests']).update(executedTests=1), bank)
+                with self.assertRaises(ValueError):
+                    hosted.verify(bundle, SOURCE, logs)
+                break
+        else:
+            self.fail('allocation diagnostic was not selected and explicitly skipped')
 
     def test_powershell_line_leading_bom_preserves_original_log_binding(self):
         bundle, logs = fixture()

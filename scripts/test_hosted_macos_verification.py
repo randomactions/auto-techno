@@ -224,6 +224,26 @@ class HostedMacOSVerificationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 hosted.summarize_log(f'Test "{name}" skipped.\nTest run with 1 test passed','swift-testing',1,[])
 
+    def test_allocation_process_diagnostic_skip_requires_exact_opt_in_identity(self):
+        name = 'Inspect a single actual streamed chain without an ordinary reference or owner snapshots'
+        identity = 'AutoTechnoCoreTests.IterativeSuccessorPreparationTests/selectedStreamAllocationProcess()'
+        source = (Path(__file__).resolve().parents[1] /
+                  'Tests/AutoTechnoCoreTests/PhrasePreparationReplayIdentityTests.swift').read_text()
+        self.assertRegex(source, re.escape('@Test("' + name + '",') +
+                         r'\s*\.enabled\(if: ProcessInfo\.processInfo\.environment\[' +
+                         r'"AUTOTECHNO_RUN_STREAM_ALLOCATION_INSPECTION"\] == "1"\)\)' +
+                         r'\s*@MainActor\s*func selectedStreamAllocationProcess\(\)')
+        raw = f'Test "{name}" skipped.\nTest run with 1 test passed'
+        self.assertEqual(hosted.summarize_log(raw, 'swift-testing', 1, [identity]),
+                         dict(reportedTests=1, explicitlySkippedTests=1, executedTests=0,
+                              skippedIdentifiers=[identity]))
+        for changed, identifiers in [(raw.replace(name, name + ' extra'), [identity]),
+                                     (raw, [identity.replace('Process()', 'ProcessExtra()')]),
+                                     (raw, []),
+                                     (f'Test "{name}" skipped.\n' + raw, [identity])]:
+            with self.subTest(raw=changed, identifiers=identifiers), self.assertRaises(ValueError):
+                hosted.summarize_log(changed, 'swift-testing', 1, identifiers)
+
     def test_native_log_summary_requires_exact_framework_counts(self):
         self.assertEqual(hosted.summarize_log('Test "Legacy random mutation suppression" skipped.\nTest run with 3 tests passed', 'swift-testing',3,[hosted.RETIRED_SKIPS['Legacy random mutation suppression']]),
                          dict(reportedTests=3,explicitlySkippedTests=1,executedTests=2,skippedIdentifiers=[hosted.RETIRED_SKIPS['Legacy random mutation suppression']]))
