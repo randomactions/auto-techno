@@ -3204,3 +3204,30 @@ are never decoded or reconstructed. This check cannot render a new study, rerun
 native predicates, grant later-source applicability, install resources or satisfy
 the complete AT-0039 acceptance matrix. The roadmap completion guard remains
 fail-closed until every item-specific requirement has authoritative evidence.
+
+
+## Original Long-study byte verification
+
+The offline `scripts/at0039_long_verification.py` authenticates an independently
+pinned pre-capture proof and a separately pinned terminal preservation manifest.
+It checks the original frozen Git inventory, actual compiled inputs, compiler
+commands, isolated module search, runtime bundle, executable and canonical input
+binding before and after inspecting products. It never calls a renderer, decodes
+sealed candidate products, imports an archive as construction input or changes
+producer files. The optional collection mode describes existing preserved bytes;
+missing, partial, live or failed studies cannot produce a terminal manifest.
+
+All seven development and two disjoint holdout roots require both native rates
+and eighteen complete independently checked histories. Corpus routes must join
+their own original signal/semantic identities, counts, operator deltas and effect
+reductions. Each native holdout verdict must independently accept every dimension;
+averaging and cross-rate history equality cannot substitute for a gate. Original
+native stdout, the complete terminal test and canonical derived artifact joins
+remain required alongside every raw history and observer archive. Synthetic
+verifier controls never supply actual capture or quality evidence.
+
+A verified original byte context binds that frozen execution only. Installed
+resources, later-source applicability, complete capacity/RSS/deadlines, platforms,
+application/output verification and authoritative full item acceptance retain
+their existing separate requirements. Generic passed JSON cannot bypass the
+unchanged completion refusal.
