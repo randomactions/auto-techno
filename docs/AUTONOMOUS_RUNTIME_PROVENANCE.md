@@ -3193,3 +3193,14 @@ the inventory, admission, evaluator, score, continuation or renderer. Existing
 Receiver work is detached diagnostic work, never audio callback work or ordinary
 deadline evidence. Observed array extents alone do not cover all transients,
 allocator-internal metadata, complete process memory or current runtime promotion.
+
+
+Original primary study verification uses `scripts/at0039_primary_verification.py`
+with independently preserved cold-proof and terminal-proof SHA256 anchors. It
+checks the original frozen Git/build/runtime bytes, all actual native products,
+checkpoint/successor multiplicities, complete corpus joins and derived artifact
+fingerprints. Recorded JSON remains inspection data; sealed candidate observations
+are never decoded or reconstructed. This check cannot render a new study, rerun
+native predicates, grant later-source applicability, install resources or satisfy
+the complete AT-0039 acceptance matrix. The roadmap completion guard remains
+fail-closed until every item-specific requirement has authoritative evidence.
