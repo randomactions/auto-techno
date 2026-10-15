@@ -417,10 +417,10 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     let directory = try outputDirectory()
     try development.deterministicJSON().write(
       to: directory.appendingPathComponent(
-        "long-horizon-development-corpus-local-v7.json"))
+        "long-horizon-development-corpus-local-v8.json"))
     try holdout.deterministicJSON().write(
       to: directory.appendingPathComponent(
-        "long-horizon-holdout-corpus-local-v7.json"))
+        "long-horizon-holdout-corpus-local-v8.json"))
   }
 
   private func outputDirectory() throws -> URL {
@@ -529,7 +529,7 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     let observation = try await renderObservation(
       rootSeed: rootSeed, primary: primary)
     let url = try outputDirectory().appendingPathComponent(
-      "long-horizon-observation-local-\(rootSeed)-v7.json")
+      "long-horizon-observation-local-\(rootSeed)-v8.json")
     try observation.deterministicJSON().write(to: url)
     Self.progress(
       "diagnostic root=\(rootSeed) source=\(observation.sourceFingerprint) "

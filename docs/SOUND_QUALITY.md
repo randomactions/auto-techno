@@ -3,7 +3,7 @@
 Current source uses canonical engine v51 under quality-contract schema50. The
 registered primary v35 resources bind the complete fresh engine-v51 study under
 the unchanged primary v32 policy and continuous v23/profile v33 contract. The
-matching Long Horizon v21 seals require all seven development and two disjoint
+matching Long Horizon v22 seals require all seven development and two disjoint
 holdout roots to qualify independently at both native rates, with all18complete
 histories. Runtime promotion also requires every separate resource, lifecycle,
 platform and output gate. Historical studies below retain their original versions
@@ -1946,3 +1946,27 @@ are never decoded or reconstructed. This check cannot render a new study, rerun
 native predicates, grant later-source applicability, install resources or satisfy
 the complete AT-0039 acceptance matrix. The roadmap completion guard remains
 fail-closed until every item-specific requirement has authoritative evidence.
+
+
+## Late pulse-echo source and delayed return evidence
+
+LongHorizonEffectDoseBarEvidence remains the sole bar-level effect reduction.
+An eligible source send near a bar end can enter the existing three-sixteenth
+delay without returning wet PCM in that bar. Effect-dose v3 preserves the
+measured zero wet level and inactive status while retaining that eligible send.
+A later measured return keeps its existing active/tail-only semantics. Positive
+sends without score eligibility, nonfinite values, inconsistent binding and
+historical dose interpretation still refuse before accumulator state advances.
+
+The fresh native regression constructs a canonical score from initial planning
+and a cold renderer at each native rate, then measures the actual next-bar delay
+return. It imports no candidate, saved continuation or historical PCM. Source-only
+bars contribute no wet activity, fabricated return level or quality credit.
+The score, renderer, existing delay continuation, primary policy and v35 resources,
+PCM, callback ownership, correction work and fallback bounds are unchanged.
+
+Runtime observation/adaptation v6, Long observation/corpus v8 and policy family
+v22 separate the corrected interpretation from historical evidence. Long seals
+remain nil. Fresh complete seven-development/two-disjoint-holdout qualification
+with all18 independent native histories, final-source applicability and every
+resource, lifecycle, platform and applicable output gate remain required.

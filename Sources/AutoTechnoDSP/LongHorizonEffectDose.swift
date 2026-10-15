@@ -2,9 +2,9 @@ import AutoTechnoCore
 import Foundation
 
 package enum LongHorizonEffectDoseSchema {
-  package static let schemaVersion = 2
+  package static let schemaVersion = 3
   package static let schemaIdentifier =
-    "autotechno-long-horizon-effect-dose.v2"
+    "autotechno-long-horizon-effect-dose.v3"
   package static let sentenceHistoryCapacity = 16
   package static let qualificationReason =
     "no-calibrated-long-horizon-policy"
@@ -172,8 +172,10 @@ package struct LongHorizonEffectDoseBarEvidence: Codable, Equatable, Sendable {
     let pulseIsCausal = !pulseEchoActive || pulseEchoEligible || pulseEchoTailOnly
     let percussionIsCausal = percussionEchoActive == percussionEchoEligible
     let spatialIsCausal = !spatialFDNActive || spatialFDNEligible || spatialFDNTailOnly
-    let silentPulseIsExact =
-      pulseEchoActive || (pulseEchoSourceSendRMS == 0 && pulseEchoWetRMS == 0)
+    // A source near the end of a bar can enter the delay before any return
+    // reaches this bar. Eligibility binds that send; activity still describes
+    // measured wet PCM only, including an eligible send's later tail.
+    let pulseSendIsCausal = pulseEchoSourceSendRMS == 0 || pulseEchoEligible
     let silentPercussionIsExact =
       percussionEchoActive || (percussionEchoSourceRMS == 0 && percussionEchoWetRMS == 0)
     let silentSpatialIsExact = spatialFDNActive || spatialFDNWetRMS == 0
@@ -194,7 +196,7 @@ package struct LongHorizonEffectDoseBarEvidence: Codable, Equatable, Sendable {
       && percussionEchoActive == (percussionEchoWetRMS > 0)
       && spatialFDNActive == (spatialFDNWetRMS > 0)
       && spatialFDNTailOnly == (spatialFDNWetRMS > 0 && spatialFDNSourceRMS == 0) && pulseIsCausal
-      && percussionIsCausal && spatialIsCausal && silentPulseIsExact && silentPercussionIsExact
+      && percussionIsCausal && spatialIsCausal && pulseSendIsCausal && silentPercussionIsExact
       && silentSpatialIsExact && Self.isFingerprint(pulseEchoPreDriveFingerprint)
       && Self.isFingerprint(pulseEchoPostDriveFingerprint)
       && Self.isFingerprint(percussionEchoSourceFingerprint)

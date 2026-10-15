@@ -203,6 +203,45 @@ struct LongHorizonEffectDoseTests {
       try encoder.encode(firstAccumulator.report)
         == encoder.encode(replayAccumulator.report))
   }
+
+  @Test("Source-only pulse bars retain truthful activity and require eligibility")
+  func sourceOnlyPulseCausality() {
+    let source = syntheticBar(bar: 0, pulseEligible: true, pulseSourceRMS: 0.2)
+    let tail = syntheticBar(bar: 1, pulseWetRMS: 0.05)
+    let clear = syntheticBar(bar: 2)
+    #expect(source.isComplete)
+    #expect(!source.pulseEchoActive && !source.pulseEchoTailOnly)
+    #expect(source.combinedWetRMS == 0 && source.combinedWetToDryDB == nil)
+    #expect(!syntheticBar(bar: 0, pulseSourceRMS: 0.2).isComplete)
+    #expect(!syntheticBar(bar: 0, pulseSourceRMS: 0.2, pulseWetRMS: 0.1).isComplete)
+    #expect(!syntheticBar(bar: 0, pulseEligible: true, pulseSourceRMS: .nan).isComplete)
+    var accumulator = LongHorizonEffectDoseAccumulator(rootSeed: 48_291)
+    #expect(accumulator.observe(syntheticPhrase(phraseIndex: 0, startBar: 0,
+      bars: [source, tail, clear])) == .accepted)
+    let pulse = accumulator.report.families.first { $0.family == .pulseEcho }
+    #expect(pulse?.eligibleBarCount == 1)
+    #expect(pulse?.activeBarCount == 1)
+    #expect(pulse?.tailOnlyBarCount == 1)
+    #expect(pulse?.maximumActiveRunBars == 1)
+    #expect(pulse?.recoveryCount == 1)
+    #expect(accumulator.report.qualificationStatus == "unavailable")
+  }
+
+  @Test("Historical effect-dose interpretation cannot advance current state")
+  func staleEffectInterpretationRefuses() throws {
+    let current = syntheticPhrase(phraseIndex: 0, startBar: 0,
+      bars: [syntheticBar(bar: 0)])
+    var object = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(current)) as? [String: Any])
+    object["schemaVersion"] = 2
+    object["schemaIdentifier"] = "autotechno-long-horizon-effect-dose.v2"
+    let stale = try JSONDecoder().decode(LongHorizonEffectDosePhraseEvidence.self,
+      from: JSONSerialization.data(withJSONObject: object))
+    var accumulator = LongHorizonEffectDoseAccumulator(rootSeed: 48_291)
+    #expect(!stale.isComplete)
+    #expect(accumulator.observe(stale) == .unavailable(.inconsistentEvidence))
+    #expect(accumulator.report.phraseCount == 0)
+    #expect(accumulator.report.barCount == 0)
+  }
 }
 
 private func firstPlannedSentence() -> (
@@ -277,4 +316,84 @@ private func syntheticBar(
     spatialFDNWetRightFingerprint: "3456789abcdef012",
     maximumMaskingOverlap: 0,
     bindingComplete: true)
+}
+
+@Suite("Fresh native late pulse-echo causality")
+struct LatePulseTests {
+  @Test("A late source can precede its wet return", arguments: [44_100.0, 48_000.0])
+  @MainActor
+  func lateSend(_ rate: Double) throws {
+    let director = AutonomousSessionDirector(rootSeed: 173_205)
+    var session = director.initialState()
+    var fixture: (AutonomousPhrasePlan, Int, SynthPerformancePlan)?
+    while session.memory.totalBars < 7_800 {
+      let plan = director.plan(from: session)
+      let synth = SynthPerformancePlan(scene: plan.scene, dna: plan.dna,
+        kind: plan.kind, resolvedBars: plan.resolvedBars)
+      if let index = synth.bars.indices.first(where: {
+        guard $0 + 1 < synth.bars.count else { return false }
+        let pulse = synth.bars[$0].pulseEchoTextureArticulation
+        return plan.resolvedBars[$0].pulseEchoEnabled
+          && (pulse.earliestPulseEchoOnsetStep ?? -1) >= 14
+      }) { fixture = (plan, index, synth); break }
+      session.advancePlanning(using: plan)
+    }
+    let (plan, index, synth) = try #require(fixture)
+    let resolved = plan.resolvedBars[index]
+    var state = RenderState()
+    state.barIndex = resolved.performance.bar
+    var workspace = RenderWorkspace()
+    let first = VoiceRenderer.renderBar(scene: plan.scene, sampleRate: rate,
+      state: &state, dna: plan.dna, resolved: resolved, synthWorld: synth.world,
+      synthPerformance: synth.bars[index], workspace: &workspace, layer: .full,
+      phraseKind: plan.kind)
+    let source = first.pulseEchoReturnDriveRenderEvidence
+    let nextResolved = plan.resolvedBars[index + 1]
+    let noNewNotes = SynthPerformanceBar(bar: nextResolved.performance.bar,
+      gesture: synth.bars[index].gesture, mutationAmount: synth.bars[index].mutationAmount,
+      relationalSteps: synth.bars[index].relationalSteps, upperNotes: [])
+    let second = VoiceRenderer.renderBar(scene: plan.scene, sampleRate: rate,
+      state: &state, dna: plan.dna, resolved: nextResolved, synthWorld: synth.world,
+      synthPerformance: noNewNotes, workspace: &workspace, layer: .full,
+      phraseKind: plan.kind)
+    let tail = second.pulseEchoReturnDriveRenderEvidence
+    #expect(source.finite && tail.finite)
+    #expect(source.currentSendRMS > 0)
+    #expect(source.preDriveRMS == 0)
+    #expect(source.postDriveRMS == 0)
+    #expect(tail.currentSendRMS == 0)
+    #expect(tail.preDriveRMS > 0)
+    let bar = pulseDose(source)
+    let tailBar = pulseDose(tail)
+    print("LATE_PULSE_NATIVE " + String(decoding: try JSONSerialization.data(withJSONObject: [
+      "rate": rate, "bar": resolved.performance.bar,
+      "earliestOnset": source.earliestPulseEchoOnsetStep ?? -1,
+      "delayFrames": source.delayFrameCount, "barFrames": source.renderedFrameCount,
+      "sourceSendRMS": source.currentSendRMS, "sameBarWetRMS": source.preDriveRMS,
+      "nextBarSendRMS": tail.currentSendRMS, "nextBarWetRMS": tail.preDriveRMS,
+      "doseComplete": bar.isComplete, "tailDoseComplete": tailBar.isComplete,
+      "sourceWetHash": source.preDriveSampleHash, "tailWetHash": tail.preDriveSampleHash
+    ], options: [.sortedKeys]), as: UTF8.self))
+    #expect(bar.pulseEchoEligible)
+    #expect(!bar.pulseEchoActive && !bar.pulseEchoTailOnly)
+    #expect(tailBar.pulseEchoActive && tailBar.pulseEchoTailOnly)
+    #expect(tailBar.isComplete)
+    #expect(bar.isComplete)
+  }
+}
+
+private func pulseDose(_ pulse: PulseEchoReturnDriveRenderEvidence) -> LongHorizonEffectDoseBarEvidence {
+  LongHorizonEffectDoseBarEvidence(bar: pulse.bar, expressiveGraphNodeCount: 0,
+    graphInputFingerprint: "0123456789abcdef", graphOutputFingerprint: "0123456789abcdef",
+    graphInputRMS: 1, graphOutputRMS: 1, instrumentEffectAccess: [],
+    pulseEchoEligible: pulse.scoreEnabled && pulse.earliestPulseEchoOnsetStep != nil,
+    pulseEchoSourceSendRMS: pulse.currentSendRMS, pulseEchoWetRMS: pulse.preDriveRMS,
+    pulseEchoPreDriveFingerprint: pulse.preDriveSampleHash,
+    pulseEchoPostDriveFingerprint: pulse.postDriveSampleHash,
+    percussionEchoEligible: false, percussionEchoSourceRMS: 0, percussionEchoWetRMS: 0,
+    percussionEchoSourceFingerprint: "23456789abcdef01", percussionEchoWetFingerprint: "23456789abcdef01",
+    spatialFDNEligible: false, spatialFDNSourceRMS: 0, spatialFDNWetRMS: 0,
+    spatialFDNActiveWetFrameCount: 0, spatialFDNRenderedFrameCount: pulse.renderedFrameCount,
+    spatialFDNSourceFingerprint: "3456789abcdef012", spatialFDNWetLeftFingerprint: "3456789abcdef012",
+    spatialFDNWetRightFingerprint: "3456789abcdef012", maximumMaskingOverlap: 0, bindingComplete: true)
 }

@@ -3231,3 +3231,27 @@ resources, later-source applicability, complete capacity/RSS/deadlines, platform
 application/output verification and authoritative full item acceptance retain
 their existing separate requirements. Generic passed JSON cannot bypass the
 unchanged completion refusal.
+
+
+## Late pulse-echo source and delayed return evidence
+
+LongHorizonEffectDoseBarEvidence remains the sole bar-level effect reduction.
+An eligible source send near a bar end can enter the existing three-sixteenth
+delay without returning wet PCM in that bar. Effect-dose v3 preserves the
+measured zero wet level and inactive status while retaining that eligible send.
+A later measured return keeps its existing active/tail-only semantics. Positive
+sends without score eligibility, nonfinite values, inconsistent binding and
+historical dose interpretation still refuse before accumulator state advances.
+
+The fresh native regression constructs a canonical score from initial planning
+and a cold renderer at each native rate, then measures the actual next-bar delay
+return. It imports no candidate, saved continuation or historical PCM. Source-only
+bars contribute no wet activity, fabricated return level or quality credit.
+The score, renderer, existing delay continuation, primary policy and v35 resources,
+PCM, callback ownership, correction work and fallback bounds are unchanged.
+
+Runtime observation/adaptation v6, Long observation/corpus v8 and policy family
+v22 separate the corrected interpretation from historical evidence. Long seals
+remain nil. Fresh complete seven-development/two-disjoint-holdout qualification
+with all18 independent native histories, final-source applicability and every
+resource, lifecycle, platform and applicable output gate remain required.

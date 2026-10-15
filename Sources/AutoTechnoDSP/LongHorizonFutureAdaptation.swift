@@ -6,9 +6,9 @@ import Foundation
 /// runtime verdict uses only the exact current route rate.
 package enum LongHorizonRuntimePolicySchema {
   package static let observationVersion =
-    "autotechno-long-horizon-runtime-observation.v5"
+    "autotechno-long-horizon-runtime-observation.v6"
   package static let adaptationVersion =
-    "autotechno-long-horizon-future-adaptation.v5"
+    "autotechno-long-horizon-future-adaptation.v6"
   package static let minimumDecisionIntervalBars = 256
 }
 
