@@ -25,6 +25,7 @@ on:
           - windows-planning-math
           - windows-full-banks
           - windows-primary-readiness
+          - windows-calibration-fixture-readiness
           - modal-continuation
           - prepared-admission
           - corrective-reservation
@@ -50,7 +51,7 @@ jobs:
       scope: ${{ inputs.validation == 'hosted-macos-map' && 'map-only' || inputs.validation == 'hosted-macos-diagnostic' && 'protected-continuation-diagnostic' || inputs.validation == 'hosted-macos-harmonic-tail-diagnostic' && 'harmonic-tail-diagnostic' || inputs.validation == 'hosted-macos-primary-readiness' && 'primary-readiness' || inputs.validation == 'hosted-macos-effect-dose-readiness' && 'effect-dose-readiness' || inputs.validation == 'hosted-macos-native-history-readiness' && 'native-history-readiness' || inputs.validation == 'hosted-macos-calibration-diagnostic-readiness' && 'calibration-diagnostic-readiness' || inputs.validation == 'hosted-macos-calibration-fixture-readiness' && 'calibration-fixture-readiness' || 'complete' }}
 
   validate-windows-source:
-    if: inputs.validation == 'windows-primary-readiness' || inputs.validation == 'windows' || inputs.validation == 'windows-diagnostics' || inputs.validation == 'windows-recovery-build' || inputs.validation == 'windows-full-banks' || inputs.validation == 'windows-planning-probe' || inputs.validation == 'windows-planning-math' || inputs.validation == ''
+    if: inputs.validation == 'windows-calibration-fixture-readiness' || inputs.validation == 'windows-primary-readiness' || inputs.validation == 'windows' || inputs.validation == 'windows-diagnostics' || inputs.validation == 'windows-recovery-build' || inputs.validation == 'windows-full-banks' || inputs.validation == 'windows-planning-probe' || inputs.validation == 'windows-planning-math' || inputs.validation == ''
     name: Windows x64 source validation (${{ matrix.test-library }})
     runs-on: windows-2025
     timeout-minutes: ${{ inputs.validation == 'windows-full-banks' && 360 || inputs.validation == 'windows-recovery-build' && 90 || 60 }}
@@ -58,7 +59,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        test-library: ${{ fromJSON(inputs.validation == 'windows-primary-readiness' && '["primary"]' || inputs.validation == 'windows-diagnostics' && '["xctest","swift-testing"]' || inputs.validation == 'windows-planning-math' && '["math"]' || inputs.validation == 'windows-planning-probe' && '["planning"]' || inputs.validation == 'windows-recovery-build' && '["recovery"]' || inputs.validation == 'windows-full-banks' && '["bank-0","bank-1","bank-2","bank-3","bank-4","bank-5","bank-6","bank-7"]' || '["all"]') }}
+        test-library: ${{ fromJSON(inputs.validation == 'windows-calibration-fixture-readiness' && '["calibration-fixture"]' || inputs.validation == 'windows-primary-readiness' && '["primary"]' || inputs.validation == 'windows-diagnostics' && '["xctest","swift-testing"]' || inputs.validation == 'windows-planning-math' && '["math"]' || inputs.validation == 'windows-planning-probe' && '["planning"]' || inputs.validation == 'windows-recovery-build' && '["recovery"]' || inputs.validation == 'windows-full-banks' && '["bank-0","bank-1","bank-2","bank-3","bank-4","bank-5","bank-6","bank-7"]' || '["all"]') }}
 
     steps:
       - name: Check out source
@@ -103,7 +104,7 @@ jobs:
       # Swift's registered environment may put the WindowsApps python alias
       # ahead of runner tools. Install/select Python after that PATH update.
       - name: Set up Python for complete Windows banks
-        if: startsWith(matrix.test-library, 'bank-') || matrix.test-library == 'primary'
+        if: startsWith(matrix.test-library, 'bank-') || matrix.test-library == 'primary' || matrix.test-library == 'calibration-fixture'
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.13'
@@ -120,7 +121,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Bank-plan regression tests failed." }
 
       - name: Verify sealed JSON checkout bytes
-        if: startsWith(matrix.test-library, 'bank-') || matrix.test-library == 'primary'
+        if: startsWith(matrix.test-library, 'bank-') || matrix.test-library == 'primary' || matrix.test-library == 'calibration-fixture'
         shell: pwsh
         run: |
           python -m unittest discover -s scripts -p test_resource_checkout.py
@@ -174,6 +175,43 @@ jobs:
           swift test --build-path .build-windows --skip-build --no-parallel --disable-xctest --enable-swift-testing --filter 'PrimaryEvaluatorReadinessTests'
           if ($LASTEXITCODE -ne 0) { throw "Installed primary native Windows verification failed." }
           Write-Host "Primary artifact component only; complete final-source platform and runtime gates remain required."
+
+      - name: Verify native Windows calibration construction fixture
+        if: matrix.test-library == 'calibration-fixture'
+        timeout-minutes: 30
+        shell: pwsh
+        env:
+          PYTHONPATH: scripts
+        run: |
+          @'
+          import json, os, subprocess
+          from pathlib import Path
+          from hosted_macos_verification import require, run_logged_native, sha, summarize_log
+          root = Path.cwd()
+          build = root / '.build-windows'
+          identity = 'AutoTechnoCoreTests.ModalSuccessorReportJoinTests/continuousCalibrationMembershipAndFitting()'
+          selector = r'(^|\.)ModalSuccessorReportJoinTests[./]continuousCalibrationMembershipAndFitting\(\)(/|$)'
+          source = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          require(source == os.environ['GITHUB_SHA'], 'exact native fixture source')
+          discovered = subprocess.check_output(['swift', 'test', '--build-path', str(build),
+              'list', '--skip-build', '--disable-xctest', '--enable-swift-testing'],
+              cwd=root, stderr=subprocess.STDOUT).decode('utf-8-sig')
+          require(sum(line.strip() == identity for line in discovered.splitlines()) == 1,
+              'exact single native fixture discovery')
+          log = Path(os.environ['RUNNER_TEMP']) / 'windows-calibration-fixture-native.log'
+          result = run_logged_native(['swift', 'test', '--build-path', str(build), '--skip-build',
+              '--no-parallel', '--disable-xctest', '--enable-swift-testing', '--filter', selector], root, log)
+          require(result.returncode == 0, 'native calibration fixture failed; original assertions stay required')
+          raw = log.read_bytes()
+          measured = summarize_log(raw.decode('utf-8-sig'), 'swift-testing', 1, [identity])
+          require(measured['executedTests'] == 1 and measured['explicitlySkippedTests'] == 0,
+              'one actual native fixture without skips required')
+          print(json.dumps(dict(schema='autotechno-windows-calibration-fixture-component.v1',
+              source=source, identity=identity, logSHA256=sha(raw), **measured,
+              fullWindowsQualification=False, automatedQualityQualification=False,
+              runtimeQualification=False, item39Complete=False), sort_keys=True))
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw "Native Windows calibration construction fixture failed." }
 
       - name: Discover selected test library
         if: matrix.test-library == 'xctest' || matrix.test-library == 'swift-testing'
