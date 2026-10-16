@@ -3320,3 +3320,49 @@ v22 separate the corrected interpretation from historical evidence. Long seals
 remain nil. Fresh complete seven-development/two-disjoint-holdout qualification
 with all18 independent native histories, final-source applicability and every
 resource, lifecycle, platform and applicable output gate remain required.
+
+## Read-only current quality-source and installation applicability
+
+`scripts/at0039_quality_applicability.py` consumes a pinned private request with
+schema `autotechno-at0039-quality-applicability-request.v1`, an exact
+`targetSource`, and `primary` and `long` original-context selectors. Each selector
+contains exactly `source_root`, `study`, `runner`, `evidence_root`, `cold_proof`,
+`cold_sha256`, `source`, `terminal_proof` and `terminal_sha256`. The four roots
+are absolute owned paths; source and proof hashes are independently pinned.
+The CLI requires `--target-root`, `--request` and `--request-sha256`. The request
+selects original inputs, never supplies qualification verdicts. Both complete
+original native verifiers must pass; partial histories or passed result JSON
+cannot supply their authority. Only the current explicit recovery-study format
+can establish this current quality scope. Its installed primary seals must equal
+the independently qualified primary products, without rate averaging or a
+cross-rate accepted-history equality requirement.
+
+The target must be clean at that exact commit. All compiled Core, DSP and
+Transport source inventory, used producer tests and Package.swift must match
+both authenticated studies. The existing two artifact loaders permit only
+changes to their three literal resource names and three literal expected seals,
+plus full-line documentation comments. Decoder, control-flow or other executable
+changes refuse. Nonliteral seals, duplicate bindings, unbound source files,
+symlinks and altered package settings also refuse. The running verifier and its
+verification dependencies must match the target's committed implementation.
+
+Every installed derived resource must equal its authenticated native product
+byte for byte, allowing only the single final packaging line feed already
+handled by the canonical loader. Existing historical resource bytes cannot be
+overwritten or removed; a changed product requires a new versioned filename.
+No unrelated resource additions are admitted. Original source/build/runtime,
+complete native product archives, target inputs and verifier bytes are checked
+for stability through the audit. No producer, renderer, installer or transport
+is invoked and no saved state or archive is imported into a capture.
+
+The result establishes only `currentQualitySourceApplicabilityVerified` and
+`sourceResourceInstallationVerified`. This checks committed source resources;
+it does not execute an installed loader or inspect a Release app bundle.
+The actual installed-positive native gates remain required and
+`installedArtifactsVerified` stays false. Complete allocated-capacity, overhead,
+physical-memory and ordinary-deadline evidence, all lifecycle and Phase-1 gates,
+final platform/Release/map verification, exact app and applicable physical-output
+validation, and the authoritative item-specific completion verifier remain
+separate requirements. `item39Complete`, runtime, platform and complete-resource
+qualification remain false. Synthetic reader controls prove rejection behavior,
+not a native study, installed product qualification or roadmap completion.
