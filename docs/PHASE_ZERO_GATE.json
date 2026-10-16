@@ -16,18 +16,18 @@
       "id": "authority-convergence",
       "artifact": "docs/AUTHORITY_SURFACE_INVENTORY.json",
       "schema": "autotechno-authority-surface-inventory.v1",
-      "version": 1,
-      "sha256": "013a0add1184b6a45b34c2bbe1db9e6ebe2daee7f911c37ddde18eaeca15418d",
-      "surfaceCount": 45,
+      "version": 2,
+      "sha256": "326742d7d5605ba1495a0673352e7786312f02a0077d1de0d0dc4e3056285554",
+      "surfaceCount": 46,
       "unresolvedCount": 0
     },
     {
       "id": "component-provenance",
       "artifact": "docs/COMPONENT_LICENSE_ASSET_MANIFEST.json",
       "schema": "autotechno-component-license-asset-manifest.v1",
-      "version": 1,
-      "sha256": "25a3497c5dae2b8e2950c41dea19f8890713217fc86fc229c2db9fb181858f2b",
-      "surfaceCount": 9,
+      "version": 4,
+      "sha256": "d17957f858401aeb31e425237d2dc23a2c0bec53bab5578d04da8cb0d0d65a30",
+      "surfaceCount": 11,
       "unresolvedCount": 0
     },
     {
