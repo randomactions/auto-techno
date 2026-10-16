@@ -301,6 +301,20 @@ class LongProductTests(unittest.TestCase):
                     'runtimeQualification', 'item39Complete']:
             self.assertIs(result[key], False)
 
+    def test_recovery_complete_products_refuse_one_over_limit_repeat_history(self):
+        for seed in (1, 9):  # One development and one disjoint holdout root.
+            for rate in (44100, 48000):
+                args = products(v.RECOVERY)
+                journey = args[2][seed, rate]['journey']
+                frames_per_bar = round(240 / 130 * rate)
+                journey['accountedRepeats'] = [dict(startSample=i * 16 * frames_per_bar,
+                    endSample=(i + 1) * 16 * frames_per_bar,
+                    frameCount=16 * frames_per_bar, barCount=16) for i in range(651)]
+                journey['endSample'] += 10416 * frames_per_bar
+                with self.subTest(seed=seed, rate=rate), self.assertRaisesRegex(
+                        ValueError, 'repeat presentation bar ceiling'):
+                    v.verify_products(*args, study_format=v.RECOVERY)
+
     def test_known_formats_cannot_borrow_each_others_evidence(self):
         for fmt in v.FORMATS.values():
             for other in v.FORMATS.values():

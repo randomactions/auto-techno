@@ -148,6 +148,41 @@ class HistoryIntegrityTests(unittest.TestCase):
         with self.assertRaisesRegex(history.HistoryIntegrityError,'bounded accepted/recovery step scope'):
             self.verify_recovery(oversized)
 
+    def test_recovery_repeat_bar_ceiling_cannot_hide_in_consistent_sample_totals(self):
+        for rate in (44100, 48000):
+            for repeat_bars in (10399, 10400, 10401, 10416):
+                document = self.recovery_fixture(rate)
+                journey = document['journey']
+                frames_per_bar = round(240 / 130 * rate)
+                repeats, remaining, start = [], repeat_bars, frames_per_bar
+                while remaining:
+                    bars = min(16, remaining)
+                    frames = bars * frames_per_bar
+                    repeats.append(dict(startSample=start, endSample=start + frames,
+                                        frameCount=frames, barCount=bars))
+                    start += frames
+                    remaining -= bars
+                journey['accountedRepeats'] = repeats
+                journey['endSample'] += repeat_bars * frames_per_bar
+                with self.subTest(rate=rate, repeat_bars=repeat_bars):
+                    if repeat_bars <= 10400:
+                        self.assertEqual(self.verify_recovery(document)['accountedRepeats'],
+                                         len(repeats))
+                    else:
+                        with self.assertRaisesRegex(history.HistoryIntegrityError,
+                                                    'repeat presentation bar ceiling'):
+                            self.verify_recovery(document)
+
+    def test_recovery_repeat_bar_ceiling_does_not_reinterpret_historical_v2(self):
+        document = fixture()
+        journey = document['journey']
+        frames_per_bar = round(240 / 130 * journey['sampleRate'])
+        journey['accountedRepeats'] = [dict(startSample=i * 16 * frames_per_bar,
+            endSample=(i + 1) * 16 * frames_per_bar, frameCount=16 * frames_per_bar,
+            barCount=16) for i in range(651)]
+        journey['endSample'] += 10416 * frames_per_bar
+        self.assertEqual(self.verify(document)['accountedRepeats'], 651)
+
     def test_effect_interpretation_requires_the_explicit_bound_pair(self):
         document = fixture(effect_schema_version=3)
         row = history.verify_history(document, 'binding', list(range(1,10)), 'policy',

@@ -18,6 +18,7 @@ import sys
 _IMPLEMENTATION_SHA_AT_IMPORT = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 MAX_JSON_BYTES = 64 * 1024 * 1024
 MAX_NUMERIC_BYTES = 128 * 1024 * 1024
+MAX_RECOVERY_REPEAT_BARS = 10400
 OPERATORS = ('maintain', 'rise', 'recover', 'reframe', 'payoff', 'recall')
 METRICS = (
     'integrated-loudness-lufs', 'maximum-momentary-loudness-lufs',
@@ -213,7 +214,7 @@ def verify_history(document, binding, roots, primary_policy, engine, *, effect_s
     require(accepted == bars * frames_per_bar, 'native accepted frame/bar geometry')
     repeats = j.get('accountedRepeats')
     require(isinstance(repeats, list), 'repeat records required')
-    previous_end = total = 0
+    previous_end = total = repeat_bar_total = 0
     for row in repeats:
         require(isinstance(row, dict), 'repeat record object')
         start = uint(row.get('startSample'), 'repeat start')
@@ -227,6 +228,13 @@ def verify_history(document, binding, roots, primary_policy, engine, *, effect_s
         require(previous_end <= start and end - start == frames, 'repeat sample accounting/order')
         previous_end = end
         total += frames
+        repeat_bar_total += repeat_bars
+        if journey_schema_version == 3:
+            # Match the original producer's separate repeatBars guard. Accepted
+            # bars are not subtracted from this allowance, and consistent
+            # sample totals cannot authorize an over-limit recovery history.
+            require(repeat_bar_total <= MAX_RECOVERY_REPEAT_BARS,
+                    'repeat presentation bar ceiling exceeded')
     end = uint(j.get('endSample'), 'history end', 1)
     require(end == accepted + total and previous_end <= end, 'accepted/repeat/end sample accounting')
     rejected = j.get('rejectedPreparations')
