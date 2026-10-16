@@ -1,6 +1,6 @@
 {
   "schema": "autotechno-authority-surface-inventory.v1",
-  "inventoryVersion": 1,
+  "inventoryVersion": 2,
   "scopePolicy": "The collision boundary is every production Swift type whose name ends in an authority-shaped suffix (Renderer, Preparer, Evaluator, Director, Resolver, Policy, Reducer, Controller, Qualifier, Generator, Engine, Orchestrator, Coordinator, Balancer, Analyzer, Validator, Processor, Artifacts, or Preflight), every production Swift type ending in Profile, Preset, Mode, or Configuration, every static value whose identifier contains profile or preset, every bundled JSON resource under Sources, and every source path assigned to the semantic map's graph-effects-routing-and-mix component. The inventory classifies naming collisions and convergence; it does not infer authority from a suffix alone and does not replace executable data-flow tests.",
   "authorityGroups": [
     {
@@ -699,14 +699,14 @@
         {"path": "Sources/AutoTechnoDSP/Resources/long-horizon-professional-profile-v16.json", "symbol": "long-horizon-professional-profile-v16", "kind": "json-resource"}
       ],
       "convergenceAnchors": [
-        {"path": "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift", "fragment": "\"long-horizon-professional-profile-v18\""},
+        {"path": "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift", "fragment": "\"long-horizon-professional-profile-v22\""},
         {"path": "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift", "fragment": "guard let expectedProfileFingerprint,"}
       ],
       "evidenceAnchors": [
         {"path": "Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift", "fragment": "func bundledArtifacts()"}
       ],
       "pcmConsequence": "changes-future-pcm-only",
-      "limitations": "The bundled v16 profile is historical. The sole current loader targets v18 with all expected fingerprints unset and refuses load; the retained resource grants no current qualification or activation. No profile selector is exposed."
+      "limitations": "The bundled v16 profile is historical. The sole current loader targets v22 with all expected fingerprints unset and refuses load; the retained resource grants no current qualification or activation. No profile selector is exposed."
     },
     {
       "id": "long-horizon-profile-support",
@@ -720,15 +720,15 @@
         {"path": "Sources/AutoTechnoDSP/Resources/long-horizon-holdout-v16.json", "symbol": "long-horizon-holdout-v16", "kind": "json-resource"}
       ],
       "convergenceAnchors": [
-        {"path": "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift", "fragment": "\"long-horizon-adversarial-suite-v18\""},
-        {"path": "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift", "fragment": "\"long-horizon-holdout-v18\""},
+        {"path": "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift", "fragment": "\"long-horizon-adversarial-suite-v22\""},
+        {"path": "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift", "fragment": "\"long-horizon-holdout-v22\""},
         {"path": "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift", "fragment": "guard let expectedProfileFingerprint,"}
       ],
       "evidenceAnchors": [
         {"path": "Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift", "fragment": "func currentPolicyResourcesFailClosed()"}
       ],
       "pcmConsequence": "qualifies-without-changing-pcm",
-      "limitations": "The bundled v16 adversarial and holdout resources are historical evidence. The sole current v18 loader requires all three exact fingerprints before loading; unset seals keep it unavailable. These resources do not qualify or activate the current policy."
+      "limitations": "The bundled v16 adversarial and holdout resources are historical evidence. The sole current v22 loader requires all three exact fingerprints before loading; unset seals keep it unavailable. These resources do not qualify or activate the current policy."
     },
     {
       "id": "modal-window-profile-contract",
@@ -749,11 +749,11 @@
         {"path": "Tests/AutoTechnoCoreTests/ModalSuccessorReportJoinTests.swift", "fragment": "func continuousCalibrationMembershipAndFitting()"}
       ],
       "pcmConsequence": "qualifies-without-changing-pcm",
-      "limitations": "Unqualified bar-local v31 and continuous v32 identities extend the existing profile type and fitter through one scope owner. Neither is installed; production activation requires v30. Continuous observations require actual report-bank membership and typed original/successor provenance; one-bank analysis cannot satisfy diverse calibration."
+      "limitations": "Bar-local v31 and continuous v33 profile contracts extend the existing profile type and fitter through one scope owner. The sole installed primary v35 resource set uses the continuous v33 contract; legacy v30 and retired continuous resources cannot activate it. Continuous observations require actual report-bank membership and typed original/successor provenance; one-bank analysis cannot satisfy diverse calibration. Matching Long Horizon artifacts remain required for host activation."
     },
     {
       "id": "primary-installed-profile",
-      "title": "Retained primary calibration profile and unavailable current target",
+      "title": "Installed current primary calibration profile",
       "category": "profile",
       "classification": "installed-calibration-artifact",
       "surfaceComponent": "evidence-calibration-and-primary-evaluation",
@@ -765,39 +765,68 @@
         {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "symbol": "profileResource", "kind": "static-value"},
         {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "symbol": "expectedProfileFingerprint", "kind": "static-value"},
         {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift", "symbol": "requiredProfileVersion", "kind": "static-value"},
-        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json", "symbol": "professional-quality-primary-profile-v30", "kind": "json-resource"}
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v35.json", "symbol": "professional-quality-primary-profile-v35", "kind": "json-resource"}
       ],
       "convergenceAnchors": [
-        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-profile-v33\""},
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-profile-v35\""},
         {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "guard let expectedProfileFingerprint,"}
       ],
       "evidenceAnchors": [
-        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func primaryResourcesAreV30FailClosed()"}
+        {"path": "Tests/AutoTechnoCoreTests/PrimaryEvaluatorReadinessTests.swift", "fragment": "func installedPrimaryRetainsUnavailableLongHorizonHost()"}
       ],
       "pcmConsequence": "qualifies-without-changing-pcm",
-      "limitations": "Checkpoint profiles belong to one calibration contract. The bundled v30 profile is historical and rejected by current construction. The sole v33 loader has unset seals and remains unavailable until fresh complete current-engine qualification; no runtime style or engine selector is exposed."
+      "limitations": "Checkpoint profiles belong to one calibration contract. The sole v35 loader binds the complete fresh engine-v51 primary study through its three exact expected fingerprints. That original qualification supplies neither final-source applicability nor matching Long Horizon qualification or host activation. No runtime style or engine selector is exposed."
     },
     {
       "id": "primary-profile-support",
-      "title": "Historical primary adversarial and holdout support",
+      "title": "Installed current primary adversarial and holdout support",
       "category": "profile",
       "classification": "qualification-support-artifact",
       "surfaceComponent": "evidence-calibration-and-primary-evaluation",
       "canonicalComponent": "evidence-calibration-and-primary-evaluation",
       "members": [
-        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v30.json", "symbol": "professional-quality-primary-adversarial-suite-v30", "kind": "json-resource"},
-        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v30.json", "symbol": "professional-quality-primary-holdout-v30", "kind": "json-resource"}
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v35.json", "symbol": "professional-quality-primary-adversarial-suite-v35", "kind": "json-resource"},
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v35.json", "symbol": "professional-quality-primary-holdout-v35", "kind": "json-resource"}
       ],
       "convergenceAnchors": [
-        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-adversarial-suite-v33\""},
-        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-holdout-v33\""},
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-adversarial-suite-v35\""},
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-holdout-v35\""},
         {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "guard let expectedProfileFingerprint,"}
       ],
       "evidenceAnchors": [
-        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func primaryResourcesAreV30FailClosed()"}
+        {"path": "Tests/AutoTechnoCoreTests/PrimaryEvaluatorReadinessTests.swift", "fragment": "func installedPrimaryRetainsUnavailableLongHorizonHost()"}
       ],
       "pcmConsequence": "qualifies-without-changing-pcm",
-      "limitations": "The bundled v30 adversarial and holdout resources are historical evidence rejected by current construction. The sole current v33 loader requires the complete exact fingerprint set; unset seals keep it unavailable. These resources grant no current evaluator qualification or activation."
+      "limitations": "The installed v35 adversarial and holdout resources bind the same exact profile and original engine-v51 primary study. The loader requires the complete three-fingerprint set and rejects altered or mixed products. Matching Long Horizon qualification and all separate release gates remain required; these support resources alone do not authorize host activation."
+    },
+    {
+      "id": "historical-primary-rejection-resources",
+      "title": "Retained historical primary rejection fixtures",
+      "category": "profile",
+      "classification": "qualification-support-artifact",
+      "surfaceComponent": "evidence-calibration-and-primary-evaluation",
+      "canonicalComponent": "evidence-calibration-and-primary-evaluation",
+      "members": [
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json", "symbol": "professional-quality-primary-profile-v30", "kind": "json-resource"},
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v30.json", "symbol": "professional-quality-primary-adversarial-suite-v30", "kind": "json-resource"},
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v30.json", "symbol": "professional-quality-primary-holdout-v30", "kind": "json-resource"},
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v33.json", "symbol": "professional-quality-primary-profile-v33", "kind": "json-resource"},
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v33.json", "symbol": "professional-quality-primary-adversarial-suite-v33", "kind": "json-resource"},
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v33.json", "symbol": "professional-quality-primary-holdout-v33", "kind": "json-resource"},
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v34.json", "symbol": "professional-quality-primary-profile-v34", "kind": "json-resource"},
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v34.json", "symbol": "professional-quality-primary-adversarial-suite-v34", "kind": "json-resource"},
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v34.json", "symbol": "professional-quality-primary-holdout-v34", "kind": "json-resource"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-profile-v35\""},
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "guard let expectedProfileFingerprint,"}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/PrimaryEvaluatorReadinessTests.swift", "fragment": "func bundledV30ArtifactsAreIneligible()"},
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func primaryResourcesAreV30FailClosed()"}
+      ],
+      "pcmConsequence": "none",
+      "limitations": "Historical v30, v33 and v34 bytes are retained for explicit rejection controls and original-study provenance. They are not selected by the current v35 loader and cannot replace its complete exact seal set or qualify the current engine. Retention and classification confer no new calibration, playback, runtime or final-source authority."
     }
   ],
   "effectPaths": [
