@@ -1,8 +1,8 @@
 {
   "schema": "autotechno-roadmap-contract-baseline.v1",
-  "snapshotVersion": 287,
+  "snapshotVersion": 288,
   "digestAlgorithm": "sha256",
-  "snapshotFingerprint": "bcbcd264b7f278064807c44ae667ea127b3e466fe74b269991d6101633126d8e",
+  "snapshotFingerprint": "79ab7f33c6d14aa96d011a1cd1113126909b71ea09e5b86c109d5385374d40c9",
   "documents": [
     {
       "role": "repository-guidance",
@@ -169,8 +169,8 @@
     {
       "role": "semantic-codebase-map-rendering",
       "path": "docs/CODEBASE_MAP.md",
-      "byteCount": 381885,
-      "sha256": "ac1257a424e07ed720bcfadb394f9a1d36fb81c7b6a661cc1866858ffc23d2d8"
+      "byteCount": 382440,
+      "sha256": "2d28edbd58cbf087a01203cd1493e325f2c14ec093cc7c6177580edf4003bc62"
     }
   ]
 }
