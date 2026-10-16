@@ -1090,6 +1090,7 @@ struct IterativeSuccessorPreparationTests {
             }.value
             #expect(outcome.preparedPhrase == nil)
             #expect(outcome.failure?.code == (mode == .cancelOnValidation ? "cancelled" : "successor-rejected"))
+            #expect((outcome.failure?.recoveryRejection(for: request) != nil) == (mode == .rejectChild))
             #expect(control.terminals.count > 1)
             #expect(AutonomousCandidateFingerprint.sessionState(request.sourceState) == original)
         }
@@ -1100,6 +1101,75 @@ struct IterativeSuccessorPreparationTests {
             makeEvaluator: { Evaluator(request: $0, control: control) }, cancellationRequested: { false })
         #expect(outcome.preparedPhrase == nil && outcome.failure?.code == "resource-bound")
         #expect(control.terminals.isEmpty)
+    }
+
+    @Test("An actual calibrated child refusal retries only its unchanged root and publishes no tentative PCM",
+        arguments: [8_000.0, 44_100.0, 48_000.0])
+    @MainActor
+    func rejectedChildRecoveryIsBound(rate: Double) async throws {
+        let request = Self.sourceRequest(rate: rate)
+        let original = request.replayIdentity
+        let control = Control(mode: .rejectChild)
+        let outcome = await Task.detached {
+            AutonomousPerformancePreparer.prepareChainDiagnosing(request: request,
+                director: AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed),
+                longHorizonPolicy: nil, makeEvaluator: { Evaluator(request: $0, control: control) },
+                cancellationRequested: { false })
+        }.value
+        #expect(outcome.preparedPhrase == nil)
+        let failure = try #require(outcome.failure)
+        let rejection = try #require(failure.recoveryRejection(for: request))
+        #expect(rejection.rootRequestFingerprint == original.fingerprint)
+        #expect(rejection.rejectedRequestFingerprint != original.fingerprint)
+        #expect(rejection.rejectedPhraseIndex > request.key.phraseIndex)
+        #expect(rejection.decision.reasonCodes == [.guardrailRegressionV1])
+        #expect(rejection.decision.isRetryableCandidateRejection)
+        #expect(PhrasePreparationFailure(stage: failure.stage, code: failure.code,
+            details: failure.details).recoveryRejection(for: request) == nil)
+        let first = AutonomousQualityRetryContinuation().recoveringAfterRejection(
+            decision: rejection.decision, targetPhraseIndex: request.key.phraseIndex,
+            initialPreparation: false, coherentRepeatCount: 0)
+        #expect(first.scheduling == .awaitFirstCoherentRepeat)
+        #expect(first.continuation.ordinal(for: request.key.phraseIndex) == 1)
+        let next = Self.retryRequest(request, context: first.continuation.context(for: request.key.phraseIndex))
+        #expect(failure.recoveryRejection(for: next) == nil)
+        #expect(next.replayIdentity.sourceStateFingerprint == original.sourceStateFingerprint)
+        #expect(next.replayIdentity.incomingRenderStateFingerprint == original.incomingRenderStateFingerprint)
+        #expect(next.replayIdentity.incomingGraphStateFingerprint == original.incomingGraphStateFingerprint)
+        var changed = request.incomingRenderState; changed.barIndex += 1
+        let foreign = PhrasePreparationRequest(key: request.key, sourceState: request.sourceState,
+            incomingLongHorizonState: request.incomingLongHorizonState, incomingRenderState: changed,
+            incomingGraphState: request.incomingGraphState, previousGraph: request.previousGraph,
+            pendingLiveMasterBinding: request.pendingLiveMasterBinding)
+        #expect(failure.recoveryRejection(for: foreign) == nil)
+        let retried = await Task.detached {
+            AutonomousPerformancePreparer.prepareChainDiagnosing(request: next,
+                director: AutonomousSessionDirector(rootSeed: next.sourceState.rootSeed),
+                longHorizonPolicy: nil, makeEvaluator: { Evaluator(request: $0, control: Control()) },
+                cancellationRequested: { false })
+        }.value
+        let accepted = try #require(retried.preparedPhrase)
+        #expect(accepted.prepared.commitEligible && accepted.continuationOwnershipIsValid)
+        #expect(accepted.request.replayIdentity == next.replayIdentity)
+        #expect(request.replayIdentity == original)
+        #expect(AutonomousCandidateFingerprint.sessionState(request.sourceState) == original.sourceStateFingerprint)
+        #expect(accepted.preparationChainResourceBudget?.reservedPeakWorkingByteCount ?? Int.max <=
+            AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount)
+    }
+
+    @Test("Unsafe descendant refusal cannot authorize a recovery wave")
+    @MainActor
+    func unsafeChildRemainsTerminal() async throws {
+        let request = Self.sourceRequest(rate: 8_000)
+        let control = Control(mode: .rejectUnsafeChild)
+        let outcome = await Task.detached {
+            AutonomousPerformancePreparer.prepareChainDiagnosing(request: request,
+                director: AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed),
+                longHorizonPolicy: nil, makeEvaluator: { Evaluator(request: $0, control: control) },
+                cancellationRequested: { false })
+        }.value
+        #expect(outcome.preparedPhrase == nil && outcome.failure?.code == "successor-rejected")
+        #expect(outcome.failure?.recoveryRejection(for: request) == nil)
     }
 
     @Test("A corrective render cannot allocate before the aggregate owner grants its second pass")
@@ -1696,6 +1766,23 @@ struct IterativeSuccessorPreparationTests {
             previousGraph: nil, pendingLiveMasterBinding: nil)
     }
 
+    private static func retryRequest(_ request: PhrasePreparationRequest,
+        context: AutonomousQualityRecoveryContext) -> PhrasePreparationRequest {
+        let k = request.key
+        return PhrasePreparationRequest(key: PhrasePreparationKey(sessionSeed: k.sessionSeed,
+            phraseIndex: k.phraseIndex, sampleRate: k.sampleRate, channelCount: k.channelCount,
+            routeRecovery: k.routeRecovery, qualityRevision: k.qualityRevision,
+            qualityPolicyVersion: k.qualityPolicyVersion, qualityControllerFingerprint: k.qualityControllerFingerprint,
+            routeGeneration: k.routeGeneration, incomingLiveMasterRevision: k.incomingLiveMasterRevision,
+            incomingLiveMasterStateFingerprint: k.incomingLiveMasterStateFingerprint,
+            pendingLiveMasterProposalFingerprint: k.pendingLiveMasterProposalFingerprint,
+            liveEarliestEligibleFutureSample: k.liveEarliestEligibleFutureSample,
+            liveTargetStartSample: k.liveTargetStartSample, qualityRecoveryContext: context),
+            sourceState: request.sourceState, incomingLongHorizonState: request.incomingLongHorizonState,
+            incomingRenderState: request.incomingRenderState, incomingGraphState: request.incomingGraphState,
+            previousGraph: request.previousGraph, pendingLiveMasterBinding: request.pendingLiveMasterBinding)
+    }
+
     private static func render(_ request: PhrasePreparationRequest, plan: AutonomousPhrasePlan,
         evaluator: Evaluator, deferred: Bool, capture: Bool = false) -> AutonomousPhrasePreparationOutcome {
         AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(plan: plan,
@@ -1708,7 +1795,7 @@ struct IterativeSuccessorPreparationTests {
     }
 
     private final class Control: @unchecked Sendable {
-        enum Mode: Sendable { case accept, dropProof, rejectRoot, rejectChild, dropChildProof, cancelOnValidation, forceCorrection }
+        enum Mode: Sendable { case accept, dropProof, rejectRoot, rejectChild, rejectUnsafeChild, dropChildProof, cancelOnValidation, forceCorrection }
         let mode: Mode
         private let lock = NSLock()
         private var sourcePhrases: [Int] = []
@@ -1748,6 +1835,10 @@ struct IterativeSuccessorPreparationTests {
             if control.mode == .cancelOnValidation { control.cancel() }
             if control.mode == .dropProof || (control.mode == .dropChildProof && request.key.phraseIndex > 21) { return nil }
             return try? preview.assessingContinuous(successor: successor) { _ in
+                if control.mode == .rejectUnsafeChild && request.key.phraseIndex > 21 {
+                    return .init(outcome: .rejected, decisionBasis: .calibratedQuality,
+                        reasonCodes: [.hardGateFailedV1], diagnosticDetails: ["mechanical-unsafe-child-rejection"])
+                }
                 if (control.mode == .rejectChild && request.key.phraseIndex > 21) ||
                     (control.mode == .rejectRoot && request.key.phraseIndex == 21) {
                     return .init(outcome: .rejected, decisionBasis: .calibratedQuality,

@@ -521,19 +521,79 @@ package struct ProspectivePerformanceContinuation: Sendable {
     }
 }
 
+/// An actual rejected descendant can invalidate a tentative root without
+/// publishing either product. Only its bounded decision and identities survive
+/// so the root's existing serial recovery can propose a different whole chain.
+package struct SuccessorCandidateRejection: Equatable, Sendable {
+    package let rootRequestFingerprint: String
+    package let rejectedRequestFingerprint: String
+    package let rejectedPhraseIndex: Int
+    package let candidateFingerprint: String
+    package let overdueDebtCount: Int
+    package let decision: QualityDecision
+
+    fileprivate init(root: PhrasePreparationRequest, rejected: PhrasePreparationRequest,
+        prepared: PreparedAutonomousPhrase) {
+        rootRequestFingerprint = root.replayIdentity.fingerprint
+        rejectedRequestFingerprint = rejected.replayIdentity.fingerprint
+        rejectedPhraseIndex = rejected.key.phraseIndex
+        candidateFingerprint = prepared.selectedCandidateEvidence.fingerprint
+        overdueDebtCount = prepared.plan.interest.overdueDebtCount
+        decision = prepared.qualityDecision
+    }
+}
+
 /// Bounded, non-PCM reason metadata shared by every platform transport.
 package struct PhrasePreparationFailure: Error, Equatable, Sendable {
     package let stage: String
     package let code: String
     package let details: [String]
+    private let successorRejection: SuccessorCandidateRejection?
 
     package init(stage: String, code: String, details: [String] = []) {
+        self.init(stage: stage, code: code, details: details, successorRejection: nil)
+    }
+
+    private init(stage: String, code: String, details: [String],
+        successorRejection: SuccessorCandidateRejection?) {
         self.stage = stage
         self.code = code
+        self.successorRejection = successorRejection
         var seen: Set<String> = []
         self.details = details.filter { seen.insert($0).inserted }
             .prefix(24)
             .map { $0 }
+    }
+
+    /// Diagnostic strings never authorize recovery. The shared reducer alone
+    /// creates this receipt from the actual rejected child; consumers must
+    /// match the entire original root request before using its Core decision.
+    package func recoveryRejection(for request: PhrasePreparationRequest) -> SuccessorCandidateRejection? {
+        guard stage == "successor-chain", code == "successor-rejected",
+            !request.key.routeRecovery, request.replayIdentity.isComplete,
+            request.replayIdentity.matches(request), let successorRejection,
+            successorRejection.rootRequestFingerprint == request.replayIdentity.fingerprint,
+            successorRejection.rejectedPhraseIndex > request.key.phraseIndex,
+            successorRejection.decision.isRetryableCandidateRejection else { return nil }
+        return successorRejection
+    }
+
+    fileprivate static func rejectedSuccessor(root: PhrasePreparationRequest,
+        rejected: PhrasePreparationRequest, prepared: PreparedAutonomousPhrase) -> Self {
+        let bound = !root.key.routeRecovery && !rejected.key.routeRecovery &&
+            root.replayIdentity.isComplete && root.replayIdentity.matches(root) &&
+            rejected.replayIdentity.isComplete && rejected.replayIdentity.matches(rejected) &&
+            rejected.key.sessionSeed == root.key.sessionSeed &&
+            rejected.key.sampleRate == root.key.sampleRate &&
+            rejected.key.channelCount == root.key.channelCount &&
+            rejected.key.routeGeneration == root.key.routeGeneration &&
+            rejected.key.phraseIndex > root.key.phraseIndex &&
+            prepared.preparationReplayFingerprint == rejected.replayIdentity.fingerprint &&
+            !prepared.commitEligible && prepared.qualityDecision.isRetryableCandidateRejection
+        return Self(stage: "successor-chain", code: "successor-rejected",
+            details: ["phrase=\(rejected.key.phraseIndex)"] + prepared.qualityDiagnosticDetails,
+            successorRejection: bound ? SuccessorCandidateRejection(root: root,
+                rejected: rejected, prepared: prepared) : nil)
     }
 }
 
@@ -953,8 +1013,8 @@ package enum AutonomousPerformancePreparer {
                     return packagePerformance(request: frame.request, prepared: prepared,
                         longHorizonPolicy: longHorizonPolicy, cancellationRequested: cancellationRequested)
                 }
-                return fail("successor-rejected", ["phrase=\(frame.request.key.phraseIndex)"] +
-                    prepared.qualityDiagnosticDetails)
+                return .failed(.rejectedSuccessor(root: request,
+                    rejected: frame.request, prepared: prepared))
             }
             if let continuation = frame.continuation {
                 guard let childRequest = continuation.admittedRequest(for: prepared,

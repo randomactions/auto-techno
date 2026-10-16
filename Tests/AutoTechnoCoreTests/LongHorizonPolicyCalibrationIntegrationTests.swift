@@ -614,6 +614,10 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     let ordinal: Int
     let wave: UInt64
     let overdueDebtCount: Int
+    let rejectedSuccessorPhraseIndex: Int?
+    let rejectedSuccessorRequestFingerprint: String?
+    let acceptedTraversalFingerprintBeforeRejection: String?
+    let rejectedSuccessorDetails: [String]?
   }
 
   private struct RecoveryRepeat: Codable, Sendable {
@@ -731,7 +735,9 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
             request.replayIdentity.previousGraphFingerprint != origin.previousGraphFingerprint) {
           failure = "recovery-origin-changed"; break
         }
-        let source: PreparedPerformancePhrase
+        var source: PreparedPerformancePhrase?
+        var rejectedSuccessor: SuccessorCandidateRejection?
+        var rejectedSuccessorDetails: [String]?
         var consumedOwnedChild = false
         do {
           let owned = try predecessor?.continuationAtBoundary(sessionState: state,
@@ -759,40 +765,51 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
             }
             switch outcome {
             case .prepared(let prepared): source = prepared
-            case .failed(let refused): throw refused
+            case .failed(let refused):
+              guard let rejection = refused.recoveryRejection(for: request) else { throw refused }
+              rejectedSuccessor = rejection
+              rejectedSuccessorDetails = Array(refused.details.prefix(24))
             }
           }
         } catch let refused as PhrasePreparationFailure {
           failure = refused.stage + ":" + refused.code; details = Array(refused.details.prefix(24)); break
         } catch { failure = "continuation-refused"; break }
         do {
-          if try Self.writeNativeRouteDivergenceWitness(request: request, prepared: source.prepared) {
+          if let source, try Self.writeNativeRouteDivergenceWitness(request: request, prepared: source.prepared) {
             failure = "diagnostic-recovery-boundary-captured"; break
           }
         } catch {
           failure = "native-route-divergence-witness-write-failed"; break
         }
-        if let budget = source.preparationChainResourceBudget {
+        if let budget = source?.preparationChainResourceBudget {
           peak = max(peak, budget.reservedPeakWorkingByteCount)
         }
-        if !source.prepared.commitEligible {
+        if rejectedSuccessor != nil || source?.prepared.commitEligible == false {
           guard !consumedOwnedChild,
-            source.request.replayIdentity.matches(source.request),
-            source.request.replayIdentity.fingerprint == request.replayIdentity.fingerprint
+            source.map({ $0.request.replayIdentity.matches($0.request) &&
+              $0.request.replayIdentity.fingerprint == request.replayIdentity.fingerprint }) ??
+                (rejectedSuccessor?.rootRequestFingerprint == request.replayIdentity.fingerprint)
           else { failure = "rejected-source-replay-mismatch"; break }
           if firstRefusalTraversal == nil {
             firstRefusalTraversal = fixedWidthFingerprintHex(sink.value)
           }
-          let decision = source.prepared.qualityDecision
+          guard let decision = source?.prepared.qualityDecision ?? rejectedSuccessor?.decision,
+            let candidate = source?.prepared.selectedCandidateEvidence.fingerprint ?? rejectedSuccessor?.candidateFingerprint
+          else { failure = "rejection-decision-unavailable"; break }
           rejections.append(RecoveryRejection(targetPhraseIndex: state.phraseIndex,
             requestFingerprint: request.replayIdentity.fingerprint,
             incomingCoreFingerprint: request.replayIdentity.sourceStateFingerprint,
-            candidateFingerprint: source.prepared.selectedCandidateEvidence.fingerprint,
+            candidateFingerprint: candidate,
             reasonCodes: decision.reasonCodes.map(\.rawValue),
             ordinal: request.key.qualityRetryOrdinal,
             wave: request.key.qualityRecoveryContext.wave,
-            overdueDebtCount: source.prepared.plan.interest.overdueDebtCount))
+            overdueDebtCount: source?.prepared.plan.interest.overdueDebtCount ?? rejectedSuccessor?.overdueDebtCount ?? 0,
+            rejectedSuccessorPhraseIndex: rejectedSuccessor?.rejectedPhraseIndex,
+            rejectedSuccessorRequestFingerprint: rejectedSuccessor?.rejectedRequestFingerprint,
+            acceptedTraversalFingerprintBeforeRejection: rejectedSuccessor == nil ? nil : fixedWidthFingerprintHex(sink.value),
+            rejectedSuccessorDetails: rejectedSuccessorDetails))
           guard decision.isRetryableCandidateRejection else {
+            guard let source else { failure = "successor-recovery-decision-invalid"; break }
             failure = "prepared-source-quality:" + decision.outcome.rawValue
             details = Array((source.prepared.commitFailureDiagnostics +
               source.prepared.qualityDiagnosticDetails +
@@ -809,9 +826,13 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
             targetPhraseIndex: state.phraseIndex)
           guard nextRetry != retry else { failure = "recovery-context-stalled"; break }
           retry = nextRetry
-          sink.string("actual-core-rejection.v1")
+          sink.string(rejectedSuccessor == nil ? "actual-core-rejection.v1" : "actual-successor-chain-rejection.v1")
           sink.string(request.replayIdentity.fingerprint)
-          sink.string(source.prepared.selectedCandidateEvidence.fingerprint)
+          sink.string(candidate)
+          if let rejectedSuccessor {
+            sink.int(rejectedSuccessor.rejectedPhraseIndex)
+            sink.string(rejectedSuccessor.rejectedRequestFingerprint)
+          }
           if predecessor == nil {
             // The host's initial phase has no accepted PCM to repeat. Each
             // finite startup wave yields before opening the next one.
@@ -859,6 +880,7 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
           }
           continue
         }
+        guard let source else { failure = "prepared-source-unavailable"; break }
         var nextSemantic = semantic, nextSignal = signal, nextEffects = effects
         let semanticStatus = nextSemantic.observe(plan: source.prepared.plan, incomingState: state)
         let signalStatus = source.prepared.longHorizonSignalTrajectoryEvidence.map { nextSignal.observe($0) }
@@ -1147,7 +1169,7 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     recovery: [String: String]? = nil
   ) throws {
     let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-    var object: [String: Any] = ["schema": "autotechno-long-horizon-shared-journey.v2",
+    var object: [String: Any] = ["schema": "autotechno-long-horizon-shared-journey.v3",
       "inputBindingFingerprint": binding, "primaryPolicyVersion": LongHorizonProfessionalPolicySchema.requiredPrimaryPolicyVersion,
       "journey": try JSONSerialization.jsonObject(with: encoder.encode(journey)),
       "sourceScope": "current-shared-preparation-primary-only-bootstrap-with-core-recovery",
@@ -1288,6 +1310,39 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
       + "\(request.key.qualityRecoveryContext.wave)-\(request.key.qualityRetryOrdinal).json"
     try JSONSerialization.data(withJSONObject: witness, options: [.sortedKeys])
       .write(to: URL(fileURLWithPath: directory).appendingPathComponent(name), options: .withoutOverwriting)
+  }
+
+  @Test("Reproduce the original native rejected-child prefix and recover through the shared owner",
+    .enabled(if: ProcessInfo.processInfo.environment["AUTOTECHNO_RUN_LONG_HORIZON_SUCCESSOR_RECOVERY_PROBE"] == "1"))
+  func probeRejectedSuccessorRecovery() async throws {
+    let environment = ProcessInfo.processInfo.environment
+    guard ["AUTOTECHNO_RUN_LONG_HORIZON_CALIBRATION", "AUTOTECHNO_RUN_LONG_HORIZON_SHARED_PROBE",
+      "AUTOTECHNO_RUN_INTERRUPTED_LONG_ROUTE", "AUTOTECHNO_ASSEMBLE_INTERRUPTED_LONG_STUDY"]
+      .allSatisfy({ environment[$0] != "1" })
+    else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
+    let primary = try loadPrimary(), binding = try executionBinding()
+    try prepareOutputNamespace()
+    // This failed, incomplete original route is rebuilt from initial state.
+    // No archived score, PCM, controller or partial continuation is imported.
+    let journey = await Task.detached(priority: .userInitiated) {
+      await Self.renderPreparedRoute(rootSeed: 173_205, sampleRate: 44_100,
+        primary: primary, prefixPhraseCount: 405)
+    }.value
+    try writeJourney(journey, binding: binding)
+    #expect(journey.completedRequestedScope && journey.failureCode == nil)
+    #expect(journey.requestedPrefixPhraseCount == 405 && journey.consumedPhraseCount >= 405)
+    #expect(journey.endsAtClosedLeaf)
+    let rejection = try #require(journey.rejectedPreparations.first {
+      $0.rejectedSuccessorPhraseIndex != nil
+    })
+    #expect(rejection.targetPhraseIndex == 402 && rejection.rejectedSuccessorPhraseIndex == 403)
+    #expect(rejection.acceptedTraversalFingerprintBeforeRejection == "fd55b882a65750ee")
+    #expect(rejection.rejectedSuccessorDetails?.contains {
+      $0.contains("kick-grounded-bar-ratio=0.8125")
+    } == true)
+    #expect(journey.signal.observationCount == journey.consumedPhraseCount)
+    #expect(journey.effects.phraseCount == journey.consumedPhraseCount)
+    #expect(try executionBinding() == binding)
   }
 
   @Test("Probe the actual native bootstrap through the same full-journey owner",

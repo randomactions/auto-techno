@@ -1840,6 +1840,22 @@ unavailable or mismatched descendant discards every tentative parent. A root
 rejection, including one measured with a child, keeps the existing reason-coded
 recovery result but releases no retained child transport ownership.
 
+A rejected descendant also preserves a bounded non-PCM recovery receipt when
+its actual Core decision is already retry-eligible. The receipt binds the entire
+root replay request and the actual rejected child request, phrase and candidate;
+it carries neither preview, prepared product nor continuation state. Both hosts
+and the native journey may use that decision only to advance the root's existing
+finite serial recovery. Every tentative parent and child is still discarded.
+Diagnostic strings cannot construct this receipt. Missing proof, unsafe or
+unavailable evidence, cancellation, route recovery and a changed root request
+remain terminal. This does not replace a child of an already accepted source:
+protected measured-child consumption is unchanged. Native journey v3 records
+root and rejected-child identities separately and fingerprints discarded-chain
+rejections explicitly while preserving the original pre-rejection prefix digest;
+original v2 journeys and their verification retain their original scope. Component
+controls do not prove that the original native refusal is repaired or qualify a
+complete Long corpus, resources, deadlines, either host or physical output.
+
 AutonomousPreparationChainResourceBudget reserves aggregate numeric storage under
 the existing 128 MiB ceiling before every render pass, including a requested
 corrective pass. Each active source uses the unchanged full per-pass workspace

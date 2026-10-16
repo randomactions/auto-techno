@@ -48,6 +48,7 @@ DIAGNOSTIC_SKIPS = {
     'Inspect a single actual streamed chain without an ordinary reference or owner snapshots': 'AutoTechnoCoreTests.IterativeSuccessorPreparationTests/selectedStreamAllocationProcess()',
     'Retained continuous model exercises actual calibrated prepared admission': 'AutoTechnoCoreTests.ContinuousPrimaryPreparedAdmissionTests/retainedModelPreparedAdmission()',
     'Probe the actual native bootstrap through the same full-journey owner': 'AutoTechnoCoreTests.LongHorizonPolicyCalibrationIntegrationTests/probeSharedPreparedBootstrap()',
+    'Reproduce the original native rejected-child prefix and recover through the shared owner': 'AutoTechnoCoreTests.LongHorizonPolicyCalibrationIntegrationTests/probeRejectedSuccessorRecovery()',
     'Probe actual native recovery past the frozen structural-debt refusal': 'AutoTechnoCoreTests.LongHorizonPolicyCalibrationIntegrationTests/probeNativeCoreRecovery()',
     'Export frozen calibrated continuation-chain resource observations': 'AutoTechnoCoreTests.PerformanceEnvelopeIntegrationTests/exportContinuousPreparationEnvelope()',
     'Export current shared preparation with exact owned-child replay': 'AutoTechnoCoreTests.PerformanceEnvelopeIntegrationTests/exportCurrentSharedPreparationEnvelope()',

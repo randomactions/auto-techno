@@ -968,6 +968,13 @@ The target loop is bounded and persistent:
    immediately after exhaustion and detached tasks still yield between waves.
    Missing or non-finite evidence, unavailable policy,
    graph or signal-safety failure, and route/provenance failure remain terminal.
+   If an actual retryable calibrated rejection belongs to a prospective child,
+   the shared preparation transaction discards the entire tentative chain and
+   retains only a receipt bound to the original root request and actual rejected
+   child. It can guide the same bounded root recovery without accepting either
+   product or weakening any child gate. A missing proof, unsafe rejection, stale
+   request, route recovery or cancellation supplies no retry authority. Required
+   children of an already accepted source remain protected exact future audio.
 7. The committed plan, reason-coded evidence, controller state, and policy version
    become continuation input for future preparation.
 8. Final immutable blocks receive a second safety check before scheduling.

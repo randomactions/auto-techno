@@ -45,13 +45,14 @@ package struct PreparedPhrase: Sendable {
 package struct PhrasePreparationResult: Sendable {
     package let prepared: PreparedPhrase?
     package let failure: NextPhraseFailure?
+    package let recoveryDecision: QualityDecision?
 
     static func success(_ prepared: PreparedPhrase) -> Self {
-        Self(prepared: prepared, failure: nil)
+        Self(prepared: prepared, failure: nil, recoveryDecision: nil)
     }
 
-    static func failed(_ failure: NextPhraseFailure) -> Self {
-        Self(prepared: nil, failure: failure)
+    static func failed(_ failure: NextPhraseFailure, recoveryDecision: QualityDecision? = nil) -> Self {
+        Self(prepared: nil, failure: failure, recoveryDecision: recoveryDecision)
     }
 }
 
@@ -107,7 +108,7 @@ package enum AppPerformancePreparer {
                 stage: failure.stage,
                 code: failure.code,
                 details: failure.details
-            ))
+            ), recoveryDecision: failure.recoveryRejection(for: request)?.decision)
         }
         return projecting(shared)
     }
@@ -540,13 +541,15 @@ package final class TechnoEngine: ObservableObject {
                     if let failure = result.failure {
                         self.markInitialPreparationRejected(
                             for: request,
-                            failure: failure
+                            failure: failure,
+                            qualityDecision: result.recoveryDecision
                         )
                     }
                 } else if let failure = result.failure {
                     self.markNextPhraseRejected(
                         for: request,
-                        failure: failure
+                        failure: failure,
+                        qualityDecision: result.recoveryDecision
                     )
                 }
             }

@@ -201,7 +201,8 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
             // decision; accepted PCM alone crosses the asynchronous handoff.
             let product = outcome.preparedPhrase
             let accepted = product?.prepared.commitEligible == true ? product : nil
-            let rejection = accepted == nil ? product?.prepared.qualityDecision : nil
+            let rejection = accepted == nil ? (product?.prepared.qualityDecision ??
+                outcome.failure?.recoveryRejection(for: request)?.decision) : nil
             self?.stateQueue.async { [weak self, accepted, rejection] in
                 guard let self else { return }
                 guard self.preparingKey == request.key else { return }
