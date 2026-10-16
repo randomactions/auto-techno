@@ -34,6 +34,7 @@ class StudyFormat:
     observation_version: int
     policy_version: int
     driver: str
+    journey_version: int = 2
 
     @property
     def observation(self):
@@ -74,7 +75,10 @@ LEGACY = StudyFormat('v21', 'autotechno-engine51-long-cold-launch-audit.v1',
 CURRENT = StudyFormat('v22', 'autotechno-engine51-effect-dose-v3-long-cold-launch-audit.v1',
     'autotechno-fresh-engine51-effect-dose-v3-long-protocol.v1', 53, 14, 3, 6, 8, 22,
     'run_at0039_engine51_effect_v3_long_study_v1.py')
-FORMATS = {value.key: value for value in (LEGACY, CURRENT)}
+RECOVERY = StudyFormat('v22-recovery', 'autotechno-engine51-successor-recovery-long-cold-launch-audit.v1',
+    'autotechno-fresh-engine51-successor-recovery-long-protocol.v1', 57, 14, 3, 6, 8, 22,
+    'run_at0039_engine51_successor_recovery_long_study_v1.py', journey_version=3)
+FORMATS = {value.key: value for value in (LEGACY, CURRENT, RECOVERY)}
 # Compatibility names describe only the original v21 format.
 OBSERVATION, CORPUS, PROFILE, ADVERSARIAL, HOLDOUT = (
     LEGACY.observation, LEGACY.corpus, LEGACY.profile, LEGACY.adversarial, LEGACY.holdout)
@@ -106,13 +110,22 @@ COLD_SELECTOR = ('PrimaryEvaluatorReadinessTests|KickSourceDynamicsTests|'
     '(boundedRecoveryRequestInput|interruptedRouteSelection|evidenceDirectoryConfinement)'
     '|LongHorizonEffectDoseTests|LatePulseTests|LongHorizonProfessionalPolicyTests')
 CAPTURE_SELECTOR = 'LongHorizonPolicyCalibrationIntegrationTests[/.]generateArtifacts'
+RECOVERY_COLD_SELECTOR = COLD_SELECTOR.replace(
+    '(boundedRecoveryRequestInput|interruptedRouteSelection|evidenceDirectoryConfinement)',
+    '(boundedRecoveryRequestInput|interruptedRouteSelection|evidenceDirectoryConfinement|retainedRepeatSelectionIsBound)') + (
+    '|IterativeSuccessorPreparationTests[/.](childRefusalAndCancellation|rejectedChildRecoveryIsBound|unsafeChildRemainsTerminal)')
+
+
+def cold_selector(fmt):
+    need(fmt in FORMATS.values(), 'known original cold selector format')
+    return RECOVERY_COLD_SELECTOR if fmt == RECOVERY else COLD_SELECTOR
 
 
 def expected_main(fmt, source, study):
     if fmt == LEGACY:
         return ('import Testing\nimport Darwin\n@main struct Runner { static func main() async '
                 '{ exit(await Testing.__swiftPMEntryPoint()) } }\n')
-    need(fmt == CURRENT, 'known original entrypoint format')
+    need(fmt in (CURRENT, RECOVERY), 'known original entrypoint format')
     return '''import Testing
 import Foundation
 import Darwin
@@ -121,7 +134,7 @@ import Darwin
     let args = Array(CommandLine.arguments.dropFirst())
     let env = ProcessInfo.processInfo.environment
     let keys = Set(env.keys.filter { $0.hasPrefix("AUTOTECHNO_") })
-    let cold = args == ["--no-parallel", "--filter", "''' + COLD_SELECTOR + '''"] && keys.isEmpty
+    let cold = args == ["--no-parallel", "--filter", "''' + cold_selector(fmt) + '''"] && keys.isEmpty
     let capture = args == ["--no-parallel", "--filter", "''' + CAPTURE_SELECTOR + '''"]
       && keys == Set(["AUTOTECHNO_RUN_LONG_HORIZON_CALIBRATION", "AUTOTECHNO_LONG_HORIZON_ACCEPTED_HEAD", "AUTOTECHNO_LONG_HORIZON_RESOURCE_DIRECTORY"])
       && env["AUTOTECHNO_RUN_LONG_HORIZON_CALIBRATION"] == "1"
@@ -164,7 +177,8 @@ def verify_compiler_recipe(runner, metadata, fmt, source, study):
          'compiled resource accessor loads exactly the bound runtime bundle')
 
 
-def verify_owned_support(context, proof, metadata, cold, protocol, inventory):
+def verify_owned_support(context, proof, metadata, cold, protocol, inventory, *, study_format=CURRENT):
+    need(study_format in (CURRENT, RECOVERY), 'known owned-support format')
     runner = context.runner
     path = runner/'copied-compiler-support-bindings.json'
     need(path.resolve() in inventory and sha(path) == cold['copiedCompilerSupportBindingsSHA256'],
@@ -211,10 +225,34 @@ def verify_owned_support(context, proof, metadata, cold, protocol, inventory):
     observers = [r for r in proof['files'] if Path(r['source']).name == 'long_horizon_history_integrity.py']
     need(len(observers) == 1, 'one archived original version3 observer')
     original = (context.source_root/'scripts/long_horizon_history_integrity.py').read_bytes()
+    if study_format == RECOVERY:
+        need(hashlib.sha256(original).hexdigest() == observers[0]['sha256'],
+             'recovery observer is the exact tracked integrity implementation, without a patched gate')
+        return
     old = b"e.get('schemaVersion') == 2 and\n            e.get('schemaIdentifier') == 'autotechno-long-horizon-effect-dose.v2'"
     new = b"e.get('schemaVersion') == 3 and\n            e.get('schemaIdentifier') == 'autotechno-long-horizon-effect-dose.v3'"
     need(original.count(old) == 1 and hashlib.sha256(original.replace(old, new)).hexdigest() == observers[0]['sha256'],
          'observer changes only the bound effect schema, retaining every original integrity gate')
+
+
+def verify_journey_versions(fmt, protocol, cold):
+    if fmt != RECOVERY:
+        return
+    need(type(protocol.get('journeySchemaVersion')) is int and
+         protocol['journeySchemaVersion'] == fmt.journey_version and
+         type(cold.get('journeySchemaVersion')) is int and
+         cold['journeySchemaVersion'] == fmt.journey_version,
+         'cold and protocol explicitly bind the recovery journey version')
+
+
+def verify_journey_interpretation(fmt, protocol, cold, producer):
+    """A new cold receipt cannot reinterpret an old compiled journey writer."""
+    verify_journey_versions(fmt, protocol, cold)
+    if fmt != RECOVERY:
+        return
+    versions = re.findall(r'"schema"\s*:\s*"autotechno-long-horizon-shared-journey\.v(\d+)"', producer)
+    need(versions == [str(fmt.journey_version)],
+         'one actual compiled journey writer matches the recovery cold interpretation')
 
 
 @dataclass(frozen=True)
@@ -396,6 +434,7 @@ class Context:
         for seal in seals: string(seal)
         need(f'{value:016x}' == proof['inputBindingFingerprint'], 'recomputed canonical original input binding')
         producer = (self.source_root/'Tests/AutoTechnoCoreTests/LongHorizonPolicyCalibrationIntegrationTests.swift').read_text()
+        verify_journey_interpretation(fmt, protocol, cold, producer)
         for key, count in [('developmentRoots', 7), ('holdoutRoots', 2)]:
             found = re.findall(key + r'\s*:\s*\[UInt64\]\s*=\s*\[([0-9_,\s]+)\]', producer)
             need(len(found) == 1, 'one compiled canonical native cohort declaration')
@@ -417,8 +456,8 @@ class Context:
              re.findall(r'static let adaptationVersion\s*=\s*"([^"]+)"', runtime_source) ==
              [f'autotechno-long-horizon-future-adaptation.v{fmt.runtime_version}'],
              'runtime interpretation comes from original compiled source')
-        if fmt == CURRENT:
-            verify_owned_support(self, proof, metadata, cold, protocol, inventory)
+        if fmt in (CURRENT, RECOVERY):
+            verify_owned_support(self, proof, metadata, cold, protocol, inventory, study_format=fmt)
         attack_enum = policy_source.split('package enum LongHorizonAdversarialAttack:', 1)[1].split('\n}',1)[0]
         attacks = re.findall(r'case \w+ = "([^"]+)"', attack_enum)
         need(len(attacks) == 10 and len(set(attacks)) == 10, 'original canonical adversarial attack inventory')
@@ -490,8 +529,9 @@ def verify_products(protocol, cold, documents, artifacts, status, log, source,
     A successful structural join is not independent native execution attestation.
     No generic result record can supply the separate original-byte context.
     """
-    need(study_format in (LEGACY, CURRENT), 'supported original product format')
+    need(study_format in FORMATS.values(), 'supported original product format')
     fmt = study_format
+    verify_journey_versions(fmt, protocol, cold)
     development = seed_list(protocol['developmentRoots'], 7)
     holdout = seed_list(protocol['holdoutRoots'], 2)
     need(len(set(development + holdout)) == 9, 'development and holdout roots must be disjoint')
@@ -520,7 +560,7 @@ def verify_products(protocol, cold, documents, artifacts, status, log, source,
         document = documents[key]
         row = verify_history(document, binding,
             development + holdout, cold['primaryPolicyVersion'], cold['engineVersion'],
-            effect_schema_version=fmt.effect_version)
+            effect_schema_version=fmt.effect_version, journey_schema_version=fmt.journey_version)
         need((row['rootSeed'], row['sampleRate']) == key, 'history identity matches its original file')
         histories[key] = row
 
@@ -631,10 +671,13 @@ def verify_products(protocol, cold, documents, artifacts, status, log, source,
         currentSourceApplicabilityVerified=False, installedArtifactsVerified=False,
         completeResourceQualification=False, fullPlatformQualified=False,
         runtimeQualification=False, item39Complete=False)
-    if fmt == CURRENT:
+    if fmt in (CURRENT, RECOVERY):
         result.update(schema='autotechno-at0039-long-original-product-verification.v2',
             originalFormat=fmt.key, effectDoseSchemaVersion=fmt.effect_version,
             longPolicyFamilyVersion=fmt.policy_version)
+    if fmt == RECOVERY:
+        result.update(schema='autotechno-at0039-long-original-product-verification.v3',
+            journeySchemaVersion=fmt.journey_version)
     return result
 
 
@@ -670,7 +713,7 @@ def inspect(context, inputs, paths):
             row = verify_history(documents[seed, rate], inputs['inputBindingFingerprint'],
                 inputs['protocol']['developmentRoots'] + inputs['protocol']['holdoutRoots'],
                 inputs['cold']['primaryPolicyVersion'], inputs['cold']['engineVersion'],
-                effect_schema_version=fmt.effect_version)
+                effect_schema_version=fmt.effect_version, journey_schema_version=fmt.journey_version)
             observer = load(paths['observer/'+name+'-audit.json'])
             need(all(observer[k] == value for k,value in row.items()) and
                  observer['source'] == context.source and observer['originalRouteSHA256'] == sha(path) and

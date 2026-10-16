@@ -46,8 +46,8 @@ def compiler_fixture(root, fmt=v.CURRENT):
     return runner, source, study, metadata
 
 
-def owned_fixture(root):
-    runner, source, study, metadata = compiler_fixture(root)
+def owned_fixture(root, fmt=v.CURRENT):
+    runner, source, study, metadata = compiler_fixture(root, fmt)
     copies = {}
     for i in range(12):
         p = runner/'compiler-support'/f'input-{i}'; p.parent.mkdir(exist_ok=True)
@@ -74,7 +74,7 @@ def owned_fixture(root):
     script=source/'scripts/long_horizon_history_integrity.py'
     script.parent.mkdir();script.write_bytes(original)
     proof=dict(files=[dict(source=str(root/'observer/long_horizon_history_integrity.py'),
-        sha256=hashlib.sha256(replacement).hexdigest())])
+        sha256=hashlib.sha256(original if fmt == v.RECOVERY else replacement).hexdigest())])
     inventory={p.resolve(): {} for p in runner.iterdir() if p.is_file()}
     return SimpleNamespace(runner=runner,source_root=source),proof,metadata,cold,protocol,inventory
 
@@ -91,11 +91,15 @@ def products(study_format=v.LEGACY):
         runtimeActivation=False, item39Complete=False)
     cold = dict(source=SOURCE, developmentRoots=development, holdoutRoots=holdout,
         sampleRates=[44100, 48000], primaryPolicyVersion='policy', engineVersion=ENGINE)
+    if fmt == v.RECOVERY:
+        protocol['journeySchemaVersion'] = cold['journeySchemaVersion'] = 3
     documents, observations = {}, {}
     for seed in development + holdout:
         routes = []
         for rate in v.RATES:
-            document = fixtures.fixture(rate, effect_schema_version=fmt.effect_version)
+            document = (fixtures.HistoryIntegrityTests.recovery_fixture(rate) if fmt == v.RECOVERY
+                else fixtures.fixture(rate, effect_schema_version=fmt.effect_version))
+            document['schema'] = f'autotechno-long-horizon-shared-journey.v{fmt.journey_version}'
             j = document['journey']; j['rootSeed'] = seed
             bars = 7800 if rate == 44100 else 9000
             for family in ['signal', 'semantic', 'effects']: j[family]['rootSeed'] = seed
@@ -170,8 +174,8 @@ def products(study_format=v.LEGACY):
 
 
 class CompilerRecipeTests(unittest.TestCase):
-    def test_both_known_entrypoints_and_actual_compiler_input_partition(self):
-        for fmt in (v.LEGACY,v.CURRENT):
+    def test_known_entrypoints_and_actual_compiler_input_partition(self):
+        for fmt in v.FORMATS.values():
             with self.subTest(fmt=fmt.key),tempfile.TemporaryDirectory() as directory:
                 runner,source,study,metadata=compiler_fixture(Path(directory),fmt)
                 v.verify_compiler_recipe(runner,metadata,fmt,SOURCE,study)
@@ -203,6 +207,39 @@ class CompilerRecipeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             v.verify_owned_support(*owned_fixture(Path(directory)))
 
+    def test_recovery_uses_exact_tracked_observer_without_an_edited_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            args=owned_fixture(Path(directory), v.RECOVERY)
+            v.verify_owned_support(*args, study_format=v.RECOVERY)
+            args[1]['files'][0]['sha256'] = '0'*64
+            with self.assertRaisesRegex(ValueError, 'exact tracked integrity'):
+                v.verify_owned_support(*args, study_format=v.RECOVERY)
+
+    def test_recovery_entrypoint_requires_the_extended_cold_selector(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runner,source,study,metadata=compiler_fixture(Path(directory),v.RECOVERY)
+            main=runner/'main.swift'
+            self.assertIn('rejectedChildRecoveryIsBound',main.read_text())
+            main.write_text(v.expected_main(v.CURRENT,SOURCE,study))
+            metadata['compilerSupport'][str(main)] = v.sha(main)
+            with self.assertRaisesRegex(ValueError, 'entrypoint'):
+                v.verify_compiler_recipe(runner,metadata,v.RECOVERY,SOURCE,study)
+
+    def test_recovery_cold_interpretation_requires_exact_version_and_compiled_writer(self):
+        producer='let row = ["schema": "autotechno-long-horizon-shared-journey.v3"]'
+        protocol=cold=dict(journeySchemaVersion=3)
+        v.verify_journey_interpretation(v.RECOVERY,protocol,cold,producer)
+        for version in [None,True,3.0,'3',2,4]:
+            for boundary in ['cold','protocol']:
+                with self.subTest(version=version,boundary=boundary),self.assertRaises(ValueError):
+                    bad={} if version is None else dict(journeySchemaVersion=version)
+                    v.verify_journey_interpretation(v.RECOVERY,
+                        bad if boundary=='protocol' else protocol,
+                        bad if boundary=='cold' else cold,producer)
+        for writer in ['',producer.replace('.v3','.v2'),producer+producer]:
+            with self.subTest(writer=writer),self.assertRaises(ValueError):
+                v.verify_journey_interpretation(v.RECOVERY,protocol,cold,writer)
+
     def test_current_owned_inputs_reject_byte_changes_or_external_cache(self):
         for case in ['copy','cache','duplicate-cache','protocol','cold-boolean','guard-output',
                      'guard-test','observer','generic-copies']:
@@ -226,6 +263,31 @@ class CompilerRecipeTests(unittest.TestCase):
 
 
 class LongProductTests(unittest.TestCase):
+    def test_recovery_complete_shape_preserves_all_history_gates_without_promotion(self):
+        result = v.verify_products(*products(v.RECOVERY), study_format=v.RECOVERY)
+        self.assertEqual(result['schema'], 'autotechno-at0039-long-original-product-verification.v3')
+        self.assertEqual(result['journeySchemaVersion'],3)
+        self.assertEqual(result['completeHistories'],18)
+        self.assertFalse(result['crossRateHistoryEqualityRequired'])
+        for key in ['nativeExecutionProven','currentSourceApplicabilityVerified',
+                    'installedArtifactsVerified','completeResourceQualification',
+                    'fullPlatformQualified','runtimeQualification','item39Complete']:
+            self.assertIs(result[key],False)
+
+    def test_recovery_native_histories_versions_and_per_rate_gates_cannot_be_bypassed(self):
+        mutations = [lambda a:a[0].pop('journeySchemaVersion'),
+            lambda a:a[1].update(journeySchemaVersion=True),
+            lambda a:a[2].pop((9,48000)),
+            lambda a:a[2][1,44100].update(schema='autotechno-long-horizon-shared-journey.v2'),
+            lambda a:a[2][1,44100]['journey']['rejectedPreparations'][0].update(rejectedSuccessorPhraseIndex=12),
+            lambda a:a[2][1,48000]['journey'].update(completedRequestedScope=False),
+            lambda a:a[3]['holdoutVerdicts']['journeys'][0]['verdict']['routeVerdicts'][1]['verdict'].update(accepted=False),
+            lambda a:a[0].update(maximumRenderPasses=3)]
+        for i,mutate in enumerate(mutations):
+            with self.subTest(i=i),self.assertRaises((ValueError,KeyError)):
+                args=products(v.RECOVERY);mutate(args)
+                v.verify_products(*args,study_format=v.RECOVERY)
+
     def test_current_complete_shape_preserves_each_native_history_without_promotion(self):
         result = v.verify_products(*products(v.CURRENT), study_format=v.CURRENT)
         self.assertEqual(result['schema'], 'autotechno-at0039-long-original-product-verification.v2')
@@ -240,9 +302,11 @@ class LongProductTests(unittest.TestCase):
             self.assertIs(result[key], False)
 
     def test_known_formats_cannot_borrow_each_others_evidence(self):
-        for fmt, other in [(v.LEGACY, v.CURRENT), (v.CURRENT, v.LEGACY)]:
-            with self.subTest(fmt=fmt.key), self.assertRaises(ValueError):
-                v.verify_products(*products(fmt), study_format=other)
+        for fmt in v.FORMATS.values():
+            for other in v.FORMATS.values():
+                if fmt==other:continue
+                with self.subTest(fmt=fmt.key,other=other.key), self.assertRaises(ValueError):
+                    v.verify_products(*products(fmt), study_format=other)
         for rate in v.RATES:
             with self.subTest(rate=rate), self.assertRaises(ValueError):
                 args = products(v.CURRENT)
@@ -272,7 +336,8 @@ class LongProductTests(unittest.TestCase):
                 v.cold_format(proof)
 
     def test_cold_format_cannot_downgrade_native_control_count_before_git(self):
-        for fmt, count in [(v.CURRENT,26),(v.LEGACY,53),(v.CURRENT,True),(v.CURRENT,53.0)]:
+        for fmt, count in [(v.CURRENT,26),(v.LEGACY,53),(v.CURRENT,True),(v.CURRENT,53.0),
+                           (v.RECOVERY,53),(v.RECOVERY,True),(v.RECOVERY,57.0)]:
             with self.subTest(fmt=fmt.key,count=count),tempfile.TemporaryDirectory() as directory:
                 root=Path(directory)
                 proof=dict(schema=fmt.cold_schema,source=SOURCE,coldNativeControls=count,
@@ -372,6 +437,9 @@ class LongProductTests(unittest.TestCase):
     def test_current_terminal_preservation_roundtrip_preserves_current_version_and_scope(self):
         self.terminal_roundtrip(v.CURRENT)
 
+    def test_recovery_terminal_roundtrip_retains_explicit_version_and_original_bytes(self):
+        self.terminal_roundtrip(v.RECOVERY)
+
     def terminal_roundtrip(self, fmt):
         # Only the cold-context boundary is replaced by unit data. The real CLI
         # cannot use this substitute and independently checks Git/build/runtime.
@@ -390,7 +458,7 @@ class LongProductTests(unittest.TestCase):
                 name=f'actual-journey-{seed}-{rate}'
                 path=study/(name+'.json');write(path,document)
                 observed=v.verify_history(document,binding,list(range(1,10)),'policy',ENGINE,
-                    effect_schema_version=fmt.effect_version)
+                    effect_schema_version=fmt.effect_version,journey_schema_version=fmt.journey_version)
                 write(evidence/(name+'-audit.json'),dict(**observed,source=source,
                     originalRouteSHA256=v.sha(path),coldByteBindingsRechecked=True,historyIndependentlyAudited=True))
             for key,name in fmt.artifacts.items():write(study/name,artifacts[key])

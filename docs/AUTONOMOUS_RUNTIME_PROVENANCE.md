@@ -3243,8 +3243,8 @@ sealed candidate products, imports an archive as construction input or changes
 producer files. The optional collection mode describes existing preserved bytes;
 missing, partial, live or failed studies cannot produce a terminal manifest.
 
-The reader recognizes only the declared original v21/dose2 and v22/dose3 harness
-formats. Independently pinned cold records select the expected inventory, cold
+The reader recognizes only the declared original v21/dose2, v22/dose3 and
+v22-recovery/dose3/journey3 harness formats. Independently pinned cold records select the expected inventory, cold
 test count and artifact names; the frozen compiled policy, runtime and dose source
 must agree with every selected version. An old format cannot admit a newer source
 or borrow the other format's observations. Current records additionally bind owned
@@ -3253,6 +3253,17 @@ observer's narrowly defined schema change. The actual compiler source/object lis
 known Testing entrypoint and resource accessor must match their inventories; an
 unused inventory or a main that prints a successful test summary cannot substitute.
 These checks authenticate original bytes and products, not current item completion.
+
+The recovery format requires 57 actual cold tests, including retained-repeat
+ownership and descendant rejection/cancellation controls, with zero skips. Its
+exact guarded entrypoint admits only that extended selector or the source-bound
+canonical capture invocation. Cold and protocol records must explicitly agree
+on journey schema3 and match the compiled native journey writer. The archived
+observer is the exact tracked integrity helper, without a private gate patch;
+history inspection explicitly binds journey3 and effect-dose3. Older frozen
+formats retain their original selectors, counts, writer interpretation and
+observer rules. Neither a version relabel nor these synthetic reader controls
+constructs or qualifies a new complete study.
 
 All seven development and two disjoint holdout roots require both native rates
 and eighteen complete independently checked histories. Corpus routes must join
