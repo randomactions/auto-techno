@@ -3217,6 +3217,17 @@ sealed candidate products, imports an archive as construction input or changes
 producer files. The optional collection mode describes existing preserved bytes;
 missing, partial, live or failed studies cannot produce a terminal manifest.
 
+The reader recognizes only the declared original v21/dose2 and v22/dose3 harness
+formats. Independently pinned cold records select the expected inventory, cold
+test count and artifact names; the frozen compiled policy, runtime and dose source
+must agree with every selected version. An old format cannot admit a newer source
+or borrow the other format's observations. Current records additionally bind owned
+macro/header copies, the isolated cache, exact pre-Testing guards and the archived
+observer's narrowly defined schema change. The actual compiler source/object lists,
+known Testing entrypoint and resource accessor must match their inventories; an
+unused inventory or a main that prints a successful test summary cannot substitute.
+These checks authenticate original bytes and products, not current item completion.
+
 All seven development and two disjoint holdout roots require both native rates
 and eighteen complete independently checked histories. Corpus routes must join
 their own original signal/semantic identities, counts, operator deltas and effect

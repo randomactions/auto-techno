@@ -17,7 +17,7 @@ def metrics(count):
                  mean=0.0, maximum=1.0) for name in history.METRICS]
 
 
-def fixture(rate=44100):
+def fixture(rate=44100, *, effect_schema_version=2):
     phrases, bars, seed = 780, 7800, 1
     signal = dict(schemaVersion=3,
         schemaIdentifier='autotechno-long-horizon-signal-trajectory-report.v3',
@@ -34,7 +34,8 @@ def fixture(rate=44100):
     semantic = dict(schemaVersion=1, schemaIdentifier='autotechno-long-horizon-semantic.v1',
         rootSeed=seed, engineVersion='fixture-engine', observedPhraseCount=phrases, observedBarCount=bars,
         startingBar=0, startingPhraseIndex=0, nextExpectedBar=bars, nextExpectedPhraseIndex=phrases)
-    effects = dict(schemaVersion=2, schemaIdentifier='autotechno-long-horizon-effect-dose.v2',
+    effects = dict(schemaVersion=effect_schema_version,
+        schemaIdentifier=f'autotechno-long-horizon-effect-dose.v{effect_schema_version}',
         rootSeed=seed, phraseCount=phrases, barCount=bars)
     for row in (signal, semantic, effects):
         row.update(availability='available', qualificationStatus='unavailable',
@@ -56,6 +57,18 @@ def fixture(rate=44100):
 
 
 class HistoryIntegrityTests(unittest.TestCase):
+    def test_effect_interpretation_requires_the_explicit_bound_pair(self):
+        document = fixture(effect_schema_version=3)
+        row = history.verify_history(document, 'binding', list(range(1,10)), 'policy',
+            'fixture-engine', effect_schema_version=3)
+        self.assertEqual(row['acceptedBars'], 7800)
+        with self.assertRaises(history.HistoryIntegrityError):
+            self.verify(document)
+        for version in [True, 3.0, '3', None, 4]:
+            with self.subTest(version=version), self.assertRaises(history.HistoryIntegrityError):
+                history.verify_history(document, 'binding', list(range(1,10)), 'policy',
+                    'fixture-engine', effect_schema_version=version)
+
     def verify(self, document):
         return history.verify_history(document, 'binding', list(range(1, 10)), 'policy', 'fixture-engine')
 

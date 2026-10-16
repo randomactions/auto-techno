@@ -19,11 +19,79 @@ from at0039_primary_verification import (VerificationError, need, canonical,
 from long_horizon_history_integrity import verify_history, SOURCE_INPUTS
 
 RATES = (44100, 48000)
-OBSERVATION = 'autotechno-long-horizon-policy-observation.v7'
-CORPUS = 'autotechno-long-horizon-policy-corpus.v7'
-PROFILE = 'autotechno-long-horizon-professional-profile.v21'
-ADVERSARIAL = 'autotechno-long-horizon-adversarial.v21'
-HOLDOUT = 'autotechno-long-horizon-holdout.v21'
+
+
+@dataclass(frozen=True)
+class StudyFormat:
+    """Closed original harness formats, never a runtime policy selector."""
+    key: str
+    cold_schema: str
+    protocol_schema: str
+    cold_tests: int
+    test_files: int
+    effect_version: int
+    runtime_version: int
+    observation_version: int
+    policy_version: int
+    driver: str
+
+    @property
+    def observation(self):
+        return f'autotechno-long-horizon-policy-observation.v{self.observation_version}'
+
+    @property
+    def corpus(self):
+        return f'autotechno-long-horizon-policy-corpus.v{self.observation_version}'
+
+    @property
+    def profile(self):
+        return f'autotechno-long-horizon-professional-profile.v{self.policy_version}'
+
+    @property
+    def adversarial(self):
+        return f'autotechno-long-horizon-adversarial.v{self.policy_version}'
+
+    @property
+    def holdout(self):
+        return f'autotechno-long-horizon-holdout.v{self.policy_version}'
+
+    @property
+    def runtime(self):
+        return f'autotechno-long-horizon-runtime-observation.v{self.runtime_version}'
+
+    @property
+    def artifacts(self):
+        return dict(development=f'long-horizon-development-corpus-local-v{self.observation_version}.json',
+            holdout=f'long-horizon-holdout-corpus-local-v{self.observation_version}.json',
+            profile=f'long-horizon-professional-profile-v{self.policy_version}.json',
+            adversarial=f'long-horizon-adversarial-suite-v{self.policy_version}.json',
+            holdoutVerdicts=f'long-horizon-holdout-v{self.policy_version}.json')
+
+
+LEGACY = StudyFormat('v21', 'autotechno-engine51-long-cold-launch-audit.v1',
+    'autotechno-fresh-engine51-long-protocol.v1', 26, 13, 2, 5, 7, 21,
+    'run_at0039_engine51_long_study_v1.py')
+CURRENT = StudyFormat('v22', 'autotechno-engine51-effect-dose-v3-long-cold-launch-audit.v1',
+    'autotechno-fresh-engine51-effect-dose-v3-long-protocol.v1', 53, 14, 3, 6, 8, 22,
+    'run_at0039_engine51_effect_v3_long_study_v1.py')
+FORMATS = {value.key: value for value in (LEGACY, CURRENT)}
+# Compatibility names describe only the original v21 format.
+OBSERVATION, CORPUS, PROFILE, ADVERSARIAL, HOLDOUT = (
+    LEGACY.observation, LEGACY.corpus, LEGACY.profile, LEGACY.adversarial, LEGACY.holdout)
+
+
+def bound_format(key):
+    need(type(key) is str and key in FORMATS, 'supported original study format required')
+    return FORMATS[key]
+
+
+def cold_format(proof):
+    need(isinstance(proof, dict), 'original cold proof object required')
+    matches = [value for value in FORMATS.values() if value.cold_schema == proof.get('schema')]
+    need(len(matches) == 1, 'supported original cold schema required')
+    return matches[0]
+
+
 IMPLEMENTATION_SHA256 = {str(Path(name).resolve()): sha(Path(name)) for name in
     [__file__, canonical.__code__.co_filename, verify_history.__code__.co_filename]}
 
@@ -31,6 +99,122 @@ IMPLEMENTATION_SHA256 = {str(Path(name).resolve()): sha(Path(name)) for name in
 def stable_implementation():
     need(all(sha(Path(path)) == digest for path,digest in IMPLEMENTATION_SHA256.items()),
          'verifier or a verification dependency changed during audit')
+
+
+COLD_SELECTOR = ('PrimaryEvaluatorReadinessTests|KickSourceDynamicsTests|'
+    'LongHorizonEnergyCoordinationTests|LongHorizonPolicyCalibrationIntegrationTests[/.]'
+    '(boundedRecoveryRequestInput|interruptedRouteSelection|evidenceDirectoryConfinement)'
+    '|LongHorizonEffectDoseTests|LatePulseTests|LongHorizonProfessionalPolicyTests')
+CAPTURE_SELECTOR = 'LongHorizonPolicyCalibrationIntegrationTests[/.]generateArtifacts'
+
+
+def expected_main(fmt, source, study):
+    if fmt == LEGACY:
+        return ('import Testing\nimport Darwin\n@main struct Runner { static func main() async '
+                '{ exit(await Testing.__swiftPMEntryPoint()) } }\n')
+    need(fmt == CURRENT, 'known original entrypoint format')
+    return '''import Testing
+import Foundation
+import Darwin
+@main struct GuardedCurrentLongRunner {
+  static func main() async {
+    let args = Array(CommandLine.arguments.dropFirst())
+    let env = ProcessInfo.processInfo.environment
+    let keys = Set(env.keys.filter { $0.hasPrefix("AUTOTECHNO_") })
+    let cold = args == ["--no-parallel", "--filter", "''' + COLD_SELECTOR + '''"] && keys.isEmpty
+    let capture = args == ["--no-parallel", "--filter", "''' + CAPTURE_SELECTOR + '''"]
+      && keys == Set(["AUTOTECHNO_RUN_LONG_HORIZON_CALIBRATION", "AUTOTECHNO_LONG_HORIZON_ACCEPTED_HEAD", "AUTOTECHNO_LONG_HORIZON_RESOURCE_DIRECTORY"])
+      && env["AUTOTECHNO_RUN_LONG_HORIZON_CALIBRATION"] == "1"
+      && env["AUTOTECHNO_LONG_HORIZON_ACCEPTED_HEAD"] == "''' + source + '''"
+      && env["AUTOTECHNO_LONG_HORIZON_RESOURCE_DIRECTORY"] == "''' + str(study) + '''"
+    guard cold || capture else { _exit(97) }
+    exit(await Testing.__swiftPMEntryPoint())
+  }
+}
+'''
+
+
+def verify_compiler_recipe(runner, metadata, fmt, source, study):
+    """Bind actual compiler inputs, not an unused inventory beside a binary."""
+    main = runner/'main.swift'
+    accessor = runner/'resource_bundle_accessor.swift'
+    support = metadata['compilerSupport']
+    need(str(main) in support and str(accessor) in support,
+         'entrypoint and resource accessor are bound compiler inputs')
+    need(main.read_text() == expected_main(fmt, source, study),
+         'exact known original Testing entrypoint, without fabricated test output')
+    commands = metadata['commands']
+    tests = {p for p in metadata['sources'] if '/Tests/' in p}
+    need(Counter(p for p in commands['tests'] if p.endswith('.swift')) == Counter([*tests, str(main)]),
+         'every linked test source and only the bound entrypoint are declared')
+    need(Counter(p for p in commands['tests'] if p.endswith('.o')) == Counter(metadata['objects'].keys()),
+         'every actual linked object is bound exactly once')
+    owners = dict(core='AutoTechnoCore', dsp='AutoTechnoDSP', transport='AutoTechnoTransport')
+    for key, owner in owners.items():
+        expected = [p for p in metadata['sources'] if '/Sources/'+owner+'/' in p]
+        if key == 'dsp': expected += [str(accessor)]
+        need(Counter(p for p in commands[key] if p.endswith('.swift')) == Counter(expected),
+             'no undeclared original production compiler input: ' + key)
+    bundles = {Path(p).parent for p in metadata['actualRuntimeResources']}
+    need(len(bundles) == 1, 'one actual runtime resource bundle')
+    bundle = next(iter(bundles))
+    need(bundle.resolve().is_relative_to(runner.resolve()) and
+         accessor.read_text() == 'import Foundation\nextension Foundation.Bundle { static let module = '
+         'Bundle(path: "'+str(bundle)+'")! }\n' and commands['dsp'].count(str(accessor)) == 1,
+         'compiled resource accessor loads exactly the bound runtime bundle')
+
+
+def verify_owned_support(context, proof, metadata, cold, protocol, inventory):
+    runner = context.runner
+    path = runner/'copied-compiler-support-bindings.json'
+    need(path.resolve() in inventory and sha(path) == cold['copiedCompilerSupportBindingsSHA256'],
+         'original owned compiler-support copy manifest')
+    copies = load(path)
+    need(len(copies) == 12 and len({r['copied'] for r in copies.values()}) == 12,
+         'twelve distinct owned dependency inputs')
+    for original, row in copies.items():
+        copied = Path(row['copied'])
+        need(Path(original).is_absolute() and copied.resolve().is_relative_to((runner/'compiler-support').resolve())
+             and metadata['compilerSupport'].get(str(copied)) == row['sha256'] and
+             sha(copied) == row['sha256'], 'owned macro/header/module copy bytes')
+    for name in metadata['compilerSupport']:
+        need(Path(name).resolve().is_relative_to(runner.resolve()), 'current compiler support is owned')
+    for key, command in metadata['commands'].items():
+        need(command.count('-module-cache-path') == 1 and
+             command[command.index('-module-cache-path')+1] == str(runner/'ClangModuleCache') and
+             not any('autotechno-pr6-verify-20261011' in arg for arg in command),
+             'current compiler command uses only its isolated inputs/cache: '+key)
+    for key, expected in dict(effectDoseSchemaVersion=3, runtimeObservationVersion=6,
+            longObservationVersion=8, longPolicyFamilyVersion=22).items():
+        need(type(protocol[key]) is int and protocol[key] == expected,
+             'protocol interpretation matches original compiled source: '+key)
+    need(type(cold['effectDoseSchemaVersion']) is int and cold['effectDoseSchemaVersion'] == 3 and
+         type(cold['longPolicyFamilyVersion']) is int and cold['longPolicyFamilyVersion'] == 22,
+         'cold interpretation matches compiled source')
+    guards = runner/'entry-guard-controls.json'
+    need(guards.resolve() in inventory, 'original pre-Testing guard controls')
+    record = load(guards)
+    args = ['--no-parallel', '--filter', CAPTURE_SELECTOR]
+    expected = [([], {}), (['--help'], {}), (args, {}),
+                (args, {'AUTOTECHNO_RUN_LONG_HORIZON_CALIBRATION': '1'})]
+    need(record['allFourRefusedBeforeTesting'] is True and record['captureStarted'] is False and
+         record['qualified'] is False and
+         len(record['cases']) == 4, 'four exact original entry guards')
+    for i, (row, (arguments, environment)) in enumerate(zip(record['cases'], expected)):
+        log = runner/f'guard-{i}.log'
+        need(log.resolve() in inventory and log.is_file() and not log.is_symlink() and log.stat().st_size == 0 and
+             type(row['case']) is int and row['case'] == i and row['arguments'] == arguments and
+             row['extraEnvironment'] == environment and type(row['exitCode']) is int and row['exitCode'] == 97 and
+             type(row['outputBytes']) is int and row['outputBytes'] == 0 and
+             type(row['actualNativeTests']) is int and row['actualNativeTests'] == 0,
+             'original guard refused before any native test')
+    observers = [r for r in proof['files'] if Path(r['source']).name == 'long_horizon_history_integrity.py']
+    need(len(observers) == 1, 'one archived original version3 observer')
+    original = (context.source_root/'scripts/long_horizon_history_integrity.py').read_bytes()
+    old = b"e.get('schemaVersion') == 2 and\n            e.get('schemaIdentifier') == 'autotechno-long-horizon-effect-dose.v2'"
+    new = b"e.get('schemaVersion') == 3 and\n            e.get('schemaIdentifier') == 'autotechno-long-horizon-effect-dose.v3'"
+    need(original.count(old) == 1 and hashlib.sha256(original.replace(old, new)).hexdigest() == observers[0]['sha256'],
+         'observer changes only the bound effect schema, retaining every original integrity gate')
 
 
 @dataclass(frozen=True)
@@ -73,18 +257,26 @@ class Context:
         proof = load(inside(self.evidence_root, self.cold_proof))
         need(sha(inside(self.evidence_root, self.cold_proof)) == self.cold_sha256,
              'independently pinned original cold proof SHA256')
-        need(proof['schema'] == 'autotechno-engine51-long-cold-launch-audit.v1' and
-             proof['source'] == self.source and proof['coldNativeControls'] == 26 and
+        fmt = cold_format(proof)
+        need(proof['source'] == self.source and type(proof['coldNativeControls']) is int and
+             proof['coldNativeControls'] == fmt.cold_tests and
              all(proof[key] is True for key in ['zeroSkips', 'freshInitialState',
                  'explicitImmutableRefBoundBeforePCM']) and
              all(proof[key] is False for key in ['archiveImport', 'partialStateImport',
                  'historicalRetag', 'longHorizonQualified', 'fullPlatformQualified',
                  'runtimeQualified', 'item39Complete']), 'original cold scope and controls')
         cold = proof['cold']
+        for key, expected in dict(sourceFiles=95+fmt.test_files, objects=183,
+                compilerSupport=18, modules=12, actualRuntimeResources=15).items():
+            need(type(cold[key]) is int and cold[key] == expected,
+                 'complete known original harness inventory: ' + key)
+        need(cold['engineVersion'] == 'autotechno-canonical-engine.v51',
+             'known engine51 original study required')
         need(cold['source'] == self.source and self.git('rev-parse', 'HEAD') == self.source and
              not self.git('status', '--porcelain', '--untracked-files=all'), 'clean exact original source')
         records = proof['files']
-        need(records and len({x['archive'] for x in records}) == len(records) and
+        need(isinstance(records, list) and 0 < len(records) <= 128 and
+             len({x['archive'] for x in records}) == len(records) and
              len({x['source'] for x in records}) == len(records), 'unique original cold file inventory')
         for record in records:
             live = Path(record['source'])
@@ -98,6 +290,11 @@ class Context:
         tracked = load(self.runner/'tracked-inputs.json')
         protocol = load(self.runner/'execution-protocol.json')
         pre = load(self.runner/'pre-PCM-audit.json')
+        need(protocol['schema'] == fmt.protocol_schema,
+             'original protocol matches its bound harness format')
+        need(pre['schema'] == fmt.protocol_schema.replace('-protocol.v1', '-pre-PCM-audit.v1') and
+             all(pre[key] is False for key in ['longHorizonQualified', 'fullPlatformQualified',
+                 'runtimeQualified', 'item39Complete']), 'original pre-capture interpretation and scope')
         need(metadata['source'] == self.source and pre['cold'] == cold and
              pre['captureStarted'] is False and pre['archiveImport'] is False and
              pre['inputBindingFingerprint'] == proof['inputBindingFingerprint'],
@@ -140,11 +337,12 @@ class Context:
                     need(tracked.get(relative) == digest, 'compiled bytes are original tracked Git inputs')
         production = {p for p in metadata['sources'] if '/Sources/' in p}
         tests = {p for p in metadata['sources'] if '/Tests/' in p}
-        need(len(production) == 95 and len(tests) == 13 and
+        need(len(production) == 95 and len(tests) == fmt.test_files and
              production == {p for key in ['core', 'dsp', 'transport'] for p in
                 metadata['commands'][key] if p.endswith('.swift') and '/Sources/' in p} and
              tests == {p for p in metadata['commands']['tests'] if p.endswith('.swift') and '/Tests/' in p},
              'actual compiler commands include every original production and test input')
+        verify_compiler_recipe(self.runner, metadata, fmt, self.source, Path(protocol['output']))
         for key in ['core', 'dsp', 'transport', 'tests']:
             worker = load(self.runner/(key+'-compile-worker.json'))
             state = load(self.runner/(key+'-compile-status.json'))
@@ -164,11 +362,12 @@ class Context:
              'actual runtime bundle bytes equal original source resources')
         build_status = load(self.runner/'build-status.json')
         need(type(build_status['exitCode']) is int and build_status['exitCode'] == 0 and
-             build_status['source'] == self.source and build_status['actualNativeTests'] == 26 and
+             build_status['source'] == self.source and type(build_status['actualNativeTests']) is int and
+             build_status['actualNativeTests'] == fmt.cold_tests and
              build_status['zeroSkips'] is True and build_status['allActualInputsUnchanged'] is True,
              'original successful compiled and cold native controls')
         cold_text = raw_file(self.runner/'cold-controls.log').decode('utf-8')
-        need(len(re.findall(r'Test run with 26 tests passed after [0-9.]+ seconds\.', cold_text)) == 1 and
+        need(len(re.findall(r'Test run with '+str(fmt.cold_tests)+r' tests passed after [0-9.]+ seconds\.', cold_text)) == 1 and
              'skipped' not in cold_text.lower() and 'recorded an issue' not in cold_text,
              'original complete cold control stdout')
         source_text = (self.source_root/'Sources/AutoTechnoCore/QualityQualification.swift').read_text()
@@ -203,18 +402,30 @@ class Context:
             seeds = [int(x.strip().replace('_', '')) for x in found[0].split(',') if x.strip()]
             need(seed_list(seeds, count) == cold[key] == protocol[key], 'compiled canonical cohort identity')
         policy_source = (self.source_root/'Sources/AutoTechnoDSP/LongHorizonProfessionalPolicy.swift').read_text()
-        for name, expected in [('observationVersion', OBSERVATION), ('corpusVersion', CORPUS),
-                               ('profileVersion', PROFILE), ('adversarialVersion', ADVERSARIAL),
-                               ('holdoutVersion', HOLDOUT)]:
+        for name, expected in [('observationVersion', fmt.observation), ('corpusVersion', fmt.corpus),
+                               ('profileVersion', fmt.profile), ('adversarialVersion', fmt.adversarial),
+                               ('holdoutVersion', fmt.holdout)]:
             need(re.findall(r'static let '+name+r'\s*=\s*"([^"]+)"', policy_source) == [expected],
                  'schema comes from the original compiled policy: ' + name)
+        effect_source = (self.source_root/'Sources/AutoTechnoDSP/LongHorizonEffectDose.swift').read_text()
+        need(re.findall(r'static let schemaVersion\s*=\s*(\d+)', effect_source) == [str(fmt.effect_version)] and
+             re.findall(r'static let schemaIdentifier\s*=\s*"([^"]+)"', effect_source) ==
+             [f'autotechno-long-horizon-effect-dose.v{fmt.effect_version}'],
+             'effect interpretation comes from original compiled source')
+        runtime_source = (self.source_root/'Sources/AutoTechnoDSP/LongHorizonFutureAdaptation.swift').read_text()
+        need(re.findall(r'static let observationVersion\s*=\s*"([^"]+)"', runtime_source) == [fmt.runtime] and
+             re.findall(r'static let adaptationVersion\s*=\s*"([^"]+)"', runtime_source) ==
+             [f'autotechno-long-horizon-future-adaptation.v{fmt.runtime_version}'],
+             'runtime interpretation comes from original compiled source')
+        if fmt == CURRENT:
+            verify_owned_support(self, proof, metadata, cold, protocol, inventory)
         attack_enum = policy_source.split('package enum LongHorizonAdversarialAttack:', 1)[1].split('\n}',1)[0]
         attacks = re.findall(r'case \w+ = "([^"]+)"', attack_enum)
         need(len(attacks) == 10 and len(set(attacks)) == 10, 'original canonical adversarial attack inventory')
-        drivers = [r for r in records if Path(r['source']).name == 'run_at0039_engine51_long_study_v1.py']
+        drivers = [r for r in records if Path(r['source']).name == fmt.driver]
         need(len(drivers) == 1, 'one preserved original launch and observer driver')
         stable_implementation()
-        return dict(source=self.source, cold=cold, protocol=protocol,
+        return dict(source=self.source, cold=cold, protocol=protocol, formatKey=fmt.key,
                     inputBindingFingerprint=proof['inputBindingFingerprint'], attacks=attacks,
                     coldProofSHA256=self.cold_sha256,
                     driverSHA256=drivers[0]['sha256'],
@@ -273,12 +484,14 @@ def projected_effects(report):
 
 
 def verify_products(protocol, cold, documents, artifacts, status, log, source,
-                    binding, attacks):
+                    binding, attacks, *, study_format=LEGACY):
     """Join all original native products; a caller must authenticate their bytes.
 
     A successful structural join is not independent native execution attestation.
     No generic result record can supply the separate original-byte context.
     """
+    need(study_format in (LEGACY, CURRENT), 'supported original product format')
+    fmt = study_format
     development = seed_list(protocol['developmentRoots'], 7)
     holdout = seed_list(protocol['holdoutRoots'], 2)
     need(len(set(development + holdout)) == 9, 'development and holdout roots must be disjoint')
@@ -306,7 +519,8 @@ def verify_products(protocol, cold, documents, artifacts, status, log, source,
     for key in sorted(expected):
         document = documents[key]
         row = verify_history(document, binding,
-            development + holdout, cold['primaryPolicyVersion'], cold['engineVersion'])
+            development + holdout, cold['primaryPolicyVersion'], cold['engineVersion'],
+            effect_schema_version=fmt.effect_version)
         need((row['rootSeed'], row['sampleRate']) == key, 'history identity matches its original file')
         histories[key] = row
 
@@ -314,14 +528,14 @@ def verify_products(protocol, cold, documents, artifacts, status, log, source,
     observations = {}
     for partition, seeds in [('development', development), ('holdout', holdout)]:
         corpus = artifacts[partition]
-        need(corpus['schemaVersion'] == CORPUS and corpus['engineVersion'] == engine and
+        need(corpus['schemaVersion'] == fmt.corpus and corpus['engineVersion'] == engine and
              corpus['primaryPolicyVersion'] == policy, 'exact original corpus identity')
         rows = corpus['observations']
         need(len(rows) == len(seeds) and Counter(x['rootSeed'] for x in rows) == Counter(seeds),
              'complete exact corpus roots with multiplicity')
         for observation in rows:
             seed = observation['rootSeed']
-            need(observation['schemaVersion'] == OBSERVATION and
+            need(observation['schemaVersion'] == fmt.observation and
                  observation['engineVersion'] == engine and observation['primaryPolicyVersion'] == policy,
                  'original policy observation identity')
             routes = observation['routes']
@@ -332,7 +546,7 @@ def verify_products(protocol, cold, documents, artifacts, status, log, source,
                 rate = route['sampleRate']; key = seed, rate
                 journey = documents[key]['journey']
                 signal, semantic = journey['signal'], journey['semantic']
-                need(route['schemaVersion'] == 'autotechno-long-horizon-runtime-observation.v5' and
+                need(route['schemaVersion'] == fmt.runtime and
                      route['rootSeed'] == seed and route['engineVersion'] == engine and
                      route['primaryPolicyVersion'] == policy and
                      route['semanticFingerprint'] == semantic['trajectoryFingerprint'] and
@@ -352,13 +566,13 @@ def verify_products(protocol, cold, documents, artifacts, status, log, source,
                      'semantic and effect values are exact original native reductions')
 
     profile, suite, held = [artifacts[k] for k in ['profile', 'adversarial', 'holdoutVerdicts']]
-    need(profile['profileVersion'] == PROFILE and profile['engineVersion'] == engine and
+    need(profile['profileVersion'] == fmt.profile and profile['engineVersion'] == engine and
          profile['primaryPolicyVersion'] == policy and profile['sampleRates'] == list(RATES) and
          type(profile['developmentJourneyCount']) is int and profile['developmentJourneyCount'] == 7 and
          Counter(profile['developmentRootSeeds']) == Counter(development) and
          profile['developmentCorpusFingerprint'] == artifacts['development']['fingerprint'],
          'profile binds the original development corpus and native rates')
-    need(suite['schemaVersion'] == ADVERSARIAL and suite['engineVersion'] == engine and
+    need(suite['schemaVersion'] == fmt.adversarial and suite['engineVersion'] == engine and
          suite['profileFingerprint'] == profile['fingerprint'] and suite['passed'] is True,
          'original native adversarial identity')
     need(isinstance(attacks, list) and attacks and len(set(attacks)) == len(attacks),
@@ -370,7 +584,7 @@ def verify_products(protocol, cold, documents, artifacts, status, log, source,
          'every original adversarial attack rejected at each rate')
     need(suite['sourceObservationFingerprint'] == observations[development[0]]['sourceFingerprint'],
          'adversarial baseline is the original first development observation')
-    need(held['schemaVersion'] == HOLDOUT and held['engineVersion'] == engine and
+    need(held['schemaVersion'] == fmt.holdout and held['engineVersion'] == engine and
          held['profileFingerprint'] == profile['fingerprint'] and
          held['adversarialFingerprint'] == suite['fingerprint'] and
          held['developmentCorpusFingerprint'] == artifacts['development']['fingerprint'] and
@@ -408,7 +622,7 @@ def verify_products(protocol, cold, documents, artifacts, status, log, source,
     for label, artifact in [('profile', profile), ('adversarial', suite), ('holdout', held)]:
         need(re.findall(r'\b' + label + r'=([0-9a-f]{16})\b', text) == [artifact['fingerprint']],
              'original native derived artifact fingerprint: ' + label)
-    return dict(schema='autotechno-at0039-long-original-product-verification.v1',
+    result = dict(schema='autotechno-at0039-long-original-product-verification.v1',
         source=source, engine=engine, originalNativeProductsConsistent=True,
         completeHistories=18, developmentRoots=7, holdoutRoots=2,
         independentNativeRateGates=True, crossRateHistoryEqualityRequired=False,
@@ -417,17 +631,19 @@ def verify_products(protocol, cold, documents, artifacts, status, log, source,
         currentSourceApplicabilityVerified=False, installedArtifactsVerified=False,
         completeResourceQualification=False, fullPlatformQualified=False,
         runtimeQualification=False, item39Complete=False)
+    if fmt == CURRENT:
+        result.update(schema='autotechno-at0039-long-original-product-verification.v2',
+            originalFormat=fmt.key, effectDoseSchemaVersion=fmt.effect_version,
+            longPolicyFamilyVersion=fmt.policy_version)
+    return result
 
 
-ARTIFACTS = dict(development='long-horizon-development-corpus-local-v7.json',
-    holdout='long-horizon-holdout-corpus-local-v7.json',
-    profile='long-horizon-professional-profile-v21.json',
-    adversarial='long-horizon-adversarial-suite-v21.json',
-    holdoutVerdicts='long-horizon-holdout-v21.json')
+ARTIFACTS = LEGACY.artifacts
 
 
 def original_paths(context, inputs):
-    result = {'study/'+name: inside(context.study, name) for name in ARTIFACTS.values()}
+    fmt = bound_format(inputs.get('formatKey', LEGACY.key))
+    result = {'study/'+name: inside(context.study, name) for name in fmt.artifacts.values()}
     for seed in inputs['protocol']['developmentRoots'] + inputs['protocol']['holdoutRoots']:
         for rate in RATES:
             name = f'actual-journey-{seed}-{rate}.json'
@@ -444,6 +660,7 @@ def original_paths(context, inputs):
 
 def inspect(context, inputs, paths):
     """Read originals only; independent archive authentication is done by caller."""
+    fmt = bound_format(inputs.get('formatKey', LEGACY.key))
     documents = {}
     for seed in inputs['protocol']['developmentRoots'] + inputs['protocol']['holdoutRoots']:
         for rate in RATES:
@@ -452,14 +669,15 @@ def inspect(context, inputs, paths):
             documents[seed, rate] = load(path)
             row = verify_history(documents[seed, rate], inputs['inputBindingFingerprint'],
                 inputs['protocol']['developmentRoots'] + inputs['protocol']['holdoutRoots'],
-                inputs['cold']['primaryPolicyVersion'], inputs['cold']['engineVersion'])
+                inputs['cold']['primaryPolicyVersion'], inputs['cold']['engineVersion'],
+                effect_schema_version=fmt.effect_version)
             observer = load(paths['observer/'+name+'-audit.json'])
             need(all(observer[k] == value for k,value in row.items()) and
                  observer['source'] == context.source and observer['originalRouteSHA256'] == sha(path) and
                  observer['coldByteBindingsRechecked'] is True and
                  observer['historyIndependentlyAudited'] is True,
                  'each original read-only observer receipt binds its complete native history')
-    artifacts = {key: load(paths['study/'+name]) for key,name in ARTIFACTS.items()}
+    artifacts = {key: load(paths['study/'+name]) for key,name in fmt.artifacts.items()}
     launch = load(paths['runner/execution-launch.json'])
     need(launch['source'] == context.source and
          launch['coldPrivateAuditSHA256'] == context.cold_sha256 and
@@ -477,7 +695,7 @@ def inspect(context, inputs, paths):
          'exact original producer launch and cold proof binding')
     return verify_products(inputs['protocol'], inputs['cold'], documents, artifacts,
         load(paths['runner/execution-status.json']), raw_file(paths['runner/execution.log']),
-        context.source, inputs['inputBindingFingerprint'], inputs['attacks'])
+        context.source, inputs['inputBindingFingerprint'], inputs['attacks'], study_format=fmt)
 
 
 def collect_terminal(context):

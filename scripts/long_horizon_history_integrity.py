@@ -119,7 +119,9 @@ def metric_rows(rows, count):
     return missing
 
 
-def verify_history(document, binding, roots, primary_policy, engine):
+def verify_history(document, binding, roots, primary_policy, engine, *, effect_schema_version=2):
+    require(type(effect_schema_version) is int and effect_schema_version in (2, 3),
+            'unsupported bound effect schema')
     require(document.get('schema') == 'autotechno-long-horizon-shared-journey.v2',
             'unsupported journey schema')
     require(all(document.get(key) is False for key in FALSE_CLAIMS),
@@ -154,8 +156,8 @@ def verify_history(document, binding, roots, primary_policy, engine):
             'autotechno-long-horizon-signal-trajectory-report.v3' and
             s.get('sampleRate') == rate, 'signal schema/route')
     require(a.get('schemaVersion') == 1 and a.get('schemaIdentifier') ==
-            'autotechno-long-horizon-semantic.v1' and e.get('schemaVersion') == 2 and
-            e.get('schemaIdentifier') == 'autotechno-long-horizon-effect-dose.v2',
+            'autotechno-long-horizon-semantic.v1' and e.get('schemaVersion') == effect_schema_version and
+            e.get('schemaIdentifier') == f'autotechno-long-horizon-effect-dose.v{effect_schema_version}',
             'semantic/effect schemas')
     require(a.get('engineVersion') == engine, 'semantic engine differs from original source')
     bars = uint(s.get('renderedBarCount'), 'rendered bars', 7800)

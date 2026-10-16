@@ -104,7 +104,7 @@ jobs:
         if: inputs.scope == 'effect-dose-readiness'
         run: >-
           swift test --build-path "$RUNNER_TEMP/at0039-map" --skip-build --no-parallel
-          --disable-xctest --enable-swift-testing --filter LongHorizonEffectDoseTests
+          --disable-xctest --enable-swift-testing --filter '(LongHorizonEffectDoseTests|LatePulseTests)'
       - name: Verify calibration render fixture stack
         if: inputs.scope == 'calibration-fixture-readiness'
         run: |
