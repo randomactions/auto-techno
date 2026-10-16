@@ -3,8 +3,9 @@
 
 This read-only component invokes both complete original native-study verifiers.
 Its request selects original evidence; it cannot supply a passed result. Only
-the six literal artifact bindings in each existing loader may differ from the
-compiled studies. No capture, installation, runtime or item completion occurs.
+the six literal artifact bindings in each existing loader and two exact declared
+non-capture admission-test transitions may differ from the compiled studies.
+No capture, installation, runtime or item completion occurs.
 """
 from __future__ import annotations
 
@@ -41,9 +42,29 @@ RESOURCE_PREFIXES = {
     'long': ('long-horizon-professional-profile', 'long-horizon-adversarial-suite',
              'long-horizon-holdout'),
 }
+READINESS_OWNERS = {
+    'Tests/AutoTechnoCoreTests/PrimaryEvaluatorReadinessTests.swift':
+        'installedPrimaryRetainsUnavailableLongHorizonHost',
+    'Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift': 'bundledArtifacts',
+}
+READINESS_PATH = Path(__file__).with_name('at0039_readiness_transitions.json')
+READINESS = primary.load(READINESS_PATH)
+need(set(READINESS) == {'schema', 'transitions'} and
+     READINESS['schema'] == 'autotechno-at0039-noncapture-readiness-transitions.v1' and
+     type(READINESS['transitions']) is list and len(READINESS['transitions']) == 2,
+     'closed built-in readiness transition catalogue')
+need({row['path'] for row in READINESS['transitions']} == set(READINESS_OWNERS),
+     'only the two declared non-capture readiness owners')
+for row in READINESS['transitions']:
+    need(set(row) == {'path', 'symbol', 'original', 'current'} and
+         row['symbol'] == READINESS_OWNERS[row['path']] and
+         all(type(row[k]) is str and 0 < len(row[k]) < 32768 for k in ('original', 'current')) and
+         row['original'] != row['current'] and
+         all(len(re.findall(r'\bfunc ' + re.escape(row['symbol']) + r'\(', row[k])) == 1
+             for k in ('original', 'current')), 'exact bounded admission-test templates')
 IMPLEMENTATION = {str(Path(p).resolve()): primary.sha(p) for p in
                   (__file__, primary.__file__, long.__file__,
-                   long.verify_history.__code__.co_filename)}
+                   long.verify_history.__code__.co_filename, READINESS_PATH)}
 
 
 def digest(raw):
@@ -123,6 +144,26 @@ def relative_inputs(context, mapping):
     return result
 
 
+def readiness_transition(original, current, relative):
+    """One forward transition; every byte outside the known method stays exact.
+
+    These two Testing admission methods are not called by the canonical capture
+    entrypoints. No client-provided mapping, arbitrary test edit or rollback is
+    accepted. Actual installed-positive native execution remains a separate gate.
+    """
+    rows = [row for row in READINESS['transitions'] if row['path'] == relative]
+    need(len(rows) == 1, 'compiled source/test changed: ' + relative)
+    row = rows[0]
+    old, new = row['original'].encode(), row['current'].encode()
+    need(original.count(old) == current.count(new) == 1 and
+         new not in original and old not in current and
+         original.replace(old, b'<declared-readiness-method>') ==
+         current.replace(new, b'<declared-readiness-method>'),
+         'change exceeds the exact non-capture readiness transition: ' + relative)
+    return dict(path=relative, symbol=row['symbol'], originalSHA256=digest(original),
+                currentSHA256=digest(current), actualInstalledPositiveNativeVerified=False)
+
+
 def inventory(root, relative, *, swift_only=False):
     base = primary.inside(root, relative)
     need(base.is_dir(), 'required source directory missing')
@@ -147,6 +188,7 @@ def source_installation(root, source, contexts, artifacts):
          'unbound non-Swift production input')
     installed = {}
     selected = set()
+    readiness = []
     for family in LOADERS:
         body, names, seals = loader(read(LOADERS[family]), family)
         need(seals == artifacts[family]['seals'] and all(seals.values()),
@@ -178,7 +220,10 @@ def source_installation(root, source, contexts, artifacts):
                 need(loader(original, family)[0] == installed[family]['body'],
                      'loader changed beyond literal installation bindings: ' + relative)
             else:
-                need(digest(current) == checksum, 'compiled source/test changed: ' + relative)
+                if digest(current) != checksum:
+                    original = primary.raw_file(primary.inside(context.source_root, relative))
+                    transition = readiness_transition(original, current, relative)
+                    readiness.append(dict(studySource=context.source, **transition))
         resources = relative_inputs(context, metadata['resources'])
         need(all(p.startswith(RESOURCES) for p in resources), 'one original resource owner')
         need(set(resources) <= target_resources and target_resources - set(resources) <= selected,
@@ -191,7 +236,8 @@ def source_installation(root, source, contexts, artifacts):
          'target source/resource bytes changed during applicability audit')
     return dict(targetSource=source, compiledProductionSources=len(target_sources),
                 checkedSourceAndResourceSHA256={p: digest(raw) for p, raw in sorted(target.items())},
-                installedResources={k: v['names'] for k, v in installed.items()})
+                installedResources={k: v['names'] for k, v in installed.items()},
+                nonCaptureReadinessTransitions=readiness)
 
 
 def context_from_request(value, cls):
@@ -284,7 +330,7 @@ def verify(root, request_path, request_sha256):
          'original/target/implementation/request context changed during audit')
     need(source_installation(root, source, (pcontext, lcontext), artifacts) == closure,
          'target source/resource inventory changed during final original-context checks')
-    return dict(schema='autotechno-at0039-quality-applicability-verification.v1', **closure,
+    return dict(schema='autotechno-at0039-quality-applicability-verification.v2', **closure,
                 requestSHA256=request_sha256, engine=presult['engine'],
                 primaryOriginalSource=pcontext.source, longOriginalSource=lcontext.source,
                 primaryTerminalProofSHA256=pcontext.terminal_sha256,

@@ -71,14 +71,26 @@ struct PrimaryEvaluatorReadinessTests {
         }
     }
 
-    @Test("Installed current primary seals do not authorize a host without Long Horizon qualification")
+    @Test("Current qualified artifact seals determine host readiness")
     func installedPrimaryRetainsUnavailableLongHorizonHost() throws {
+        // Preserve the exact completed v35 fixture independently of the current
+        // installation. These admission checks never produce calibration data.
+        let resources = PackagedResourceBundle.current
+        let profileURL = try #require(resources.url(
+            forResource: "professional-quality-primary-profile-v35", withExtension: "json"))
+        let adversarialURL = try #require(resources.url(
+            forResource: "professional-quality-primary-adversarial-suite-v35", withExtension: "json"))
+        let holdoutURL = try #require(resources.url(
+            forResource: "professional-quality-primary-holdout-v35", withExtension: "json"))
+        let historical = try ProfessionalQualityPrimaryArtifacts(
+            profileData: Data(contentsOf: profileURL),
+            adversarialSuiteData: Data(contentsOf: adversarialURL),
+            holdoutQualificationData: Data(contentsOf: holdoutURL))
+        #expect(historical.profile.fingerprint == "267051f651dcfdca")
+        #expect(historical.adversarialSuite.fingerprint == "13b17b49e495d050")
+        #expect(historical.holdoutQualification.fingerprint == "d0be2dd73e33792b")
+
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-        #expect(ProfessionalQualityPrimaryArtifacts.profileResource ==
-            "professional-quality-primary-profile-v35")
-        #expect(artifacts.profile.fingerprint == "267051f651dcfdca")
-        #expect(artifacts.adversarialSuite.fingerprint == "13b17b49e495d050")
-        #expect(artifacts.holdoutQualification.fingerprint == "d0be2dd73e33792b")
         #expect(artifacts.profile.fingerprint == ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint)
         #expect(artifacts.adversarialSuite.fingerprint == ProfessionalQualityPrimaryArtifacts.expectedAdversarialSuiteFingerprint)
         #expect(artifacts.holdoutQualification.fingerprint == ProfessionalQualityPrimaryArtifacts.expectedHoldoutQualificationFingerprint)
@@ -94,9 +106,25 @@ struct PrimaryEvaluatorReadinessTests {
             #expect(ProfessionalQualityPreparationEvaluator(sampleRate: rate,
                 artifacts: artifacts).availability == .available)
         }
-        #expect(LongHorizonProfessionalPolicyArtifacts.expectedProfileFingerprint == nil)
-        #expect(throws: LongHorizonProfessionalPolicyError.invalidEvidence) {
-            try AutonomousPerformanceArtifactSet.load()
+        let longSeals = [LongHorizonProfessionalPolicyArtifacts.expectedProfileFingerprint,
+            LongHorizonProfessionalPolicyArtifacts.expectedAdversarialFingerprint,
+            LongHorizonProfessionalPolicyArtifacts.expectedHoldoutFingerprint]
+        if longSeals.allSatisfy({ $0 == nil }) {
+            #expect(throws: LongHorizonProfessionalPolicyError.invalidEvidence) {
+                try AutonomousPerformanceArtifactSet.load()
+            }
+        } else {
+            // Partial, mismatched or missing installed evidence must fail here.
+            #expect(longSeals.allSatisfy { $0 != nil })
+            let admitted = try AutonomousPerformanceArtifactSet.load()
+            #expect(admitted.primary.profile.fingerprint == artifacts.profile.fingerprint)
+            #expect(admitted.longHorizon.profile.fingerprint == longSeals[0])
+            #expect(admitted.longHorizon.adversarial.fingerprint == longSeals[1])
+            #expect(admitted.longHorizon.holdout.fingerprint == longSeals[2])
+            #expect(admitted.longHorizon.profile.primaryPolicyVersion == artifacts.evaluator.policyVersion)
+            #expect(admitted.longHorizon.profile.sampleRates == artifacts.profile.sampleRates)
+            #expect(admitted.longHorizon.adversarial.passed)
+            #expect(admitted.longHorizon.holdout.qualified)
         }
     }
 

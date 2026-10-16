@@ -3338,13 +3338,32 @@ the independently qualified primary products, without rate averaging or a
 cross-rate accepted-history equality requirement.
 
 The target must be clean at that exact commit. All compiled Core, DSP and
-Transport source inventory, used producer tests and Package.swift must match
+Transport source inventory, capture-producing tests and Package.swift must match
 both authenticated studies. The existing two artifact loaders permit only
 changes to their three literal resource names and three literal expected seals,
 plus full-line documentation comments. Decoder, control-flow or other executable
 changes refuse. Nonliteral seals, duplicate bindings, unbound source files,
 symlinks and altered package settings also refuse. The running verifier and its
 verification dependencies must match the target's committed implementation.
+
+Applicability result v2 additionally recognizes exactly two non-capture admission
+method transitions in PrimaryEvaluatorReadinessTests and
+LongHorizonProfessionalPolicyTests. The built-in
+`scripts/at0039_readiness_transitions.json` contains their complete old/current
+method templates. The canonical capture entrypoints never call these methods;
+production code and every byte outside these exact method spans remain unchanged.
+Only the declared forward transition is accepted, not rollback, arbitrary test
+edits, client-supplied mappings or a free-form applicability assertion. The
+catalogue itself is bound to target Git and the verifier's implementation digest.
+
+The revised tests preserve missing-Long host refusal, historical v16 rejection,
+the exact completed v35 primary fixture, all current primary qualification
+checks and seal/engine/policy/rate joins. Once seals are present, actual canonical
+loading and compatible host artifacts must succeed; partial or invalid installed
+evidence fails instead of counting as an unavailable pass. Original cold tests
+retain their original source scope. Neither these declared test transitions nor
+synthetic verifier controls prove the new installed-positive branch; actual
+final-source native execution with qualified current resources remains required.
 
 Every installed derived resource must equal its authenticated native product
 byte for byte, allowing only the single final packaging line feed already

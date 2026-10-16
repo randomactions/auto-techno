@@ -220,6 +220,28 @@ class SourceClosureTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'duplicate normalized'):
             q.relative_inputs(self.context, {str(p): q.primary.sha(p), str(p.parent / '.' / p.name) + '/../Example.swift': q.primary.sha(p)})
 
+    def test_complete_source_closure_admits_only_declared_readiness_transition(self):
+        metadata = json.loads((self.runner / 'build-metadata.json').read_text())
+        for row in q.READINESS['transitions']:
+            old, current = self.old / row['path'], self.target / row['path']
+            old.parent.mkdir(parents=True, exist_ok=True)
+            current.parent.mkdir(parents=True, exist_ok=True)
+            old.write_text('unchanged capture predicates\n' + row['original'])
+            current.write_text('unchanged capture predicates\n' + row['current'])
+            metadata['sources'][str(old)] = q.primary.sha(old)
+        (self.runner / 'build-metadata.json').write_text(json.dumps(metadata))
+        self.git('add', '.')
+        self.commit()
+        result = self.check()
+        self.assertEqual(len(result['nonCaptureReadinessTransitions']), 4)
+        self.assertTrue(all(not row['actualInstalledPositiveNativeVerified']
+                            for row in result['nonCaptureReadinessTransitions']))
+        relative = q.READINESS['transitions'][0]['path']
+        self.change(relative, (self.target / relative).read_bytes().replace(
+            b'unchanged capture predicates', b'relaxed capture predicates'))
+        with self.assertRaisesRegex(ValueError, 'exceeds the exact'):
+            self.check()
+
 
 class AuthorityTests(unittest.TestCase):
     def test_generic_passed_json_cannot_select_or_bypass_native_readers(self):
@@ -382,6 +404,46 @@ class NativeArtifactByteTests(unittest.TestCase):
             gzip.compress(b'{"changed":true}', mtime=0))
         with self.assertRaisesRegex(ValueError, 'original archive digest'):
             self.extract()
+
+
+class ReadinessTransitionTests(unittest.TestCase):
+    def test_only_two_exact_forward_noncapture_methods_are_admitted(self):
+        for row in q.READINESS['transitions']:
+            # Every surrounding byte stays exact, not just a file hash or label.
+            original = b'prefix\n' + row['original'].encode() + b'\nsuffix'
+            current = b'prefix\n' + row['current'].encode() + b'\nsuffix'
+            result = q.readiness_transition(original, current, row['path'])
+            self.assertEqual(result['symbol'], row['symbol'])
+            self.assertFalse(result['actualInstalledPositiveNativeVerified'])
+            for tampered in (current + b'changed capture helper', current.replace(b'#expect(', b'#expect(true || ', 1),
+                             current + row['current'].encode(), original):
+                with self.subTest(path=row['path']), self.assertRaises(ValueError):
+                    q.readiness_transition(original, tampered, row['path'])
+
+    def test_unlisted_test_and_reverse_transition_refuse(self):
+        for row in q.READINESS['transitions']:
+            with self.assertRaises(ValueError):
+                q.readiness_transition(row['current'].encode(), row['original'].encode(), row['path'])
+            with self.assertRaisesRegex(ValueError, 'compiled source/test changed'):
+                q.readiness_transition(row['original'].encode(), row['current'].encode(),
+                                      'Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationIntegrationTests.swift')
+
+    def test_published_target_has_exact_current_templates_and_no_other_file_delta(self):
+        for row in q.READINESS['transitions']:
+            raw = (ROOT / row['path']).read_text()
+            self.assertEqual(raw.count(row['current']), 1)
+            self.assertNotIn(row['original'], raw)
+            self.assertIn('allSatisfy', row['current'])
+            self.assertIn('throws: LongHorizonProfessionalPolicyError.invalidEvidence', row['current'])
+            self.assertIn('try ', row['current'])
+
+    def test_unchanged_compiler_inputs_remain_exact_outside_readiness_method(self):
+        row = q.READINESS['transitions'][0]
+        # A mutation to a calibration predicate elsewhere in the same owner refuses.
+        original = b'func capture() { requireGate() }\n' + row['original'].encode()
+        current = b'func capture() { skipGate() }\n' + row['current'].encode()
+        with self.assertRaisesRegex(ValueError, 'exceeds the exact'):
+            q.readiness_transition(original, current, row['path'])
 
 
 if __name__ == '__main__':

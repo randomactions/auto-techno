@@ -367,16 +367,33 @@ struct LongHorizonProfessionalPolicyTests {
     }
   }
 
-  @Test("Historical v16 bytes cannot activate the unqualified current Long Horizon family")
+  @Test("Installed Long Horizon readiness preserves historical rejection")
   func bundledArtifacts() throws {
     for name in ["long-horizon-professional-profile-v16", "long-horizon-adversarial-suite-v16", "long-horizon-holdout-v16"] {
       #expect(LongHorizonProfessionalPolicyArtifacts.containsBundledResource(named: name))
     }
-    #expect(LongHorizonProfessionalPolicyArtifacts.expectedProfileFingerprint == nil)
-    #expect(LongHorizonProfessionalPolicyArtifacts.expectedAdversarialFingerprint == nil)
-    #expect(LongHorizonProfessionalPolicyArtifacts.expectedHoldoutFingerprint == nil)
-    #expect(throws: LongHorizonProfessionalPolicyError.invalidEvidence) {
-      try LongHorizonProfessionalPolicyArtifacts.load()
+    let seals = [LongHorizonProfessionalPolicyArtifacts.expectedProfileFingerprint,
+      LongHorizonProfessionalPolicyArtifacts.expectedAdversarialFingerprint,
+      LongHorizonProfessionalPolicyArtifacts.expectedHoldoutFingerprint]
+    if seals.allSatisfy({ $0 == nil }) {
+      #expect(throws: LongHorizonProfessionalPolicyError.invalidEvidence) {
+        try LongHorizonProfessionalPolicyArtifacts.load()
+      }
+    } else {
+      // A partially installed family is a test failure, not an unavailable pass.
+      #expect(seals.allSatisfy { $0 != nil })
+      let artifacts = try LongHorizonProfessionalPolicyArtifacts.load()
+      #expect(artifacts.profile.fingerprint == seals[0])
+      #expect(artifacts.adversarial.fingerprint == seals[1])
+      #expect(artifacts.holdout.fingerprint == seals[2])
+      #expect(artifacts.profile.engineVersion == QualityQualificationContract.engineVersion)
+      #expect(artifacts.profile.primaryPolicyVersion ==
+        LongHorizonProfessionalPolicySchema.requiredPrimaryPolicyVersion)
+      #expect(artifacts.profile.sampleRates == [44_100, 48_000])
+      #expect(artifacts.profile.developmentJourneyCount == 7)
+      #expect(artifacts.holdout.journeys.count == 2)
+      #expect(artifacts.adversarial.passed)
+      #expect(artifacts.holdout.qualified)
     }
     let directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
       .deletingLastPathComponent().deletingLastPathComponent()
