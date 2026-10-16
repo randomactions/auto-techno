@@ -119,10 +119,15 @@ def metric_rows(rows, count):
     return missing
 
 
-def verify_history(document, binding, roots, primary_policy, engine, *, effect_schema_version=2):
+def verify_history(document, binding, roots, primary_policy, engine, *, effect_schema_version=2,
+                   journey_schema_version=2):
     require(type(effect_schema_version) is int and effect_schema_version in (2, 3),
             'unsupported bound effect schema')
-    require(document.get('schema') == 'autotechno-long-horizon-shared-journey.v2',
+    require(type(journey_schema_version) is int and journey_schema_version in (2, 3),
+            'unsupported bound journey schema')
+    require(journey_schema_version != 3 or effect_schema_version == 3,
+            'unsupported bound journey/effect pair')
+    require(document.get('schema') == f'autotechno-long-horizon-shared-journey.v{journey_schema_version}',
             'unsupported journey schema')
     require(all(document.get(key) is False for key in FALSE_CLAIMS),
             'history must retain its unavailable qualification claims')
@@ -226,16 +231,69 @@ def verify_history(document, binding, roots, primary_policy, engine, *, effect_s
     require(end == accepted + total and previous_end <= end, 'accepted/repeat/end sample accounting')
     rejected = j.get('rejectedPreparations')
     require(isinstance(rejected, list), 'rejected preparations required')
+    discarded = _verify_rejections(rejected, phrases, journey_schema_version)
     attempts = uint(j.get('newPreparationAttemptCount'), 'preparation attempts')
     children = uint(j.get('ownedChildConsumptionCount'), 'owned children')
     require(attempts + children == phrases + len(rejected), 'attempt/child/refusal accounting')
     require(uint(j.get('reservedNumericPeakBytes'), 'numeric reservation', 1) <= MAX_NUMERIC_BYTES,
             'numeric reservation exceeds existing ceiling')
-    return dict(rootSeed=seed, sampleRate=rate, acceptedPhrases=phrases, acceptedBars=bars,
+    row = dict(rootSeed=seed, sampleRate=rate, acceptedPhrases=phrases, acceptedBars=bars,
                 preparationAttempts=attempts, ownedChildren=children, rejectedPreparations=len(rejected),
                 accountedRepeats=len(repeats), neutralOperatorObservationCount=phrases - operator_total,
                 conditionallyUnavailableSignalObservations=conditional_signal,
                 conditionallyUnavailableTransitionObservations=conditional_transitions)
+    if journey_schema_version == 3:
+        row['discardedChainRejections'] = discarded
+    return row
+
+
+def _verify_rejections(rows, phrases, journey_version):
+    """Only explicit v3 callers interpret the new discarded-chain receipts.
+
+    This is integrity, never a policy verdict or authority to construct a root,
+    child, native history or quality artifact. Historical v2 callers retain
+    their original interpretation and cannot gain v3 receipt authority by a
+    schema-only relabel. Keep every actual record, including multiplicity.
+    """
+    fields = ('rejectedSuccessorPhraseIndex', 'rejectedSuccessorRequestFingerprint',
+              'acceptedTraversalFingerprintBeforeRejection', 'rejectedSuccessorDetails')
+    if journey_version == 3:
+        require(phrases + len(rows) <= 10416, 'bounded accepted/recovery step scope')
+    discarded, previous = 0, 0
+    for row in rows:
+        require(isinstance(row, dict), 'rejection record object required')
+        child = any(row.get(key) is not None for key in fields)
+        if journey_version == 2:
+            require(not child, 'unbound successor rejection metadata in original journey schema')
+            continue
+        target = uint(row.get('targetPhraseIndex'), 'rejected root phrase')
+        require(previous <= target < phrases, 'rejection target order/accepted scope')
+        previous = target
+        for key in ('requestFingerprint', 'incomingCoreFingerprint', 'candidateFingerprint'):
+            require(isinstance(row.get(key), str) and re.fullmatch('[0-9a-f]{16}', row[key]),
+                    'canonical rejected identity: ' + key)
+        require(uint(row.get('ordinal'), 'rejection ordinal') <= 9, 'finite rejection ordinal')
+        uint(row.get('wave'), 'rejection wave')
+        uint(row.get('overdueDebtCount'), 'rejected candidate debt')
+        reasons = row.get('reasonCodes')
+        require(reasons in (['quality.guardrail-regression.v1'],
+                            ['quality.hard-gate-failed.v1', 'quality.symbolic-interest-failed.v1']),
+                'actual retry-eligible rejection reasons required')
+        if not child:
+            continue
+        index = uint(row.get(fields[0]), 'rejected descendant phrase')
+        require(index > target, 'discarded descendant must follow root')
+        for key in fields[1:3]:
+            require(isinstance(row.get(key), str) and re.fullmatch('[0-9a-f]{16}', row[key]),
+                    'canonical discarded-chain identity: ' + key)
+        require(row[fields[1]] != row['requestFingerprint'], 'discarded child cannot be root request')
+        details = row.get(fields[3])
+        require(isinstance(details, list) and 1 <= len(details) <= 24 and
+                all(isinstance(value, str) and value for value in details) and
+                len(set(details)) == len(details) and details[0] == f'phrase={index}',
+                'bounded actual discarded-child diagnostics required')
+        discarded += 1
+    return discarded
 
 
 def git(root, *args):

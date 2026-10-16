@@ -57,6 +57,97 @@ def fixture(rate=44100, *, effect_schema_version=2):
 
 
 class HistoryIntegrityTests(unittest.TestCase):
+    @staticmethod
+    def recovery_fixture(rate=44100):
+        document = fixture(rate, effect_schema_version=3)
+        document['schema'] = 'autotechno-long-horizon-shared-journey.v3'
+        j = document['journey']
+        j['rejectedPreparations'] = [dict(targetPhraseIndex=12,
+            requestFingerprint='a'*16, incomingCoreFingerprint='b'*16,
+            candidateFingerprint='c'*16, reasonCodes=['quality.guardrail-regression.v1'],
+            ordinal=0, wave=0, overdueDebtCount=0,
+            rejectedSuccessorPhraseIndex=13, rejectedSuccessorRequestFingerprint='d'*16,
+            acceptedTraversalFingerprintBeforeRejection='e'*16,
+            rejectedSuccessorDetails=['phrase=13', 'long-continuation:reason=metric-out-of-range'])]
+        j['newPreparationAttemptCount'] += 1
+        return document
+
+    @staticmethod
+    def verify_recovery(document, **kwargs):
+        return history.verify_history(document, 'binding', list(range(1,10)), 'policy',
+            'fixture-engine', effect_schema_version=3, journey_schema_version=3, **kwargs)
+
+    def test_recovery_format_requires_explicit_bound_version_and_preserves_native_rates(self):
+        for rate in (44100, 48000):
+            document = self.recovery_fixture(rate)
+            row = self.verify_recovery(document)
+            self.assertEqual((row['sampleRate'], row['acceptedBars'], row['discardedChainRejections']),
+                             (rate, 7800, 1))
+            with self.assertRaisesRegex(history.HistoryIntegrityError, 'unsupported journey schema'):
+                history.verify_history(document, 'binding', [1], 'policy', 'fixture-engine',
+                                       effect_schema_version=3)
+        for version in [True, 3.0, '3', None, 4]:
+            with self.subTest(version=version), self.assertRaises(history.HistoryIntegrityError):
+                history.verify_history(self.recovery_fixture(), 'binding', [1], 'policy',
+                    'fixture-engine', effect_schema_version=3, journey_schema_version=version)
+        with self.assertRaisesRegex(history.HistoryIntegrityError, 'journey/effect pair'):
+            history.verify_history(self.recovery_fixture(), 'binding', [1], 'policy',
+                'fixture-engine', journey_schema_version=3)
+
+    def test_discarded_child_receipt_corruption_cannot_supply_a_root_recovery_history(self):
+        attacks = [
+            lambda r:r.update(targetPhraseIndex=780),
+            lambda r:r.update(rejectedSuccessorPhraseIndex=12),
+            lambda r:r.update(rejectedSuccessorPhraseIndex=True),
+            lambda r:r.update(rejectedSuccessorRequestFingerprint=r['requestFingerprint']),
+            lambda r:r.update(rejectedSuccessorRequestFingerprint=None),
+            lambda r:r.update(acceptedTraversalFingerprintBeforeRejection='E'*16),
+            lambda r:r.update(rejectedSuccessorDetails=None),
+            lambda r:r.update(rejectedSuccessorDetails=['phrase=14']),
+            lambda r:r.update(rejectedSuccessorDetails=['phrase=13']*2),
+            lambda r:r.update(rejectedSuccessorDetails=['phrase=13']+[str(i) for i in range(24)]),
+            lambda r:r.update(reasonCodes=['quality.evidence-missing.v1']),
+            lambda r:r.update(reasonCodes=['quality.hard-gate-failed.v1']),
+            lambda r:r.update(ordinal=10),
+            lambda r:r.update(wave=True),
+            lambda r:r.update(overdueDebtCount=-1),
+            lambda r:r.update(candidateFingerprint='not-a-fingerprint'),
+        ]
+        for attack in attacks:
+            document = self.recovery_fixture();attack(document['journey']['rejectedPreparations'][0])
+            with self.subTest(attack=attacks.index(attack)), self.assertRaises(history.HistoryIntegrityError):
+                self.verify_recovery(document)
+
+    def test_recovery_receipts_cannot_relabel_a_prefix_or_enter_original_format_authority(self):
+        for key,value in [('completedRequestedScope',False),('endsAtClosedLeaf',False),
+                          ('requestedMinimumBars',0),('requestedPrefixPhraseCount',405),
+                          ('failureCode','successor-chain:successor-rejected')]:
+            document=self.recovery_fixture();document['journey'][key]=value
+            with self.subTest(key=key), self.assertRaises(history.HistoryIntegrityError):
+                self.verify_recovery(document)
+        document=self.recovery_fixture();document['schema']='autotechno-long-horizon-shared-journey.v2'
+        with self.assertRaisesRegex(history.HistoryIntegrityError,'unbound successor rejection metadata'):
+            history.verify_history(document,'binding',[1],'policy','fixture-engine',effect_schema_version=3)
+
+    def test_recovery_history_keeps_ordinary_rejections_and_every_actual_occurrence(self):
+        document=self.recovery_fixture();j=document['journey']
+        duplicate=copy.deepcopy(j['rejectedPreparations'][0]);j['rejectedPreparations'].append(duplicate)
+        ordinary=copy.deepcopy(duplicate)
+        for key in ['rejectedSuccessorPhraseIndex','rejectedSuccessorRequestFingerprint',
+                    'acceptedTraversalFingerprintBeforeRejection','rejectedSuccessorDetails']:
+            ordinary.pop(key)
+        ordinary.update(targetPhraseIndex=13,reasonCodes=['quality.hard-gate-failed.v1','quality.symbolic-interest-failed.v1'])
+        j['rejectedPreparations'].append(ordinary);j['newPreparationAttemptCount']+=2
+        row=self.verify_recovery(document)
+        self.assertEqual((row['rejectedPreparations'],row['discardedChainRejections']), (3,2))
+        j['rejectedPreparations'][-1]['targetPhraseIndex']=11
+        with self.assertRaisesRegex(history.HistoryIntegrityError,'rejection target order'):
+            self.verify_recovery(document)
+        oversized=self.recovery_fixture()
+        oversized['journey']['rejectedPreparations']=[None]*10416
+        with self.assertRaisesRegex(history.HistoryIntegrityError,'bounded accepted/recovery step scope'):
+            self.verify_recovery(oversized)
+
     def test_effect_interpretation_requires_the_explicit_bound_pair(self):
         document = fixture(effect_schema_version=3)
         row = history.verify_history(document, 'binding', list(range(1,10)), 'policy',

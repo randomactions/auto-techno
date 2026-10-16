@@ -1856,6 +1856,16 @@ original v2 journeys and their verification retain their original scope. Compone
 controls do not prove that the original native refusal is repaired or qualify a
 complete Long corpus, resources, deadlines, either host or physical output.
 
+The read-only history integrity helper interprets journey v3 only when its caller
+explicitly binds that version with effect evidence v3. It checks each ordinary or
+discarded-child rejection without deduplicating occurrences, including the exact
+root/child distinction, finite retry ordinal, calibrated reason set and bounded
+diagnostics. Historical callers still bind journey v2; relabelled descendant
+metadata cannot enter that interpretation. Every original complete-history gate,
+including 7,800 accepted bars, dense native evidence and a closed leaf, remains
+required. This helper adds neither a registered cold-study format nor item-wide
+acceptance authority; those require their own actual source-bound validation.
+
 AutonomousPreparationChainResourceBudget reserves aggregate numeric storage under
 the existing 128 MiB ceiling before every render pass, including a requested
 corrective pass. Each active source uses the unchanged full per-pass workspace
