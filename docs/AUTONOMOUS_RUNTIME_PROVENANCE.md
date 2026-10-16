@@ -2816,10 +2816,27 @@ A passed receipt using this route must add an `execution` object to that gate:
 exact bytes. This object is forbidden on other subjects, gates or statuses.
 The existing result-record and roadmap validators verify this binding through
 `scripts/hosted_macos_verification.py`. The complete receipt must identify the
-successful repository workflow, all eight exact-source native jobs, strict
+successful repository workflow, all sixteen exact-source native jobs, strict
 recomputed discovery partitions, matching executed identities/counts and separate
 explicit skips, plus successful tooling, Release app and semantic-map steps.
 Map-only jobs, partial jobs, mixed revisions and mere discovery cannot pass.
+
+The collected verification schema is v2. Each bank binds its original complete
+job-log SHA256, and the collector and bound-receipt validator both replay the
+native receipt transport, ordered slice summaries, executed identities and named
+skips from those original bytes. The run and every bank job must have the same
+positive integer run attempt. A receipt alone or a legacy v1 receipt cannot
+supply the original-log requirement. Historical receipts remain unchanged.
+
+The bound result receipt requires sixteen regular gzip originals at
+`docs/local/result-records/AT-0039-hosted-macos-logs/bank-N.log.gz`, where N is
+0 through15. The collector preserves the same `bank-N.log.gz` files beside its
+collected `receipt.json`; binding an original collection preserves those exact
+bytes at the declared result-record paths. Reads bound compressed and decompressed
+sizes, refuse missing/corrupt archives and symbolic links, and recheck the receipt
+and all archive bytes after verification. Original transformed Actions stdout
+does not independently establish the producer's untransformed slice-file hashes;
+that limitation remains explicit.
 
 The separate exact-head CI, algorithmic/adversarial/holdout, Windows, resource,
 lifecycle, app/route and applicable physical-output requirements remain.
@@ -2828,7 +2845,7 @@ complete. Human listening remains optional, and other roadmap items retain the
 ordinary local-verification requirement.
 
 Hosted ordinary-suite skip accounting enumerates the two retired mutation tests
-and six existing opt-in diagnostics whose private historical inputs or optimized
+and existing opt-in diagnostics whose private historical inputs or optimized
 qualification runs are owned separately. Their identities and counts remain
 explicit; they supply no executed-test or separate qualification credit. The
 installed-primary successor test is not exempt: absent current primary seals

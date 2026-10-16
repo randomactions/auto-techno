@@ -1,6 +1,7 @@
 """Synthetic receipt controls; fixture success is not hosted execution evidence."""
 import copy
 import contextlib
+import gzip
 import io
 import json
 import os
@@ -35,10 +36,12 @@ def fixture(include_retired=False):
         if bank == 0: names += ['Run complete tooling tests', 'Build macOS Release app', 'Validate codebase map']
         rows.append(dict(receipt=dict(schema='autotechno-hosted-macos-bank.v1', source=SOURCE,
              environment='hosted-macos', bank=bank, banks=hosted.BANKS, discovery=discovery, plan=plan, completedSlices=completed),
-             job=dict(id=100+bank, run_id=50, head_sha=SOURCE, name=f'hosted-macos / Complete macOS bank {bank}',
+             job=dict(id=100+bank, run_id=50, run_attempt=1, head_sha=SOURCE, name=f'hosted-macos / Complete macOS bank {bank}',
                       status='completed', conclusion='success', steps=[dict(name=n,status='completed',conclusion='success') for n in names])))
+    for row in rows:
+        row['originalLogSHA256'] = hosted.sha(native_log(row['receipt']))
     return dict(schema=hosted.SCHEMA,source=SOURCE,workflow=dict(id=20,path=hosted.WORKFLOW,state='active'),
-                run=dict(id=50,workflow_id=20,head_sha=SOURCE,status='completed',conclusion='success',
+                run=dict(id=50,workflow_id=20,run_attempt=1,head_sha=SOURCE,status='completed',conclusion='success',
                          event='workflow_dispatch',repository=dict(full_name='randomactions/auto-techno')),banks=rows)
 
 
@@ -69,12 +72,19 @@ def execution(raw):
                 receipt='docs/local/result-records/AT-0039-hosted-macos.json',receiptSHA256=hosted.sha(raw))
 
 
+def original_logs(bundle):
+    return {row['receipt']['bank']: native_log(row['receipt']) for row in bundle['banks']}
+
+
 class HostedMacOSVerificationTests(unittest.TestCase):
     def test_complete_native_matrix_has_only_verification_scope(self):
-        result = hosted.verify(fixture(), SOURCE)
+        bundle = fixture(); result = hosted.verify(bundle, SOURCE, original_logs(bundle))
         self.assertEqual(result['discoveredTests'], 256)
         self.assertEqual(result['executedTests'], 256)
         self.assertTrue(result['completeNativeSuitesAndReleaseBuild'])
+        self.assertTrue(result['originalJobLogsVerified'])
+        self.assertEqual((result['run'],result['runAttempt'],result['banks']),(50,1,16))
+        self.assertFalse(result['suiteFileHashesIndependentlyVerified'])
         for key in ['localExecution','automatedQualityQualification','runtimeQualification','item39Complete']:
             self.assertFalse(result[key])
 
@@ -166,7 +176,7 @@ class HostedMacOSVerificationTests(unittest.TestCase):
         self.assertIn('max-parallel: 4', workflow)
         bundle['banks'] = bundle['banks'][:8]
         with self.assertRaisesRegex(ValueError, 'all sixteen banks'):
-            hosted.verify(bundle, SOURCE)
+            hosted.verify(bundle, SOURCE, original_logs(bundle))
 
     def test_expensive_fixtures_have_dedicated_banks_without_losing_coverage(self):
         discovery = fixture()['banks'][0]['receipt']['discovery']
@@ -228,10 +238,11 @@ class HostedMacOSVerificationTests(unittest.TestCase):
           lambda d:d['banks'][0]['receipt']['plan']['selected'][0].__setitem__('selector','.*')]
         for index, change in enumerate(changes):
             d=copy.deepcopy(fixture());change(d)
-            with self.subTest(index=index),self.assertRaises(ValueError):hosted.verify(d,SOURCE)
+            with self.subTest(index=index),self.assertRaises(ValueError):hosted.verify(d,SOURCE,original_logs(d))
 
     def test_skips_do_not_become_executed_behavior(self):
-        result=hosted.verify(fixture(include_retired=True),SOURCE)
+        bundle=fixture(include_retired=True)
+        result=hosted.verify(bundle,SOURCE,original_logs(bundle))
         self.assertEqual(result['executedTests'],256)
         self.assertEqual(result['explicitlySkippedTests'],2)
 
@@ -298,13 +309,85 @@ class HostedMacOSVerificationTests(unittest.TestCase):
 
     def test_bound_receipt_checks_bytes_and_complete_evidence(self):
         with tempfile.TemporaryDirectory() as folder:
-            root=Path(folder);raw=json.dumps(fixture()).encode();record=self.record(raw);e=record['gates'][2]['execution']
+            root=Path(folder);bundle=fixture();raw=json.dumps(bundle).encode();record=self.record(raw);e=record['gates'][2]['execution']
             p=root/e['receipt'];p.parent.mkdir(parents=True);p.write_bytes(raw)
+            self.assertTrue(hosted.validate_bound_receipt(root,record,e))
+            logs=p.parent/(p.stem+'-logs');logs.mkdir()
+            for bank,body in original_logs(bundle).items():
+                (logs/f'bank-{bank}.log.gz').write_bytes(gzip.compress(body,mtime=0))
             self.assertEqual(hosted.validate_bound_receipt(root,record,e),[])
             p.write_bytes(raw+b' ')
             self.assertTrue(hosted.validate_bound_receipt(root,record,e))
             d=fixture();d['banks'].pop();raw=json.dumps(d).encode();p.write_bytes(raw);e['receiptSHA256']=hosted.sha(raw)
             self.assertTrue(hosted.validate_bound_receipt(root,record,e))
+
+    def test_receipt_json_without_all_originals_cannot_claim_complete_hosted_verification(self):
+        bundle=fixture();logs=original_logs(bundle)
+        for missing in [None,{},dict(list(logs.items())[:-1])]:
+            with self.subTest(missing=missing is None),self.assertRaisesRegex(ValueError,'original job logs'):
+                hosted.verify(bundle,SOURCE,missing)
+        old=copy.deepcopy(bundle);old['schema']='autotechno-hosted-macos-verification.v1'
+        with self.assertRaisesRegex(ValueError,'bundle fields|exact source|schema'):
+            hosted.verify(old,SOURCE,logs)
+        for bank in logs:
+            changed=copy.deepcopy(bundle);bad=dict(logs);bad[bank]=b'{"passed":true}'
+            changed['banks'][bank]['originalLogSHA256']=hosted.sha(bad[bank])
+            with self.subTest(bank=bank),self.assertRaises(ValueError):
+                hosted.verify(changed,SOURCE,bad)
+
+    def test_original_logs_and_native_receipts_cannot_be_substituted_or_resealed_partial(self):
+        bundle=fixture();logs=original_logs(bundle)
+        for mode in ['digest','missing-native','partial-summary','different-receipt','foreign-bank']:
+            changed=copy.deepcopy(bundle);bad=dict(logs)
+            if mode=='digest':bad[0]+=b'changed original'
+            elif mode=='missing-native':
+                stream=io.StringIO()
+                with contextlib.redirect_stdout(stream):hosted.emit(changed['banks'][0]['receipt'])
+                bad[0]=stream.getvalue().encode()
+            elif mode=='partial-summary':bad[0]=bad[0].replace(b'Executed ',b'Missing ',1)
+            elif mode=='different-receipt':
+                changed['banks'][0]['receipt']['completedSlices'][0]['logSHA256']='d'*64
+            else:bad[0]=logs[1]
+            if mode!='digest':changed['banks'][0]['originalLogSHA256']=hosted.sha(bad[0])
+            with self.subTest(mode=mode),self.assertRaises(ValueError):
+                hosted.verify(changed,SOURCE,bad)
+
+    def test_native_run_attempt_is_one_strict_shared_original_attempt(self):
+        for boundary in ['run','job']:
+            for attempt in [None,True,0,1.0,2]:
+                bundle=fixture();target=bundle['run'] if boundary=='run' else bundle['banks'][0]['job']
+                if attempt is None:target.pop('run_attempt')
+                else:target['run_attempt']=attempt
+                with self.subTest(boundary=boundary,attempt=attempt),self.assertRaises(ValueError):
+                    hosted.verify(bundle,SOURCE,original_logs(bundle))
+
+    def test_bound_original_archives_refuse_corruption_symlinks_and_oversize(self):
+        for mode in ['missing','corrupt','symlink','directory-link','expanded-limit','changed-after-read']:
+            with self.subTest(mode=mode),tempfile.TemporaryDirectory() as folder:
+                root=Path(folder);bundle=fixture();raw=json.dumps(bundle).encode();record=self.record(raw);e=record['gates'][2]['execution']
+                p=root/e['receipt'];p.parent.mkdir(parents=True);p.write_bytes(raw)
+                directory=p.parent/(p.stem+'-logs');directory.mkdir()
+                for bank,body in original_logs(bundle).items():
+                    (directory/f'bank-{bank}.log.gz').write_bytes(gzip.compress(body,mtime=0))
+                target=directory/'bank-0.log.gz'
+                if mode=='missing':target.unlink()
+                elif mode=='corrupt':target.write_bytes(b'invalid gzip')
+                elif mode=='symlink':
+                    other=target.with_name('other.gz');target.rename(other);target.symlink_to(other)
+                elif mode=='directory-link':
+                    other=directory.with_name('other');directory.rename(other);directory.symlink_to(other,target_is_directory=True)
+                if mode=='expanded-limit':
+                    target.write_bytes(gzip.compress(b'x'*1024,mtime=0))
+                    with mock.patch.object(hosted,'MAX_LOG_BYTES',32):
+                        self.assertIn('bounded original decompressed bytes',
+                                      ' '.join(hosted.validate_bound_receipt(root,record,e)))
+                elif mode=='changed-after-read':
+                    real=hosted.verify
+                    def mutate(*args):
+                        result=real(*args);target.write_bytes(b'changed');return result
+                    with mock.patch.object(hosted,'verify',side_effect=mutate):
+                        self.assertTrue(hosted.validate_bound_receipt(root,record,e))
+                else:self.assertTrue(hosted.validate_bound_receipt(root,record,e))
 
     def test_chunk_transport_is_lossless_and_rejects_partial_or_foreign_payloads(self):
         receipt=fixture()['banks'][0]['receipt'];stream=io.StringIO()
@@ -333,6 +416,14 @@ class HostedMacOSVerificationTests(unittest.TestCase):
             out=Path(folder)/'complete'
             self.assertTrue(hosted.collect(50,SOURCE,out)['completeNativeSuitesAndReleaseBuild'])
             self.assertEqual(len(list(out.glob('bank-*.log.gz'))),hosted.BANKS)
+            collected=(out/'receipt.json').read_bytes();record=self.record(collected)
+            binding=record['gates'][2]['execution'];root=Path(folder)/'bound'
+            target=root/binding['receipt'];target.parent.mkdir(parents=True);target.write_bytes(collected)
+            directory=target.parent/(target.stem+'-logs');directory.mkdir()
+            for bank in range(hosted.BANKS):
+                original=(out/f'bank-{bank}.log.gz').read_bytes()
+                (directory/f'bank-{bank}.log.gz').write_bytes(original)
+            self.assertEqual(hosted.validate_bound_receipt(root,record,binding),[])
             with self.assertRaises(ValueError):hosted.collect(50,SOURCE,out)
             def receipt_only(command, **kwargs):
                 if command[-1].endswith('/logs'):

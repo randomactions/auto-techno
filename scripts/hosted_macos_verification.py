@@ -5,6 +5,7 @@ import codecs
 import base64
 import hashlib
 import gzip
+import io
 import json
 import os
 from pathlib import Path
@@ -16,9 +17,10 @@ import sys
 import zlib
 from windows_test_plan import plan as native_plan
 
-SCHEMA = 'autotechno-hosted-macos-verification.v1'
+SCHEMA = 'autotechno-hosted-macos-verification.v2'
 EXECUTION_SCHEMA = 'autotechno-at0039-hosted-execution.v1'
 BANKS = 16
+MAX_LOG_BYTES = 64 * 1024 * 1024
 ISOLATED_IDENTITIES = (
     'swift-testing:ModalSuccessorReportJoinTests/continuousCalibrationMembershipAndFitting()',
     'swift-testing:FoundationRhythmicRelationTests/algorithmicFullPhraseCompanionFaults()',
@@ -125,22 +127,25 @@ def execution_errors(execution, subject, revision, gate, status):
     return [] if valid else ['invalid AT-0039-only hosted full verification binding']
 
 
-def verify(bundle, source):
+def verify(bundle, source, logs=None):
     require(isinstance(bundle, dict) and set(bundle) == {'schema', 'source', 'run', 'workflow', 'banks'}, 'bundle fields')
     require(bundle['schema'] == SCHEMA and bundle['source'] == source and
             re.fullmatch('[0-9a-f]{40}', str(source)), 'exact source')
     run = bundle['run']; workflow = bundle['workflow']
     require(isinstance(run, dict) and isinstance(workflow, dict), 'native run and workflow')
-    require(type(run.get('id')) is int and run['id'] > 0 and run.get('head_sha') == source and
+    require(type(run.get('id')) is int and run['id'] > 0 and
+            type(run.get('run_attempt')) is int and run['run_attempt'] > 0 and run.get('head_sha') == source and
             run.get('status') == 'completed' and run.get('conclusion') == 'success' and
             run.get('event') == 'workflow_dispatch', 'successful exact-source workflow')
     require(workflow.get('path') == WORKFLOW and workflow.get('id') == run.get('workflow_id') and
             workflow.get('state') == 'active' and type(workflow.get('id')) is int, 'authorized workflow')
     require(run.get('repository', {}).get('full_name') == 'randomactions/auto-techno', 'repository binding')
     rows = bundle['banks']; require(isinstance(rows, list) and len(rows) == BANKS, 'all sixteen banks')
+    require(isinstance(logs, dict) and all(type(bank) is int for bank in logs) and
+            set(logs) == set(range(BANKS)), 'all sixteen original job logs required')
     seen = set(); discovered = set(); jobs = set(); digests = set(); skipped = 0; executed = 0
     for row in rows:
-        require(isinstance(row, dict) and set(row) == {'job', 'receipt'}, 'bank fields')
+        require(isinstance(row, dict) and set(row) == {'job', 'receipt', 'originalLogSHA256'}, 'bank fields')
         job, receipt = row['job'], row['receipt']
         require(isinstance(job, dict) and isinstance(receipt, dict), 'bank objects')
         require(set(receipt) == {'schema', 'source', 'environment', 'bank', 'banks', 'discovery', 'plan', 'completedSlices'}, 'receipt fields')
@@ -149,10 +154,16 @@ def verify(bundle, source):
         require(receipt['schema'] == 'autotechno-hosted-macos-bank.v1' and receipt['source'] == source and
                 receipt['environment'] == 'hosted-macos' and receipt['banks'] == BANKS, 'native bank source/scope')
         require(type(job.get('id')) is int and job['id'] > 0 and job['id'] not in jobs and
-                job.get('run_id') == run['id'] and job.get('head_sha') == source and
+                job.get('run_id') == run['id'] and type(job.get('run_attempt')) is int and
+                job['run_attempt'] == run['run_attempt'] and job.get('head_sha') == source and
                 job.get('status') == 'completed' and job.get('conclusion') == 'success' and
                 job.get('name') == f'hosted-macos / Complete macOS bank {bank}', 'successful exact bank job')
         jobs.add(job['id'])
+        raw = logs[bank]
+        require(isinstance(raw, bytes) and 0 < len(raw) <= MAX_LOG_BYTES and
+                sha(raw) == row['originalLogSHA256'], 'original bank job log digest')
+        original, measured = parse_bank(raw, source, bank)
+        require(original == receipt, 'bank receipt equals its original native stdout')
         for name in ['Verify macOS environment', 'Build all native tests', 'Execute complete native bank'] + (
                 ['Run complete tooling tests', 'Build macOS Release app', 'Validate codebase map'] if bank == 0 else []):
             steps = [s for s in job.get('steps', []) if isinstance(s, dict) and s.get('name') == name]
@@ -162,6 +173,7 @@ def verify(bundle, source):
         digests.add(expected['discoverySHA256'])
         completed = receipt['completedSlices']
         require(isinstance(completed, list) and len(completed) == len(expected['selected']), 'complete executed slices')
+        bank_executed = 0; bank_skipped = 0
         for selection, result in zip(expected['selected'], completed):
             require(isinstance(result, dict) and set(result) == {'selection', 'reportedTests', 'explicitlySkippedTests', 'executedTests', 'skippedIdentifiers', 'exitCode', 'logSHA256'}, 'slice fields')
             count = len(selection['identifiers'])
@@ -173,14 +185,42 @@ def verify(bundle, source):
             allowed_skips = sorted(set(selection['identifiers']) & set(ALLOWED_SKIPS.values())) if selection['library'] == 'swift-testing' else []
             require(result['skippedIdentifiers'] == allowed_skips and result['explicitlySkippedTests'] == len(allowed_skips), 'only enumerated retired and separate diagnostic skips')
             skipped += result['explicitlySkippedTests']; executed += result['executedTests']
+            bank_skipped += result['explicitlySkippedTests']; bank_executed += result['executedTests']
             for case in selection['identifiers']:
                 key = selection['library'] + ':' + case
                 require(key not in discovered, 'duplicate executed identity'); discovered.add(key)
+        require(measured == dict(executedTests=bank_executed, explicitlySkippedTests=bank_skipped),
+                'original per-bank native execution and skip totals')
     require(len(digests) == 1 and seen == set(range(BANKS)), 'common discovery and complete banks')
     require(sha('\n'.join(sorted(discovered)).encode()) == next(iter(digests)), 'exhaustive discovery union')
-    return dict(schema=SCHEMA, source=source, environment='hosted-macos', discoveredTests=len(discovered),
+    return dict(schema=SCHEMA, source=source, run=run['id'], runAttempt=run['run_attempt'], banks=BANKS,
+                environment='hosted-macos', discoveredTests=len(discovered),
                 executedTests=executed, explicitlySkippedTests=skipped, completeNativeSuitesAndReleaseBuild=True,
+                originalJobLogsVerified=True, suiteFileHashesIndependentlyVerified=False,
                 localExecution=False, automatedQualityQualification=False, runtimeQualification=False, item39Complete=False)
+
+
+def bounded_regular(path, limit):
+    require(path.is_file() and not path.is_symlink() and 0 < path.stat().st_size <= limit,
+            'bounded regular original file required')
+    with path.open('rb') as handle:
+        raw = handle.read(limit + 1)
+    require(0 < len(raw) <= limit, 'bounded original file bytes')
+    return raw
+
+
+def original_logs(directory):
+    """Read bounded preserved originals; return compressed-byte stability bindings."""
+    require(directory.is_dir() and not directory.is_symlink(), 'original log directory required')
+    logs, digests = {}, {}
+    for bank in range(BANKS):
+        path = directory / f'bank-{bank}.log.gz'
+        compressed = bounded_regular(path, MAX_LOG_BYTES)
+        with gzip.GzipFile(fileobj=io.BytesIO(compressed), mode='rb') as handle:
+            raw = handle.read(MAX_LOG_BYTES + 1)
+        require(0 < len(raw) <= MAX_LOG_BYTES, 'bounded original decompressed bytes')
+        logs[bank] = raw; digests[path] = sha(compressed)
+    return logs, digests
 
 
 def validate_bound_receipt(root, record, execution):
@@ -189,10 +229,16 @@ def validate_bound_receipt(root, record, execution):
     root = Path(root).resolve(); path = root / execution['receipt']
     try:
         require(path.resolve().is_relative_to(root), 'receipt escapes repository')
-        raw = path.read_bytes(); require(len(raw) <= 32 * 1024 * 1024, 'oversized hosted receipt')
+        raw = bounded_regular(path, 32 * 1024 * 1024)
         require(sha(raw) == execution['receiptSHA256'], 'hosted receipt digest mismatch')
-        verify(strict_json(raw), record['revision'])
-    except (OSError, ValueError, TypeError, KeyError) as exc:
+        directory = path.parent / (path.stem + '-logs')
+        require(directory.resolve().is_relative_to(root), 'original logs escape repository')
+        logs, digests = original_logs(directory)
+        verify(strict_json(raw), record['revision'], logs)
+        require(not directory.is_symlink() and bounded_regular(path, 32 * 1024 * 1024) == raw and
+                all(sha(bounded_regular(p, MAX_LOG_BYTES)) == digest for p,digest in digests.items()),
+                'original receipt or bank archives changed during verification')
+    except (OSError, ValueError, TypeError, KeyError, EOFError, zlib.error) as exc:
         return ['hosted verification receipt: ' + str(exc)]
     return []
 
@@ -212,7 +258,7 @@ def summarize_log(raw, library, expected, identifiers):
 
 def parse_bank(raw, source, bank):
     """Recompute execution counts from original stdout, never receipt JSON alone."""
-    require(isinstance(raw, bytes) and 0 < len(raw) <= 64 * 1024 * 1024,
+    require(isinstance(raw, bytes) and 0 < len(raw) <= MAX_LOG_BYTES,
             'bounded original native log')
     require(isinstance(source, str) and re.fullmatch('[0-9a-f]{40}', source), 'exact native source')
     require(type(bank) is int and 0 <= bank < BANKS, 'native bank index')
@@ -398,14 +444,14 @@ def collect(run_id, source, output):
         bank = int(job['name'].rsplit(' ', 1)[1])
         raw = api(f'jobs/{job["id"]}/logs', raw=True)
         receipt, _ = parse_bank(raw, source, bank)
-        rows.append(dict(job=job, receipt=receipt)); logs[f'bank-{bank}.log.gz'] = gzip.compress(raw,mtime=0)
+        rows.append(dict(job=job, receipt=receipt, originalLogSHA256=sha(raw))); logs[bank] = raw
     bundle = dict(schema=SCHEMA,source=source,run=run,workflow=workflow,banks=rows)
-    result = verify(bundle,source)
+    result = verify(bundle,source,logs)
     refreshed = api(f'runs/{run_id}')
     require(all(refreshed.get(key) == run.get(key) for key in
                 ['id','head_sha','status','conclusion','run_attempt','workflow_id']), 'run changed during collection')
     output.mkdir(parents=True,exist_ok=False)
-    for name, raw in logs.items(): (output/name).write_bytes(raw)
+    for bank, raw in logs.items(): (output/f'bank-{bank}.log.gz').write_bytes(gzip.compress(raw,mtime=0))
     (output/'receipt.json').write_text(json.dumps(bundle,indent=2,sort_keys=True)+'\n')
     (output/'verification.json').write_text(json.dumps(result,indent=2,sort_keys=True)+'\n')
     return result
