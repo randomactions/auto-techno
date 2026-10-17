@@ -4304,8 +4304,9 @@ struct AutonomousCandidateEvaluationTests {
             }
         }
 
+        // Engine52 binds intent schema2 and neutral upperColor in the plan.
         #expect(AutonomousCandidateFingerprint.plan(plan) ==
-            "e4e7937cef42580e")
+            "3a5b7d1f643340b3")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "9191ba1b316d1c03")
         // v5 domain separation intentionally invalidates the old v4 golden
@@ -4314,8 +4315,9 @@ struct AutonomousCandidateEvaluationTests {
                 "50304391ec440494")
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
+        // Complete recovery intent participates even for neutral continuation.
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-            "35614a1677c3c42b")
+            "f4ee691ed9dac1dd")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
