@@ -224,7 +224,10 @@ def full_phrase(report):
             else: integer(targeted,1)
             expected = row[old] + len(row['targetedScoreBars']) if row['scenario']=='undeclared-bass' else row[old] if valid or row['scenario'] in ('shifted-bass','zero-intensity') else row[old]-targeted
             exact(row[new],expected)
-        elif valid or row['scenario']=='shifted-'+noun: exact(row[new],row[old])
+        elif valid or row['scenario']=='shifted-'+noun or (not companion and row['scenario']=='zero-intensity'):
+            # The canonical native bass control retains scheduled events when
+            # intensity becomes zero. A deleted event is a different fault.
+            exact(row[new],row[old])
         elif row['scenario'] in ('deleted-'+noun,'wrong-voice'): exact(row[new],0)
     return dict(rows=len(rows), pairedRates=list(RATES), behavior=behavior, canonicalDamageReportsChecked=True,
                 rawPCMIndependentlyRendered=False)

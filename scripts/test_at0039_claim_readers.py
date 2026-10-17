@@ -96,6 +96,18 @@ class ClaimReadersTests(unittest.TestCase):
             p=full_phrase(); p['rows'][1].update(change)
             with self.assertRaises(ValueError): r.read(p)
 
+    def test_full_phrase_zero_intensity_bass_retains_every_scheduled_event(self):
+        for behavior in [None,'monotone','point','pump','subPulse']:
+            original=full_phrase(behavior)
+            r.read(original)
+            for index,row in enumerate(original['rows']):
+                if row['scenario']!='zero-intensity': continue
+                for count in (0,row['originalBassEvents']+1):
+                    changed=copy.deepcopy(original)
+                    changed['rows'][index]['renderedBassEvents']=count
+                    with self.subTest(behavior=behavior,root=row['rootSeed'],rate=row['sampleRate'],count=count):
+                        with self.assertRaises(ValueError): r.read(changed)
+
     def test_absent_behavior_requires_an_actual_undeclared_part_counterexample(self):
         p=full_phrase('absent'); p['rows'][1]['renderedBassEvents']=0
         with self.assertRaises(ValueError): r.read(p)
