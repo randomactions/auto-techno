@@ -3418,3 +3418,25 @@ check actual spectral response and frequency independence. Mechanical prepared
 controls trace reducer, future score, PCM and evidence under an explicit test
 policy; they do not establish installed quality, complete resource/deadline or
 Long qualification. Fresh complete engine-v52 qualification remains mandatory.
+
+
+## Engine-v52 Long study verification format
+
+The existing original-product reader has a distinct `v22-upper-color` format.
+Its cold proof and protocol bind engine52, recovery-intent schema2, journey3,
+effect-dose3, runtime6 and Long policy22. The cold suite requires63 actual native
+controls with no skips, including the complete existing recovery selector and
+upper-color controls. The actual compiled Core owner must declare the same
+intent schema and upper-color coordinate. Its entrypoint, production/test/object
+partitions, owned compiler support, isolated cache, actual runtime bundle and
+four pre-Testing refusals retain the existing strict byte bindings.
+
+All18 complete histories, seven development and two disjoint holdout roots,
+independent native-rate gates, global repeat limit, exact reductions, native
+verdict stdout and original cold/terminal archives remain mandatory. Historical
+engine51 formats retain their own identities and cannot be relabeled as engine52.
+The source-applicability reader joins only a matching engine and authenticated
+cold format; it still requires complete original primary and Long verification
+and exact installed bytes. The new result schema distinguishes this format and
+supplies no capture, installed-positive, resource, platform, runtime or item
+completion authority. Generic passed JSON remains insufficient.

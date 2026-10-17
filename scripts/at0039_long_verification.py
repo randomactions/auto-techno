@@ -35,6 +35,8 @@ class StudyFormat:
     policy_version: int
     driver: str
     journey_version: int = 2
+    engine_version: str = "autotechno-canonical-engine.v51"
+    recovery_intent_version: int = 1
 
     @property
     def observation(self):
@@ -78,7 +80,12 @@ CURRENT = StudyFormat('v22', 'autotechno-engine51-effect-dose-v3-long-cold-launc
 RECOVERY = StudyFormat('v22-recovery', 'autotechno-engine51-successor-recovery-long-cold-launch-audit.v1',
     'autotechno-fresh-engine51-successor-recovery-long-protocol.v1', 57, 14, 3, 6, 8, 22,
     'run_at0039_engine51_successor_recovery_long_study_v1.py', journey_version=3)
-FORMATS = {value.key: value for value in (LEGACY, CURRENT, RECOVERY)}
+UPPER_COLOR = StudyFormat('v22-upper-color',
+    'autotechno-engine52-upper-color-long-cold-launch-audit.v1',
+    'autotechno-fresh-engine52-upper-color-long-protocol.v1', 63, 14, 3, 6, 8, 22,
+    'run_at0039_engine52_upper_color_long_study_v1.py', journey_version=3,
+    engine_version='autotechno-canonical-engine.v52', recovery_intent_version=2)
+FORMATS = {value.key: value for value in (LEGACY, CURRENT, RECOVERY, UPPER_COLOR)}
 # Compatibility names describe only the original v21 format.
 OBSERVATION, CORPUS, PROFILE, ADVERSARIAL, HOLDOUT = (
     LEGACY.observation, LEGACY.corpus, LEGACY.profile, LEGACY.adversarial, LEGACY.holdout)
@@ -118,14 +125,14 @@ RECOVERY_COLD_SELECTOR = COLD_SELECTOR.replace(
 
 def cold_selector(fmt):
     need(fmt in FORMATS.values(), 'known original cold selector format')
-    return RECOVERY_COLD_SELECTOR if fmt == RECOVERY else COLD_SELECTOR
+    return RECOVERY_COLD_SELECTOR if fmt in (RECOVERY, UPPER_COLOR) else COLD_SELECTOR
 
 
 def expected_main(fmt, source, study):
     if fmt == LEGACY:
         return ('import Testing\nimport Darwin\n@main struct Runner { static func main() async '
                 '{ exit(await Testing.__swiftPMEntryPoint()) } }\n')
-    need(fmt in (CURRENT, RECOVERY), 'known original entrypoint format')
+    need(fmt in (CURRENT, RECOVERY, UPPER_COLOR), 'known original entrypoint format')
     return '''import Testing
 import Foundation
 import Darwin
@@ -178,7 +185,7 @@ def verify_compiler_recipe(runner, metadata, fmt, source, study):
 
 
 def verify_owned_support(context, proof, metadata, cold, protocol, inventory, *, study_format=CURRENT):
-    need(study_format in (CURRENT, RECOVERY), 'known owned-support format')
+    need(study_format in (CURRENT, RECOVERY, UPPER_COLOR), 'known owned-support format')
     runner = context.runner
     path = runner/'copied-compiler-support-bindings.json'
     need(path.resolve() in inventory and sha(path) == cold['copiedCompilerSupportBindingsSHA256'],
@@ -225,7 +232,7 @@ def verify_owned_support(context, proof, metadata, cold, protocol, inventory, *,
     observers = [r for r in proof['files'] if Path(r['source']).name == 'long_horizon_history_integrity.py']
     need(len(observers) == 1, 'one archived original version3 observer')
     original = (context.source_root/'scripts/long_horizon_history_integrity.py').read_bytes()
-    if study_format == RECOVERY:
+    if study_format in (RECOVERY, UPPER_COLOR):
         need(hashlib.sha256(original).hexdigest() == observers[0]['sha256'],
              'recovery observer is the exact tracked integrity implementation, without a patched gate')
         return
@@ -235,8 +242,29 @@ def verify_owned_support(context, proof, metadata, cold, protocol, inventory, *,
          'observer changes only the bound effect schema, retaining every original integrity gate')
 
 
+def verify_engine_versions(fmt, protocol, cold, compiled_source=None):
+    """A named cold format binds an engine; old studies cannot be relabeled."""
+    need(fmt in FORMATS.values() and cold.get('engineVersion') == fmt.engine_version,
+         'engine identity matches the exact original study format')
+    if fmt != UPPER_COLOR:
+        return
+    need(protocol.get('engineVersion') == fmt.engine_version and
+         all(type(row.get('recoveryIntentSchemaVersion')) is int and
+             row['recoveryIntentSchemaVersion'] == fmt.recovery_intent_version
+             for row in (protocol, cold)),
+         'engine52 cold and protocol bind recovery-intent schema2')
+    if compiled_source is not None:
+        versions = re.findall(
+            r'package struct AutonomousQualityRecoveryIntent:[^{]+\{\s*'
+            r'package static let schemaVersion\s*=\s*(\d+)', compiled_source)
+        fields = re.findall(r'package let upperColor: AutonomousQualityRecoveryDirection',
+                            compiled_source)
+        need(versions == [str(fmt.recovery_intent_version)] and len(fields) == 1,
+             'engine52 recovery interpretation comes from the actual compiled Core owner')
+
+
 def verify_journey_versions(fmt, protocol, cold):
-    if fmt != RECOVERY:
+    if fmt not in (RECOVERY, UPPER_COLOR):
         return
     need(type(protocol.get('journeySchemaVersion')) is int and
          protocol['journeySchemaVersion'] == fmt.journey_version and
@@ -248,7 +276,7 @@ def verify_journey_versions(fmt, protocol, cold):
 def verify_journey_interpretation(fmt, protocol, cold, producer):
     """A new cold receipt cannot reinterpret an old compiled journey writer."""
     verify_journey_versions(fmt, protocol, cold)
-    if fmt != RECOVERY:
+    if fmt not in (RECOVERY, UPPER_COLOR):
         return
     versions = re.findall(r'"schema"\s*:\s*"autotechno-long-horizon-shared-journey\.v(\d+)"', producer)
     need(versions == [str(fmt.journey_version)],
@@ -308,8 +336,8 @@ class Context:
                 compilerSupport=18, modules=12, actualRuntimeResources=15).items():
             need(type(cold[key]) is int and cold[key] == expected,
                  'complete known original harness inventory: ' + key)
-        need(cold['engineVersion'] == 'autotechno-canonical-engine.v51',
-             'known engine51 original study required')
+        need(cold['engineVersion'] == fmt.engine_version,
+             'engine identity matches the exact original study format')
         need(cold['source'] == self.source and self.git('rev-parse', 'HEAD') == self.source and
              not self.git('status', '--porcelain', '--untracked-files=all'), 'clean exact original source')
         records = proof['files']
@@ -411,6 +439,7 @@ class Context:
         source_text = (self.source_root/'Sources/AutoTechnoCore/QualityQualification.swift').read_text()
         need(set(re.findall(r'"(autotechno-canonical-engine\.v\d+)"', source_text)) == {cold['engineVersion']},
              'engine identity comes from compiled original source')
+        verify_engine_versions(fmt, protocol, cold, source_text)
         registry = (self.source_root/'Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift').read_text()
         seals = []
         for name in ['Profile', 'AdversarialSuite', 'HoldoutQualification']:
@@ -456,7 +485,7 @@ class Context:
              re.findall(r'static let adaptationVersion\s*=\s*"([^"]+)"', runtime_source) ==
              [f'autotechno-long-horizon-future-adaptation.v{fmt.runtime_version}'],
              'runtime interpretation comes from original compiled source')
-        if fmt in (CURRENT, RECOVERY):
+        if fmt in (CURRENT, RECOVERY, UPPER_COLOR):
             verify_owned_support(self, proof, metadata, cold, protocol, inventory, study_format=fmt)
         attack_enum = policy_source.split('package enum LongHorizonAdversarialAttack:', 1)[1].split('\n}',1)[0]
         attacks = re.findall(r'case \w+ = "([^"]+)"', attack_enum)
@@ -531,6 +560,7 @@ def verify_products(protocol, cold, documents, artifacts, status, log, source,
     """
     need(study_format in FORMATS.values(), 'supported original product format')
     fmt = study_format
+    verify_engine_versions(fmt, protocol, cold)
     verify_journey_versions(fmt, protocol, cold)
     development = seed_list(protocol['developmentRoots'], 7)
     holdout = seed_list(protocol['holdoutRoots'], 2)
@@ -671,13 +701,16 @@ def verify_products(protocol, cold, documents, artifacts, status, log, source,
         currentSourceApplicabilityVerified=False, installedArtifactsVerified=False,
         completeResourceQualification=False, fullPlatformQualified=False,
         runtimeQualification=False, item39Complete=False)
-    if fmt in (CURRENT, RECOVERY):
+    if fmt in (CURRENT, RECOVERY, UPPER_COLOR):
         result.update(schema='autotechno-at0039-long-original-product-verification.v2',
             originalFormat=fmt.key, effectDoseSchemaVersion=fmt.effect_version,
             longPolicyFamilyVersion=fmt.policy_version)
-    if fmt == RECOVERY:
+    if fmt in (RECOVERY, UPPER_COLOR):
         result.update(schema='autotechno-at0039-long-original-product-verification.v3',
             journeySchemaVersion=fmt.journey_version)
+    if fmt == UPPER_COLOR:
+        result.update(schema='autotechno-at0039-long-original-product-verification.v4',
+            recoveryIntentSchemaVersion=fmt.recovery_intent_version)
     return result
 
 

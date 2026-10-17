@@ -261,9 +261,12 @@ def native_artifacts(pcontext, lcontext, presult, lresult):
          lresult['originalByteContextAuthenticated'] is True and
          lresult['originalNativeExecutionBound'] is True,
          'both complete original native verifications required')
-    need(presult['engine'] == lresult['engine'] and lresult['originalFormat'] == 'v22-recovery',
-         'same engine and current recovery-study format required')
+    fmt = long.bound_format(lresult['originalFormat'])
+    need(fmt in (long.RECOVERY, long.UPPER_COLOR) and
+         presult['engine'] == lresult['engine'] == fmt.engine_version,
+         'same engine and exact recovery-study format required')
     inputs = lcontext.inputs()
+    need(inputs.get('formatKey') == fmt.key, 'original cold format matches verified native result')
     seals = dict(zip(KINDS, (presult['profileFingerprint'], presult['adversarialFingerprint'],
                              presult['holdoutFingerprint'])))
     need(inputs['protocol']['primarySeals'] == list(seals.values()),
@@ -280,7 +283,7 @@ def native_artifacts(pcontext, lcontext, presult, lresult):
         raw = primary.raw_file(path)
         need(digest(raw) == presult['productSHA256'][str(path)], 'primary native product changed')
         data['primary']['bytes'][kind] = raw
-        filename = long.RECOVERY.artifacts[lkey]
+        filename = fmt.artifacts[lkey]
         path = lcontext.study / filename
         long.authenticate_original(lcontext, records['study/' + filename], path)
         raw = primary.raw_file(path)

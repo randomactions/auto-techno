@@ -15,7 +15,7 @@ from at0039_primary_verification import VerificationError
 
 import at0039_long_verification as v
 SOURCE = 'a' * 40
-ENGINE = 'fixture-engine'
+ENGINE = 'autotechno-canonical-engine.v51'
 fp = lambda text: hashlib.sha256(text.encode()).hexdigest()[:16]
 
 
@@ -74,13 +74,14 @@ def owned_fixture(root, fmt=v.CURRENT):
     script=source/'scripts/long_horizon_history_integrity.py'
     script.parent.mkdir();script.write_bytes(original)
     proof=dict(files=[dict(source=str(root/'observer/long_horizon_history_integrity.py'),
-        sha256=hashlib.sha256(original if fmt == v.RECOVERY else replacement).hexdigest())])
+        sha256=hashlib.sha256(original if fmt in (v.RECOVERY, v.UPPER_COLOR) else replacement).hexdigest())])
     inventory={p.resolve(): {} for p in runner.iterdir() if p.is_file()}
     return SimpleNamespace(runner=runner,source_root=source),proof,metadata,cold,protocol,inventory
 
 
 def products(study_format=v.LEGACY):
     fmt = study_format
+    engine = fmt.engine_version
     development, holdout = list(range(1, 8)), [8, 9]
     protocol = dict(source=SOURCE, developmentRoots=development, holdoutRoots=holdout,
         nativeRates=[44100, 48000], allHistoriesFromInitialState=True,
@@ -90,14 +91,17 @@ def products(study_format=v.LEGACY):
         archiveImport=False, partialStateImport=False, historicalHistoriesRetagged=False,
         runtimeActivation=False, item39Complete=False)
     cold = dict(source=SOURCE, developmentRoots=development, holdoutRoots=holdout,
-        sampleRates=[44100, 48000], primaryPolicyVersion='policy', engineVersion=ENGINE)
-    if fmt == v.RECOVERY:
+        sampleRates=[44100, 48000], primaryPolicyVersion='policy', engineVersion=engine)
+    if fmt in (v.RECOVERY, v.UPPER_COLOR):
         protocol['journeySchemaVersion'] = cold['journeySchemaVersion'] = 3
+    if fmt == v.UPPER_COLOR:
+        protocol['engineVersion'] = engine
+        protocol['recoveryIntentSchemaVersion'] = cold['recoveryIntentSchemaVersion'] = 2
     documents, observations = {}, {}
     for seed in development + holdout:
         routes = []
         for rate in v.RATES:
-            document = (fixtures.HistoryIntegrityTests.recovery_fixture(rate) if fmt == v.RECOVERY
+            document = (fixtures.HistoryIntegrityTests.recovery_fixture(rate) if fmt in (v.RECOVERY, v.UPPER_COLOR)
                 else fixtures.fixture(rate, effect_schema_version=fmt.effect_version))
             document['schema'] = f'autotechno-long-horizon-shared-journey.v{fmt.journey_version}'
             j = document['journey']; j['rootSeed'] = seed
@@ -107,7 +111,7 @@ def products(study_format=v.LEGACY):
             signal['renderedBarCount'] = bars
             for i, row in enumerate(signal['recentPhrases']):
                 row.update(rootSeed=seed, startBar=bars-320+i*10)
-            semantic.update(observedBarCount=bars, nextExpectedBar=bars,
+            semantic.update(engineVersion=engine, observedBarCount=bars, nextExpectedBar=bars,
                 trajectoryFingerprint=fp(f'semantic-{seed}-{rate}'),
                 tensionDwell=dict(maximumHighDwellBars=0, recoveryBarCount=0),
                 eventSignatureRecurrence=dict(observationCount=0, repeatObservationCount=0),
@@ -124,7 +128,7 @@ def products(study_format=v.LEGACY):
             j['acceptedFrameCount'] = j['endSample'] = bars * round(240/130*rate)
             documents[seed, rate] = document
             routes.append(dict(schemaVersion=fmt.runtime,
-                engineVersion=ENGINE, primaryPolicyVersion='policy', rootSeed=seed,
+                engineVersion=engine, primaryPolicyVersion='policy', rootSeed=seed,
                 sampleRate=rate, sourceFingerprint=fp(f'route-{seed}-{rate}'),
                 semanticFingerprint=semantic['trajectoryFingerprint'],
                 signalFingerprint=signal['trajectoryFingerprint'],
@@ -134,23 +138,23 @@ def products(study_format=v.LEGACY):
                 operatorDeltas=[dict(sampleRate=rate, operatorKind=t['operatorKind'],
                     metric=m['metric'], transitionCount=m['observationCount'], meanDelta=m['mean'])
                     for t in signal['operatorTransitions'] for m in t['metricDeltas']]))
-        observations[seed] = dict(schemaVersion=fmt.observation, engineVersion=ENGINE,
+        observations[seed] = dict(schemaVersion=fmt.observation, engineVersion=engine,
             primaryPolicyVersion='policy', rootSeed=seed, routes=routes, sourceFingerprint=fp(f'root-{seed}'))
-    artifacts = {partition: dict(schemaVersion=fmt.corpus, engineVersion=ENGINE,
+    artifacts = {partition: dict(schemaVersion=fmt.corpus, engineVersion=engine,
         primaryPolicyVersion='policy', fingerprint=fp(partition), observations=[observations[s] for s in seeds])
         for partition,seeds in [('development',development),('holdout',holdout)]}
-    profile = dict(profileVersion=fmt.profile, engineVersion=ENGINE, primaryPolicyVersion='policy',
+    profile = dict(profileVersion=fmt.profile, engineVersion=engine, primaryPolicyVersion='policy',
         sampleRates=list(v.RATES), fingerprint=fp('profile'), developmentJourneyCount=7,
         developmentRootSeeds=development, developmentCorpusFingerprint=fp('development'))
     attacks = ['attack-'+str(i) for i in range(10)]
-    suite = dict(schemaVersion=fmt.adversarial, engineVersion=ENGINE,
+    suite = dict(schemaVersion=fmt.adversarial, engineVersion=engine,
         profileFingerprint=fp('profile'), sourceObservationFingerprint=observations[1]['sourceFingerprint'],
         fingerprint=fp('adversarial'), passed=True,
         cases=[dict(sampleRate=rate, attack=attack, rejected=True, failedDimensions=['dimension'])
             for rate in v.RATES for attack in attacks])
     accepted = lambda: dict(accepted=True, failedDimensions=[], failedSemanticMetrics=[],
         failedOperatorDeltas=[], failedEffectFamilies=[])
-    held = dict(schemaVersion=fmt.holdout, engineVersion=ENGINE, qualified=True,
+    held = dict(schemaVersion=fmt.holdout, engineVersion=engine, qualified=True,
         profileFingerprint=fp('profile'), adversarialFingerprint=fp('adversarial'),
         developmentCorpusFingerprint=fp('development'), holdoutCorpusFingerprint=fp('holdout'),
         fingerprint=fp('held'), journeys=[])
@@ -240,6 +244,38 @@ class CompilerRecipeTests(unittest.TestCase):
             with self.subTest(writer=writer),self.assertRaises(ValueError):
                 v.verify_journey_interpretation(v.RECOVERY,protocol,cold,writer)
 
+    def test_upper_color_format_binds_engine_and_intent_in_cold_protocol_and_compiled_owner(self):
+        args=products(v.UPPER_COLOR);protocol,cold=args[:2]
+        source='package struct AutonomousQualityRecoveryIntent: Codable {\n    package static let schemaVersion = 2\n    package let upperColor: AutonomousQualityRecoveryDirection\n}'
+        v.verify_engine_versions(v.UPPER_COLOR,protocol,cold,source)
+        for boundary in ['cold','protocol']:
+            for key, value in [('engineVersion',v.RECOVERY.engine_version),
+                    ('recoveryIntentSchemaVersion',1),('recoveryIntentSchemaVersion',True),
+                    ('recoveryIntentSchemaVersion',2.0),('recoveryIntentSchemaVersion',None)]:
+                with self.subTest(boundary=boundary,key=key,value=value),self.assertRaises(ValueError):
+                    p,c=copy.deepcopy((protocol,cold));row=p if boundary=='protocol' else c
+                    if value is None:row.pop(key,None)
+                    else:row[key]=value
+                    v.verify_engine_versions(v.UPPER_COLOR,p,c,source)
+        for invalid in ['',source.replace('Version = 2','Version = 1'),
+                source.replace('upperColor','unboundColor'),source+source]:
+            with self.subTest(source=invalid),self.assertRaises(ValueError):
+                v.verify_engine_versions(v.UPPER_COLOR,protocol,cold,invalid)
+
+    def test_upper_color_reuses_complete_recovery_guards_and_exact_observer(self):
+        with tempfile.TemporaryDirectory() as directory:
+            args=owned_fixture(Path(directory),v.UPPER_COLOR)
+            v.verify_owned_support(*args,study_format=v.UPPER_COLOR)
+            args[1]['files'][0]['sha256']='0'*64
+            with self.assertRaisesRegex(ValueError,'exact tracked integrity'):
+                v.verify_owned_support(*args,study_format=v.UPPER_COLOR)
+        with tempfile.TemporaryDirectory() as directory:
+            runner,source,study,metadata=compiler_fixture(Path(directory),v.UPPER_COLOR)
+            main=runner/'main.swift';main.write_text(v.expected_main(v.CURRENT,SOURCE,study))
+            metadata['compilerSupport'][str(main)]=v.sha(main)
+            with self.assertRaisesRegex(ValueError,'entrypoint'):
+                v.verify_compiler_recipe(runner,metadata,v.UPPER_COLOR,SOURCE,study)
+
     def test_current_owned_inputs_reject_byte_changes_or_external_cache(self):
         for case in ['copy','cache','duplicate-cache','protocol','cold-boolean','guard-output',
                      'guard-test','observer','generic-copies']:
@@ -263,6 +299,38 @@ class CompilerRecipeTests(unittest.TestCase):
 
 
 class LongProductTests(unittest.TestCase):
+    def test_upper_color_complete_shape_preserves_independent_histories_and_no_promotion(self):
+        result=v.verify_products(*products(v.UPPER_COLOR),study_format=v.UPPER_COLOR)
+        self.assertEqual(result['schema'],'autotechno-at0039-long-original-product-verification.v4')
+        self.assertEqual(result['engine'],v.UPPER_COLOR.engine_version)
+        self.assertEqual(result['recoveryIntentSchemaVersion'],2)
+        self.assertEqual(result['completeHistories'],18)
+        self.assertFalse(result['currentSourceApplicabilityVerified'])
+        self.assertFalse(result['installedArtifactsVerified'])
+        self.assertFalse(result['runtimeQualification'])
+        self.assertFalse(result['item39Complete'])
+
+    def test_upper_color_partial_or_cross_rate_evidence_and_over_limit_repeats_refuse(self):
+        mutations=[lambda a:a[2].pop((9,48000)),
+            lambda a:a[2][1,44100]['journey'].update(completedRequestedScope=False),
+            lambda a:a[3]['holdoutVerdicts']['journeys'][0]['verdict']['routeVerdicts'].pop(),
+            lambda a:a[1].update(recoveryIntentSchemaVersion=1)]
+        for mutate in mutations:
+            with self.subTest(mutation=mutate),self.assertRaises(ValueError):
+                args=products(v.UPPER_COLOR);mutate(args)
+                v.verify_products(*args,study_format=v.UPPER_COLOR)
+        for seed in (1,9):
+            for rate in v.RATES:
+                args=products(v.UPPER_COLOR);journey=args[2][seed,rate]['journey']
+                frames=round(240/130*rate)
+                journey['accountedRepeats']=[dict(startSample=i*16*frames,
+                    endSample=(i+1)*16*frames,frameCount=16*frames,barCount=16)
+                    for i in range(651)]
+                journey['endSample']+=10416*frames
+                with self.subTest(seed=seed,rate=rate),self.assertRaisesRegex(
+                        ValueError,'repeat presentation bar ceiling'):
+                    v.verify_products(*args,study_format=v.UPPER_COLOR)
+
     def test_recovery_complete_shape_preserves_all_history_gates_without_promotion(self):
         result = v.verify_products(*products(v.RECOVERY), study_format=v.RECOVERY)
         self.assertEqual(result['schema'], 'autotechno-at0039-long-original-product-verification.v3')
@@ -284,7 +352,7 @@ class LongProductTests(unittest.TestCase):
             lambda a:a[3]['holdoutVerdicts']['journeys'][0]['verdict']['routeVerdicts'][1]['verdict'].update(accepted=False),
             lambda a:a[0].update(maximumRenderPasses=3)]
         for i,mutate in enumerate(mutations):
-            with self.subTest(i=i),self.assertRaises((ValueError,KeyError)):
+            with self.subTest(i=i),self.assertRaises(ValueError):
                 args=products(v.RECOVERY);mutate(args)
                 v.verify_products(*args,study_format=v.RECOVERY)
 
@@ -351,7 +419,8 @@ class LongProductTests(unittest.TestCase):
 
     def test_cold_format_cannot_downgrade_native_control_count_before_git(self):
         for fmt, count in [(v.CURRENT,26),(v.LEGACY,53),(v.CURRENT,True),(v.CURRENT,53.0),
-                           (v.RECOVERY,53),(v.RECOVERY,True),(v.RECOVERY,57.0)]:
+                           (v.RECOVERY,53),(v.RECOVERY,True),(v.RECOVERY,57.0),
+                           (v.UPPER_COLOR,57),(v.UPPER_COLOR,True),(v.UPPER_COLOR,63.0)]:
             with self.subTest(fmt=fmt.key,count=count),tempfile.TemporaryDirectory() as directory:
                 root=Path(directory)
                 proof=dict(schema=fmt.cold_schema,source=SOURCE,coldNativeControls=count,
@@ -384,7 +453,7 @@ class LongProductTests(unittest.TestCase):
             lambda a:a[2][1,44100]['journey'].update(completedRequestedScope=False),
             lambda a:a[2][1,44100]['journey'].update(reservedNumericPeakBytes=268435456)]
         for i,mutate in enumerate(mutations):
-            with self.subTest(i=i), self.assertRaises((ValueError,KeyError)):
+            with self.subTest(i=i), self.assertRaises(ValueError):
                 args=products();mutate(args);v.verify_products(*args)
 
     def test_per_rate_reductions_and_holdout_gates_cannot_be_averaged(self):
@@ -399,7 +468,7 @@ class LongProductTests(unittest.TestCase):
             lambda a:a[3]['adversarial']['cases'][0].update(rejected=False),
             lambda a:a[3]['profile'].update(developmentJourneyCount=True)]
         for i,mutate in enumerate(mutations):
-            with self.subTest(i=i), self.assertRaises((ValueError,KeyError)):
+            with self.subTest(i=i), self.assertRaises(ValueError):
                 args=products();mutate(args);v.verify_products(*args)
 
     def test_original_terminal_and_native_stdout_are_required(self):
@@ -408,9 +477,9 @@ class LongProductTests(unittest.TestCase):
                        lambda a:a[4].update(originalLogSHA256='0'*64),
                        lambda a:a[4].update(independentlyAuditedCompleteHistories=7),
                        lambda a:a.__setitem__(5,b'passed')]:
-            with self.assertRaises((ValueError,KeyError)):
+            with self.assertRaises(ValueError):
                 args=products();mutate(args);v.verify_products(*args)
-        with self.assertRaises((ValueError,KeyError)):
+        with self.assertRaises(ValueError):
             v.verify_products(*([{'passed':True}]*5),b'passed',SOURCE,'binding',['attack'])
 
     def test_generic_unpinned_context_refuses_before_any_native_execution(self):
@@ -454,6 +523,9 @@ class LongProductTests(unittest.TestCase):
     def test_recovery_terminal_roundtrip_retains_explicit_version_and_original_bytes(self):
         self.terminal_roundtrip(v.RECOVERY)
 
+    def test_upper_color_terminal_roundtrip_preserves_new_scope_and_all_originals(self):
+        self.terminal_roundtrip(v.UPPER_COLOR)
+
     def terminal_roundtrip(self, fmt):
         # Only the cold-context boundary is replaced by unit data. The real CLI
         # cannot use this substitute and independently checks Git/build/runtime.
@@ -471,7 +543,7 @@ class LongProductTests(unittest.TestCase):
             for (seed,rate),document in documents.items():
                 name=f'actual-journey-{seed}-{rate}'
                 path=study/(name+'.json');write(path,document)
-                observed=v.verify_history(document,binding,list(range(1,10)),'policy',ENGINE,
+                observed=v.verify_history(document,binding,list(range(1,10)),'policy',cold['engineVersion'],
                     effect_schema_version=fmt.effect_version,journey_schema_version=fmt.journey_version)
                 write(evidence/(name+'-audit.json'),dict(**observed,source=source,
                     originalRouteSHA256=v.sha(path),coldByteBindingsRechecked=True,historyIndependentlyAudited=True))

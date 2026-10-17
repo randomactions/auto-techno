@@ -1,6 +1,7 @@
 """Adversarial source/installation controls; synthetic data is never qualification."""
 from dataclasses import asdict
 import json
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -34,16 +35,24 @@ class LoaderTests(unittest.TestCase):
             self.assertEqual(q.loader(changed, family)[0], old_body)
 
     def test_expression_nil_duplicate_unsafe_or_nonliteral_resource_refused(self):
-        raw = (ROOT / q.LOADERS['primary']).read_bytes()
+        current = (ROOT / q.LOADERS['primary']).read_bytes()
+        # A qualified literal is an explicit parser fixture, independent of
+        # whether the current engine's installed seals are present or nil.
+        raw, count = re.subn(
+            rb'(package static let expectedProfileFingerprint: String\? = )(nil|"[0-9a-f]{16}")',
+            rb'\g<1>"abcdef0123456789"', current)
+        self.assertEqual(count, 1)
+        q.loader(raw, 'primary')
         for changed in [
-            raw.replace(b'"267051f651dcfdca"', b'"267051f651dcfdca" + ""'),
-            raw.replace(b'"267051f651dcfdca"', b'computeSeal()'),
-            raw.replace(b'"267051f651dcfdca"', b'nil /* unqualified */'),
+            raw.replace(b'"abcdef0123456789"', b'"abcdef0123456789" + ""'),
+            raw.replace(b'"abcdef0123456789"', b'computeSeal()'),
+            raw.replace(b'"abcdef0123456789"', b'nil /* unqualified */'),
             raw + b'\npackage static let expectedProfileFingerprint: String? = nil\n',
             raw.replace(b'professional-quality-primary-profile-v35', b'../foreign'),
             raw.replace(b'professional-quality-primary-profile-v35', b'professional-quality-primary-profile-v035'),
             raw + '\n// non-ASCII syntax \u2028\n'.encode(),
         ]:
+            self.assertNotEqual(changed, raw, 'the adversarial fixture must actually mutate the binding')
             with self.subTest(changed=changed[-80:]), self.assertRaises(ValueError):
                 q.loader(changed, 'primary')
 
@@ -313,20 +322,20 @@ class AuthorityTests(unittest.TestCase):
 
     def test_long_primary_seals_cannot_inherit_foreign_primary_qualification(self):
         p = dict(originalNativeProductsConsistent=True, originalColdOriginBound=True,
-                 engine='e', profileFingerprint='1'*16, adversarialFingerprint='2'*16,
+                 engine=q.long.RECOVERY.engine_version, profileFingerprint='1'*16, adversarialFingerprint='2'*16,
                  holdoutFingerprint='3'*16)
         l = dict(originalNativeProductsConsistent=True, originalByteContextAuthenticated=True,
-                 originalNativeExecutionBound=True, engine='e', originalFormat='v22-recovery')
-        with patch.object(q.long.Context, 'inputs', return_value={'protocol': {'primarySeals': ['0'*16]*3}}):
+                 originalNativeExecutionBound=True, engine=q.long.RECOVERY.engine_version, originalFormat='v22-recovery')
+        with patch.object(q.long.Context, 'inputs', return_value={'formatKey': q.long.RECOVERY.key, 'protocol': {'primarySeals': ['0'*16]*3}}):
             ctx = q.long.Context(Path('/a'), Path('/b'), Path('/c'), Path('/d'), '', '', '', '', '')
             with self.assertRaisesRegex(ValueError, 'Long study must use'):
                 q.native_artifacts(None, ctx, p, l)
 
     def test_legacy_long_format_cannot_supply_current_applicability(self):
-        p = dict(originalNativeProductsConsistent=True, originalColdOriginBound=True, engine='e')
+        p = dict(originalNativeProductsConsistent=True, originalColdOriginBound=True, engine=q.long.RECOVERY.engine_version)
         l = dict(originalNativeProductsConsistent=True, originalByteContextAuthenticated=True,
-                 originalNativeExecutionBound=True, engine='e', originalFormat='v21')
-        with self.assertRaisesRegex(ValueError, 'current recovery-study format'):
+                 originalNativeExecutionBound=True, engine=q.long.RECOVERY.engine_version, originalFormat='v21')
+        with self.assertRaisesRegex(ValueError, 'exact recovery-study format'):
             q.native_artifacts(None, None, p, l)
 
 
@@ -346,7 +355,7 @@ class NativeArtifactByteTests(unittest.TestCase):
         self.lcontext = q.long.Context(self.root, self.lstudy, self.lrunner, self.root,
             'cold.json', 'a'*64, 'b'*40, 'lterminal.json', 'c'*64)
         self.presult = dict(originalNativeProductsConsistent=True, originalColdOriginBound=True,
-            engine='synthetic', profileFingerprint='1'*16, adversarialFingerprint='2'*16,
+            engine=q.long.RECOVERY.engine_version, profileFingerprint='1'*16, adversarialFingerprint='2'*16,
             holdoutFingerprint='3'*16, productSHA256={})
         for name in ('offline-profile.json', 'continuous-adversarial-suite.json',
                      'continuous-holdout-qualification.json'):
@@ -355,7 +364,7 @@ class NativeArtifactByteTests(unittest.TestCase):
             self.presult['productSHA256'][str(p)] = q.primary.sha(p)
         (self.root / 'pterminal.json').write_text('{"files":[]}')
         self.lresult = dict(originalNativeProductsConsistent=True, originalByteContextAuthenticated=True,
-            originalNativeExecutionBound=True, engine='synthetic', originalFormat='v22-recovery')
+            originalNativeExecutionBound=True, engine=q.long.RECOVERY.engine_version, originalFormat='v22-recovery')
         rows = []
         for key, filename in q.long.RECOVERY.artifacts.items():
             p = self.lstudy / filename
@@ -387,6 +396,20 @@ class NativeArtifactByteTests(unittest.TestCase):
         self.assertTrue(all(q.primary.sha(p) == digest for p, digest in stable.items()))
         self.assertIn(str(self.lrunner / 'execution.log'), stable)
         self.assertIn(str(self.root / 'execution.log.gz'), stable)
+
+    def test_engine52_extraction_requires_the_distinct_matching_cold_format(self):
+        self.presult['engine']=self.lresult['engine']=q.long.UPPER_COLOR.engine_version
+        self.lresult['originalFormat']=self.inputs['formatKey']=q.long.UPPER_COLOR.key
+        products,stable=self.extract()
+        self.assertEqual(products['long']['seals']['profile'],'4'*16)
+        self.assertIn(str(self.lrunner/'execution.log'),stable)
+        self.inputs['formatKey']=q.long.RECOVERY.key
+        with self.assertRaisesRegex(ValueError,'cold format'):
+            self.extract()
+        self.inputs['formatKey']=q.long.UPPER_COLOR.key
+        self.lresult['originalFormat']=q.long.RECOVERY.key
+        with self.assertRaisesRegex(ValueError,'same engine'):
+            self.extract()
 
     def test_primary_product_changed_after_original_verification_refused(self):
         (self.pstudy / 'capture/offline-profile.json').write_bytes(b'{"changed":true}')
