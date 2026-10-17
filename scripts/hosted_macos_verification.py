@@ -16,8 +16,9 @@ import subprocess
 import sys
 import zlib
 from windows_test_plan import plan as native_plan
+import tooling_verification as tooling
 
-SCHEMA = 'autotechno-hosted-macos-verification.v2'
+SCHEMA = 'autotechno-hosted-macos-verification.v3'
 EXECUTION_SCHEMA = 'autotechno-at0039-hosted-execution.v1'
 BANKS = 16
 MAX_LOG_BYTES = 64 * 1024 * 1024
@@ -144,6 +145,7 @@ def verify(bundle, source, logs=None):
     require(isinstance(logs, dict) and all(type(bank) is int for bank in logs) and
             set(logs) == set(range(BANKS)), 'all sixteen original job logs required')
     seen = set(); discovered = set(); jobs = set(); digests = set(); skipped = 0; executed = 0
+    tooling_result = None
     for row in rows:
         require(isinstance(row, dict) and set(row) == {'job', 'receipt', 'originalLogSHA256'}, 'bank fields')
         job, receipt = row['job'], row['receipt']
@@ -164,6 +166,8 @@ def verify(bundle, source, logs=None):
                 sha(raw) == row['originalLogSHA256'], 'original bank job log digest')
         original, measured = parse_bank(raw, source, bank)
         require(original == receipt, 'bank receipt equals its original native stdout')
+        if bank == 0:
+            tooling_result = tooling.verify(tooling.decode(raw.decode('utf-8'), source), source)
         for name in ['Verify macOS environment', 'Build all native tests', 'Execute complete native bank'] + (
                 ['Run complete tooling tests', 'Build macOS Release app', 'Validate codebase map'] if bank == 0 else []):
             steps = [s for s in job.get('steps', []) if isinstance(s, dict) and s.get('name') == name]
@@ -193,10 +197,14 @@ def verify(bundle, source, logs=None):
                 'original per-bank native execution and skip totals')
     require(len(digests) == 1 and seen == set(range(BANKS)), 'common discovery and complete banks')
     require(sha('\n'.join(sorted(discovered)).encode()) == next(iter(digests)), 'exhaustive discovery union')
+    require(tooling_result is not None, 'complete original tooling execution required')
     return dict(schema=SCHEMA, source=source, run=run['id'], runAttempt=run['run_attempt'], banks=BANKS,
                 environment='hosted-macos', discoveredTests=len(discovered),
                 executedTests=executed, explicitlySkippedTests=skipped, completeNativeSuitesAndReleaseBuild=True,
                 originalJobLogsVerified=True, suiteFileHashesIndependentlyVerified=False,
+                completeToolingTestsVerified=True,
+                originalToolingOutputVerified=True,
+                toolingExecutedTests=tooling_result['executedTests'],
                 localExecution=False, automatedQualityQualification=False, runtimeQualification=False, item39Complete=False)
 
 

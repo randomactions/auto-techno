@@ -14,6 +14,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import hosted_macos_verification as hosted
 import result_status_vocabulary as results
+import test_tooling_verification as tooling_tests
 
 SOURCE = 'a' * 40
 
@@ -61,6 +62,11 @@ def native_log(receipt, timestamped=False):
     with contextlib.redirect_stdout(stream):
         hosted.emit(receipt)
     lines.extend(stream.getvalue().splitlines())
+    if receipt['bank'] == 0:
+        stream = io.StringIO()
+        with contextlib.redirect_stdout(stream):
+            hosted.tooling.emit(tooling_tests.fixture(receipt['source']))
+        lines.extend(stream.getvalue().splitlines())
     if timestamped:
         lines = ['2026-10-15T08:00:00.0000000Z ' + line for line in lines]
     return ('\n'.join(lines) + '\n').encode()
@@ -83,10 +89,55 @@ class HostedMacOSVerificationTests(unittest.TestCase):
         self.assertEqual(result['executedTests'], 256)
         self.assertTrue(result['completeNativeSuitesAndReleaseBuild'])
         self.assertTrue(result['originalJobLogsVerified'])
+        self.assertTrue(result['completeToolingTestsVerified'])
+        self.assertTrue(result['originalToolingOutputVerified'])
+        self.assertEqual(result['toolingExecutedTests'], 2)
         self.assertEqual((result['run'],result['runAttempt'],result['banks']),(50,1,16))
         self.assertFalse(result['suiteFileHashesIndependentlyVerified'])
         for key in ['localExecution','automatedQualityQualification','runtimeQualification','item39Complete']:
             self.assertFalse(result[key])
+
+    def test_successful_tooling_step_without_original_named_execution_refuses(self):
+        bundle = fixture(); logs = original_logs(bundle)
+        logs[0] = b'\n'.join(line for line in logs[0].splitlines()
+                            if hosted.tooling.CHUNK_SCHEMA.encode() not in line) + b'\n'
+        bundle['banks'][0]['originalLogSHA256'] = hosted.sha(logs[0])
+        # All native banks, Release/map step statuses and successful tooling
+        # step metadata remain intact; none replace the missing actual output.
+        with self.assertRaisesRegex(ValueError, 'original tooling chunks required'):
+            hosted.verify(bundle, SOURCE, logs)
+
+    def test_generic_foreign_or_failed_tooling_cannot_borrow_complete_native_banks(self):
+        invalid = [dict(source=SOURCE, passed=True),
+                   dict(tooling_tests.fixture(), source='b'*40),
+                   dict(tooling_tests.fixture(), exitCode=1),
+                   dict(tooling_tests.fixture(), implementationSHA256='0'*64)]
+        for record in invalid:
+            bundle = fixture(); logs = original_logs(bundle)
+            native = b'\n'.join(line for line in logs[0].splitlines()
+                                if hosted.tooling.CHUNK_SCHEMA.encode() not in line) + b'\n'
+            stream = io.StringIO()
+            with contextlib.redirect_stdout(stream):
+                hosted.tooling.emit(record)
+            logs[0] = native + stream.getvalue().encode()
+            bundle['banks'][0]['originalLogSHA256'] = hosted.sha(logs[0])
+            with self.subTest(record=record.keys()), self.assertRaises(ValueError):
+                hosted.verify(bundle, SOURCE, logs)
+
+    def test_legacy_outer_receipt_cannot_claim_new_tooling_scope(self):
+        bundle = fixture(); bundle['schema'] = 'autotechno-hosted-macos-verification.v2'
+        with self.assertRaisesRegex(ValueError, 'exact source'):
+            hosted.verify(bundle, SOURCE, original_logs(bundle))
+
+    def test_full_bank_tooling_invokes_complete_original_runner(self):
+        root = Path(__file__).resolve().parents[1]
+        workflow = (root/'.github/workflows/at0039-hosted-macos.yml').read_text()
+        body = workflow.split('- name: Run complete tooling tests\n', 1)[1].split('- name:', 1)[0]
+        self.assertIn('if: matrix.bank == 0', body)
+        self.assertIn('python3 scripts/tooling_verification.py --source "$GITHUB_SHA"', body)
+        self.assertIn('--output "$RUNNER_TEMP/at0039-complete-tooling"', body)
+        self.assertNotIn('--pattern', body)
+        self.assertNotIn('--skip', body)
 
     def test_native_history_components_cover_the_same_disjoint_test_identities(self):
         root = Path(__file__).resolve().parents[1]

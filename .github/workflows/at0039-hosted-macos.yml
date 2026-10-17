@@ -50,7 +50,9 @@ jobs:
           --output "$RUNNER_TEMP/at0039-bank-${{ matrix.bank }}"
       - name: Run complete tooling tests
         if: matrix.bank == 0
-        run: python3 -m unittest discover -s scripts -p 'test_*.py'
+        run: >-
+          python3 scripts/tooling_verification.py --source "$GITHUB_SHA"
+          --output "$RUNNER_TEMP/at0039-complete-tooling"
       - name: Build macOS Release app
         if: matrix.bank == 0
         run: swift build -c release --product AutoTechno --build-path "$RUNNER_TEMP/at0039-release"

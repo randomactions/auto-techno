@@ -2821,12 +2821,29 @@ recomputed discovery partitions, matching executed identities/counts and separat
 explicit skips, plus successful tooling, Release app and semantic-map steps.
 Map-only jobs, partial jobs, mixed revisions and mere discovery cannot pass.
 
-The collected verification schema is v2. Each bank binds its original complete
+The collected verification schema is v3. Each bank binds its original complete
 job-log SHA256, and the collector and bound-receipt validator both replay the
 native receipt transport, ordered slice summaries, executed identities and named
 skips from those original bytes. The run and every bank job must have the same
-positive integer run attempt. A receipt alone or a legacy v1 receipt cannot
-supply the original-log requirement. Historical receipts remain unchanged.
+positive integer run attempt. A receipt alone or a legacy v1/v2 receipt cannot
+supply the current original-log requirement. Historical receipts remain unchanged
+with their original verification scope; relabeling them as v3 is unavailable.
+
+Bank0 additionally runs the sole `scripts/tooling_verification.py` owner for
+complete standard-library unittest discovery and execution. It binds every
+tracked source byte to exact Git, the running implementation, Python identity,
+all discovered test identities and any present scoped private governance inputs.
+It preserves the actual verbose output and exit status and rechecks source/input
+stability. The source-bound chunk transport carries the original file bytes,
+not a reconstruction from timestamped Actions lines. The independent reader
+requires every discovered identity exactly once, its actual terminal `ok`, the
+complete summary and zero skips. Expected diagnostic output between a test name
+and its terminal status remains intact. Missing, failed, skipped, repeated or
+substituted identities, empty discovery, generic passed JSON and partial or
+foreign chunks refuse. A successful workflow step alone supplies no tooling
+credit. Actual failures keep their original output and emit no success chunks.
+This verifies tooling execution only; it supplies no calibrated-quality,
+resource, ordinary-deadline, runtime or item-completion authority.
 
 The bound result receipt requires sixteen regular gzip originals at
 `docs/local/result-records/AT-0039-hosted-macos-logs/bank-N.log.gz`, where N is
