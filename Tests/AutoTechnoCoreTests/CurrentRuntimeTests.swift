@@ -107,11 +107,11 @@ struct CurrentRuntimeTests {
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
                 "autotechno-professional-evidence.v30")
         #expect(ProfessionalQualityPrimaryArtifacts.profileResource ==
-                "professional-quality-primary-profile-v35")
+                "professional-quality-primary-profile-v36")
         #expect(ProfessionalQualityPrimaryArtifacts.adversarialResource ==
-                "professional-quality-primary-adversarial-suite-v35")
+                "professional-quality-primary-adversarial-suite-v36")
         #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource ==
-                "professional-quality-primary-holdout-v35")
+                "professional-quality-primary-holdout-v36")
     }
 
     @Test("Historical v30 resources remain present but cannot activate the current policy")

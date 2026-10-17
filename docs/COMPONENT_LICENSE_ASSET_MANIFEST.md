@@ -3,8 +3,8 @@
 > Generated from `docs/COMPONENT_LICENSE_ASSET_MANIFEST.json`; do not edit by hand.
 
 Schema: `autotechno-component-license-asset-manifest.v1`  
-Manifest version: 4  
-Source access date: 2026-10-16  
+Manifest version: 5  
+Source access date: 2026-10-17  
 
 ## Scope
 
@@ -38,14 +38,17 @@ Covers the repository licence, resolved SwiftPM graph, source-level platform imp
 | `Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v33.json` | project-generated-qualification-resource | Original engine-v49 primary evidence retained for stale-resource rejection | `shipped-runtime` / `retain` | `e5d5813b2d60256c1e1dd9351f6072fea4bd0b7e1b62090b85d64f73395c2e9e` |
 | `Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v34.json` | project-generated-qualification-resource | Original engine-v50 primary evidence from the complete fresh native development/adversarial/holdout study | `shipped-runtime` / `retain` | `bc755e2047ba3cc67705d87eadb29cb6ca53223230d00b7ba1a6134573ca6f50` |
 | `Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v35.json` | project-generated-qualification-resource | Original engine-v51 primary evidence from the complete fresh native development/adversarial/holdout study | `shipped-runtime` / `retain` | `104bd0a61b6ce30017f6ef85148021bd987484d343c7408ac9d5bf18bcedf607` |
+| `Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v36.json` | project-generated-qualification-resource | Original engine-v52 primary evidence from the independently audited complete fresh frozen0b8d8a7 native development/adversarial/holdout study | `shipped-runtime` / `retain` | `5ab6fb769162bff1cc3d5a4619087ffafaa5a485a6221bca3ece771b94894f69` |
 | `Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v30.json` | project-generated-qualification-resource | Deterministically generated from repository-owned primary corpus, renderer, and evaluator code | `shipped-runtime` / `retain` | `2a2429b80f8a656b15b97c43b82f56d3b8c597e526f7ac965fdcf9f670ca8bc3` |
 | `Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v33.json` | project-generated-qualification-resource | Original engine-v49 primary evidence retained for stale-resource rejection | `shipped-runtime` / `retain` | `cc36d20ac801b3096c3bff78629989e72219c112cdbb921b146a3b99d38f3b6d` |
 | `Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v34.json` | project-generated-qualification-resource | Original engine-v50 primary evidence from the complete fresh native development/adversarial/holdout study | `shipped-runtime` / `retain` | `e68bb3c01dde8f6f0710670f4704f348a09a42353b7601c39e135662712f4bfb` |
 | `Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v35.json` | project-generated-qualification-resource | Original engine-v51 primary evidence from the complete fresh native development/adversarial/holdout study | `shipped-runtime` / `retain` | `646678d5aad552b265cc0fda801cef63a5f61a885d63121cfff294145239137b` |
+| `Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v36.json` | project-generated-qualification-resource | Original engine-v52 primary evidence from the independently audited complete fresh frozen0b8d8a7 native development/adversarial/holdout study | `shipped-runtime` / `retain` | `96aaf23ce9c6559608f5e38ae6cc4ca2c64bfd47be21ce02dbaff6aa7c42a71c` |
 | `Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json` | project-generated-calibration-resource | Deterministically generated from repository-owned primary corpus, renderer, and evaluator code | `shipped-runtime` / `retain` | `e0fc12e521f456d93ba1f6299cea4c0c2d39613b9b24c739c363178208fca677` |
 | `Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v33.json` | project-generated-calibration-resource | Original engine-v49 primary evidence retained for stale-resource rejection | `shipped-runtime` / `retain` | `fa1dac07dd6492b5acc3ff2cbda81a8028fc9f0494b44b3ebed97dbcac6a40ed` |
 | `Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v34.json` | project-generated-calibration-resource | Original engine-v50 primary evidence from the complete fresh native development/adversarial/holdout study | `shipped-runtime` / `retain` | `ee2178efd6c061652ad8a0927a5c4c79731ebc64a29994869649763e00187902` |
 | `Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v35.json` | project-generated-calibration-resource | Original engine-v51 primary evidence from the complete fresh native development/adversarial/holdout study | `shipped-runtime` / `retain` | `52f9bee888b8e8888ca36840d68b587e48a4dcb5c5ec6db6469f3b0a89c56341` |
+| `Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v36.json` | project-generated-calibration-resource | Original engine-v52 primary evidence from the independently audited complete fresh frozen0b8d8a7 native development/adversarial/holdout study | `shipped-runtime` / `retain` | `ea54ca5f3e73d3dfd45913bf8d4130239c3997bc511b6c9751a10d2c299db9ef` |
 
 ## Local-only artifact classes
 
