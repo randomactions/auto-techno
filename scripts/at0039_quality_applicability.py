@@ -3,8 +3,8 @@
 
 This read-only component invokes both complete original native-study verifiers.
 Its request selects original evidence; it cannot supply a passed result. Only
-the six literal artifact bindings in each existing loader and two exact declared
-non-capture admission-test transitions may differ from the compiled studies.
+the six literal artifact bindings in each existing loader and closed forward transitions in two existing
+non-capture admission-test owners may differ from the compiled studies.
 No capture, installation, runtime or item completion occurs.
 """
 from __future__ import annotations
@@ -50,8 +50,8 @@ READINESS_OWNERS = {
 READINESS_PATH = Path(__file__).with_name('at0039_readiness_transitions.json')
 READINESS = primary.load(READINESS_PATH)
 need(set(READINESS) == {'schema', 'transitions'} and
-     READINESS['schema'] == 'autotechno-at0039-noncapture-readiness-transitions.v1' and
-     type(READINESS['transitions']) is list and len(READINESS['transitions']) == 2,
+     READINESS['schema'] == 'autotechno-at0039-noncapture-readiness-transitions.v2' and
+     type(READINESS['transitions']) is list and len(READINESS['transitions']) == 3,
      'closed built-in readiness transition catalogue')
 need({row['path'] for row in READINESS['transitions']} == set(READINESS_OWNERS),
      'only the two declared non-capture readiness owners')
@@ -151,7 +151,9 @@ def readiness_transition(original, current, relative):
     entrypoints. No client-provided mapping, arbitrary test edit or rollback is
     accepted. Actual installed-positive native execution remains a separate gate.
     """
-    rows = [row for row in READINESS['transitions'] if row['path'] == relative]
+    rows = [row for row in READINESS['transitions'] if row['path'] == relative and
+            original.count(row['original'].encode()) == 1 and
+            current.count(row['current'].encode()) == 1]
     need(len(rows) == 1, 'compiled source/test changed: ' + relative)
     row = rows[0]
     old, new = row['original'].encode(), row['current'].encode()

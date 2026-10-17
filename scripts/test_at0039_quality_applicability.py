@@ -430,7 +430,7 @@ class NativeArtifactByteTests(unittest.TestCase):
 
 
 class ReadinessTransitionTests(unittest.TestCase):
-    def test_only_two_exact_forward_noncapture_methods_are_admitted(self):
+    def test_only_three_exact_forward_transitions_in_two_owners_are_admitted(self):
         for row in q.READINESS['transitions']:
             # Every surrounding byte stays exact, not just a file hash or label.
             original = b'prefix\n' + row['original'].encode() + b'\nsuffix'
@@ -452,13 +452,29 @@ class ReadinessTransitionTests(unittest.TestCase):
                                       'Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationIntegrationTests.swift')
 
     def test_published_target_has_exact_current_templates_and_no_other_file_delta(self):
-        for row in q.READINESS['transitions']:
-            raw = (ROOT / row['path']).read_text()
-            self.assertEqual(raw.count(row['current']), 1)
-            self.assertNotIn(row['original'], raw)
-            self.assertIn('allSatisfy', row['current'])
-            self.assertIn('throws: LongHorizonProfessionalPolicyError.invalidEvidence', row['current'])
-            self.assertIn('try ', row['current'])
+        self.assertEqual(len(q.READINESS['transitions']), 3)
+        self.assertEqual(len({row['path'] for row in q.READINESS['transitions']}), 2)
+        for relative in q.READINESS_OWNERS:
+            raw = (ROOT / relative).read_text()
+            rows = [row for row in q.READINESS['transitions'] if row['path'] == relative]
+            latest = [row for row in rows if raw.count(row['current']) == 1]
+            self.assertEqual(len(latest), 1)
+            self.assertNotIn(latest[0]['original'], raw)
+            self.assertIn('allSatisfy', latest[0]['current'])
+            self.assertIn('throws: LongHorizonProfessionalPolicyError.invalidEvidence', latest[0]['current'])
+            self.assertIn('try ', latest[0]['current'])
+
+    def test_unlisted_multihop_and_historical_admission_rollback_refuse(self):
+        first, _, latest = q.READINESS['transitions']
+        self.assertEqual(first['current'], latest['original'])
+        with self.assertRaises(ValueError):
+            q.readiness_transition(first['original'].encode(), latest['current'].encode(), first['path'])
+        for old, new in ((latest['current'], latest['original']),
+                         (latest['original'], latest['current'].replace(
+                             'throws: ProfessionalQualityCalibrationError.profileMismatch',
+                             'throws: ProfessionalQualityCalibrationError.invalidIdentity'))):
+            with self.assertRaises(ValueError):
+                q.readiness_transition(old.encode(), new.encode(), latest['path'])
 
     def test_unchanged_compiler_inputs_remain_exact_outside_readiness_method(self):
         row = q.READINESS['transitions'][0]

@@ -82,13 +82,25 @@ struct PrimaryEvaluatorReadinessTests {
             forResource: "professional-quality-primary-adversarial-suite-v35", withExtension: "json"))
         let holdoutURL = try #require(resources.url(
             forResource: "professional-quality-primary-holdout-v35", withExtension: "json"))
-        let historical = try ProfessionalQualityPrimaryArtifacts(
-            profileData: Data(contentsOf: profileURL),
-            adversarialSuiteData: Data(contentsOf: adversarialURL),
-            holdoutQualificationData: Data(contentsOf: holdoutURL))
-        #expect(historical.profile.fingerprint == "267051f651dcfdca")
-        #expect(historical.adversarialSuite.fingerprint == "13b17b49e495d050")
-        #expect(historical.holdoutQualification.fingerprint == "d0be2dd73e33792b")
+        let profileData = try Data(contentsOf: profileURL)
+        let adversarialData = try Data(contentsOf: adversarialURL)
+        let holdoutData = try Data(contentsOf: holdoutURL)
+        // Decode the original bytes without admitting their historical engine.
+        // The packaging LF is the only byte removed, as in the existing loader.
+        let historicalProfile = try ProfessionalQualityCalibrationProfile
+            .decodeDeterministicJSON(profileData.last == 0x0A ? profileData.dropLast() : profileData)
+        let historicalAdversarial = try ProfessionalQualityAdversarialSuiteReport
+            .decodeDeterministicJSON(adversarialData.last == 0x0A ? adversarialData.dropLast() : adversarialData)
+        let historicalHoldout = try ProfessionalQualityHoldoutQualification
+            .decodeDeterministicJSON(holdoutData.last == 0x0A ? holdoutData.dropLast() : holdoutData)
+        #expect(historicalProfile.fingerprint == "267051f651dcfdca")
+        #expect(historicalAdversarial.fingerprint == "13b17b49e495d050")
+        #expect(historicalHoldout.fingerprint == "d0be2dd73e33792b")
+        #expect(historicalProfile.engineVersion == "autotechno-canonical-engine.v51")
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPrimaryArtifacts(profileData: profileData,
+                adversarialSuiteData: adversarialData, holdoutQualificationData: holdoutData)
+        }
 
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(artifacts.profile.fingerprint == ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint)
