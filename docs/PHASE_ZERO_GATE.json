@@ -7,17 +7,17 @@
       "id": "parameter-reachability",
       "artifact": "docs/PARAMETER_REACHABILITY_AUDIT.json",
       "schema": "autotechno-parameter-reachability-audit.v1",
-      "version": 2,
-      "sha256": "838fd0736e83579a43473dcaf63ff5c94d47785cc509ba95fcf79dbdcdaac238",
-      "surfaceCount": 543,
+      "version": 3,
+      "sha256": "7fbf6d9971f2cb62901e8c0503f39a6939415c785bd64fbdfbd578f44410f73f",
+      "surfaceCount": 544,
       "unresolvedCount": 0
     },
     {
       "id": "authority-convergence",
       "artifact": "docs/AUTHORITY_SURFACE_INVENTORY.json",
       "schema": "autotechno-authority-surface-inventory.v1",
-      "version": 2,
-      "sha256": "326742d7d5605ba1495a0673352e7786312f02a0077d1de0d0dc4e3056285554",
+      "version": 3,
+      "sha256": "b649918adfe9934f0a523d74bfbf33601a67097441bd546b475f4ece2fbc1f1f",
       "surfaceCount": 46,
       "unresolvedCount": 0
     },
@@ -25,8 +25,8 @@
       "id": "component-provenance",
       "artifact": "docs/COMPONENT_LICENSE_ASSET_MANIFEST.json",
       "schema": "autotechno-component-license-asset-manifest.v1",
-      "version": 4,
-      "sha256": "d17957f858401aeb31e425237d2dc23a2c0bec53bab5578d04da8cb0d0d65a30",
+      "version": 5,
+      "sha256": "54157534f2aa988cb8bd581ed638653ff18a41b8151472c8a3e0d42d138fa1bd",
       "surfaceCount": 11,
       "unresolvedCount": 0
     },
