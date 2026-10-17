@@ -3,8 +3,8 @@
 
 This read-only component invokes both complete original native-study verifiers.
 Its request selects original evidence; it cannot supply a passed result. Only
-the six literal artifact bindings in each existing loader and closed forward transitions in two existing
-non-capture admission-test owners may differ from the compiled studies.
+the six literal artifact bindings in each existing loader and closed forward transitions in three existing
+non-capture check owners may differ from the compiled studies.
 No capture, installation, runtime or item completion occurs.
 """
 from __future__ import annotations
@@ -46,15 +46,33 @@ READINESS_OWNERS = {
     'Tests/AutoTechnoCoreTests/PrimaryEvaluatorReadinessTests.swift':
         'installedPrimaryRetainsUnavailableLongHorizonHost',
     'Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift': 'bundledArtifacts',
+    'Tests/AutoTechnoCoreTests/LongHorizonSignalTrajectoryTests.swift': 'eightHourTrajectoryIsBounded',
 }
+ENGINE52_REHEARSAL_OWNER = 'Tests/AutoTechnoCoreTests/LongHorizonSignalTrajectoryTests.swift'
+def validate_rehearsal_identity_template(row):
+    """No rehearsal generation or evidence predicate may change with its pins."""
+    need(row['path'] == ENGINE52_REHEARSAL_OWNER and
+         row['symbol'] == 'eightHourTrajectoryIsBounded', 'one synthetic rehearsal owner')
+    code = lambda text: ''.join(line for line in text.splitlines(keepends=True)
+                               if not line.lstrip().startswith('//'))
+    expected = code(row['original'])
+    for old, new in [('"autotechno-canonical-engine.v51"', '"autotechno-canonical-engine.v52"'),
+                     ('"1e90955e389c8215"', '"9cb5deaba047abf2"')]:
+        need(expected.count(old) == 1 and new not in expected,
+             'one original versioned rehearsal identity pin')
+        expected = expected.replace(old, new)
+    need(code(row['current']) == expected,
+         'rehearsal transition may change only its two versioned identity pins and comments')
+
+
 READINESS_PATH = Path(__file__).with_name('at0039_readiness_transitions.json')
 READINESS = primary.load(READINESS_PATH)
 need(set(READINESS) == {'schema', 'transitions'} and
-     READINESS['schema'] == 'autotechno-at0039-noncapture-readiness-transitions.v2' and
-     type(READINESS['transitions']) is list and len(READINESS['transitions']) == 3,
+     READINESS['schema'] == 'autotechno-at0039-noncapture-readiness-transitions.v3' and
+     type(READINESS['transitions']) is list and len(READINESS['transitions']) == 4,
      'closed built-in readiness transition catalogue')
 need({row['path'] for row in READINESS['transitions']} == set(READINESS_OWNERS),
-     'only the two declared non-capture readiness owners')
+     'only the three declared non-capture check owners')
 for row in READINESS['transitions']:
     need(set(row) == {'path', 'symbol', 'original', 'current'} and
          row['symbol'] == READINESS_OWNERS[row['path']] and
@@ -62,6 +80,8 @@ for row in READINESS['transitions']:
          row['original'] != row['current'] and
          all(len(re.findall(r'\bfunc ' + re.escape(row['symbol']) + r'\(', row[k])) == 1
              for k in ('original', 'current')), 'exact bounded admission-test templates')
+    if row['path'] == ENGINE52_REHEARSAL_OWNER:
+        validate_rehearsal_identity_template(row)
 IMPLEMENTATION = {str(Path(p).resolve()): primary.sha(p) for p in
                   (__file__, primary.__file__, long.__file__,
                    long.verify_history.__code__.co_filename, READINESS_PATH)}
@@ -144,13 +164,17 @@ def relative_inputs(context, mapping):
     return result
 
 
-def readiness_transition(original, current, relative):
+def readiness_transition(original, current, relative, *, compiled_engine=None):
     """One forward transition; every byte outside the known method stays exact.
 
-    These two Testing admission methods are not called by the canonical capture
-    entrypoints. No client-provided mapping, arbitrary test edit or rollback is
-    accepted. Actual installed-positive native execution remains a separate gate.
+    These Testing checks are not called by the canonical capture entrypoints.
+    The synthetic rehearsal transition additionally requires the exact compiled
+    engine52 source; an engine51 study cannot receive its identity pins. No
+    client-provided mapping, arbitrary test edit or rollback is accepted. Actual installed-positive native execution remains a separate gate.
     """
+    if relative == ENGINE52_REHEARSAL_OWNER:
+        need(compiled_engine == 'autotechno-canonical-engine.v52',
+             'synthetic rehearsal identity transition requires compiled engine52')
     rows = [row for row in READINESS['transitions'] if row['path'] == relative and
             original.count(row['original'].encode()) == 1 and
             current.count(row['current'].encode()) == 1]
@@ -224,7 +248,17 @@ def source_installation(root, source, contexts, artifacts):
             else:
                 if digest(current) != checksum:
                     original = primary.raw_file(primary.inside(context.source_root, relative))
-                    transition = readiness_transition(original, current, relative)
+                    compiled_engine = None
+                    if relative == ENGINE52_REHEARSAL_OWNER:
+                        engine_path = 'Sources/AutoTechnoCore/QualityQualification.swift'
+                        engine_raw = primary.raw_file(primary.inside(context.source_root, engine_path))
+                        need(sources.get(engine_path) == digest(engine_raw),
+                             'rehearsal transition must bind the actual compiled engine owner')
+                        versions = set(re.findall(rb'"(autotechno-canonical-engine\.v[0-9]+)"', engine_raw))
+                        need(len(versions) == 1, 'one actual compiled canonical engine required')
+                        compiled_engine = next(iter(versions)).decode('ascii')
+                    transition = readiness_transition(original, current, relative,
+                                                      compiled_engine=compiled_engine)
                     readiness.append(dict(studySource=context.source, **transition))
         resources = relative_inputs(context, metadata['resources'])
         need(all(p.startswith(RESOURCES) for p in resources), 'one original resource owner')
