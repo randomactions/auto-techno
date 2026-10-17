@@ -58,6 +58,61 @@ class LoaderTests(unittest.TestCase):
                 q.loader(changed, 'primary')
 
 
+class PrimaryRouteStrengtheningTests(unittest.TestCase):
+    def test_only_the_exact_two_rate_assertions_can_strengthen_this_method(self):
+        row = q.route_rows[0]
+        q.validate_primary_route_template(row)
+        for before, after in [("[8_000.0, 12_000.0]", "[44_100.0, 48_000.0]"),
+                              ("== .unsupportedSampleRate", "== .available"),
+                              ("#expect(!unsupported.requiresPreparedValidation)", "// assertion removed")]:
+            changed = dict(row, current=row['current'].replace(before, after))
+            self.assertNotEqual(changed['current'], row['current'])
+            with self.assertRaises(ValueError): q.validate_primary_route_template(changed)
+        for field, value in [('path', 'Tests/AutoTechnoCoreTests/Producer.swift'),
+                             ('symbol', 'renderPreparedRoute'), ('original', row['original']+'// edited')]:
+            with self.assertRaises(ValueError): q.validate_primary_route_template(dict(row, **{field: value}))
+
+    def test_both_recorded_readiness_cuts_keep_other_owner_bytes_exact(self):
+        current = (ROOT / q.PRIMARY_ROUTE_OWNER).read_bytes()
+        rows = [row for row in q.READINESS['transitions'] if row['path'] == q.PRIMARY_ROUTE_OWNER
+                and q.digest(row['original'].encode()) in
+                (q.PRIMARY_ROUTE_ORIGINAL_SHA256, q.PRIMARY_ROUTE_BRIDGE_SHA256)]
+        self.assertEqual(len(rows), 2)
+        for row in rows:
+            # Parser fixture only: actual historical Git/build binding is a
+            # separate original-evidence audit, not a shallow-CI prerequisite.
+            self.assertEqual(current.count(row['current'].encode()), 1)
+            original = current.replace(row['current'].encode(), row['original'].encode())
+            result = q.readiness_transition(original, current, q.PRIMARY_ROUTE_OWNER)
+            self.assertFalse(result['actualInstalledPositiveNativeVerified'])
+            with self.assertRaises(ValueError):
+                q.readiness_transition(original, current+b'// unrelated producer change', q.PRIMARY_ROUTE_OWNER)
+
+    def test_workflow_rate_matrix_requires_one_named_unskipped_native_execution(self):
+        workflow = (ROOT / '.github/workflows/swift.yml').read_text()
+        block = workflow.split('      - name: Verify current primary native and unsupported-rate readiness\n')[1].split('\n      - name: ')[0]
+        self.assertIn('set -euo pipefail', block)
+        self.assertIn("--filter 'PrimaryEvaluatorReadinessTests/installedPrimaryRetainsUnavailableLongHorizonHost'", block)
+        self.assertNotIn('unsupported8KRouteStaysUnavailable', workflow)
+        self.assertNotIn('unsupported12KRouteStaysUnavailable', workflow)
+        code = block.split("<<'PYTHON'\n")[1].split('          PYTHON')[0]
+        code = '\n'.join(line[10:] for line in code.splitlines())+'\n'
+        name = 'Current qualified artifact seals determine host readiness'
+        positive = f'◇ Test "{name}" started.\n✔ Test "{name}" passed after 0.1 seconds.\n✔ Test run with 1 test passed after 0.1 seconds.\n'
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'native.log'
+            for text, accepted in [(positive, True),
+                ('✔ Test run with 0 tests passed after 0.1 seconds.\n', False),
+                (positive.replace(name, 'Foreign control'), False),
+                (positive.replace('passed after 0.1', 'failed after 0.1', 1), False),
+                (positive+'✘ Test had an issue\n', False),
+                ('✔ Test run with 0 tests passed after 0.1 seconds.\n'+positive, False)]:
+                path.write_text(text)
+                child = subprocess.run([__import__('sys').executable, '-', str(path)], input=code,
+                    text=True, capture_output=True, cwd=ROOT)
+                self.assertEqual(child.returncode == 0, accepted, child.stderr)
+
+
 class SourceClosureTests(unittest.TestCase):
     """Real Git/filesystem controls around explicitly synthetic native artifacts."""
     def setUp(self):
@@ -475,12 +530,12 @@ class ReadinessTransitionTests(unittest.TestCase):
                                       'Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationIntegrationTests.swift')
 
     def test_published_target_has_exact_current_templates_and_no_other_file_delta(self):
-        self.assertEqual(len(q.READINESS['transitions']), 4)
+        self.assertEqual(len(q.READINESS['transitions']), 5)
         self.assertEqual(len({row['path'] for row in q.READINESS['transitions']}), 3)
         for relative in q.READINESS_OWNERS:
             raw = (ROOT / relative).read_text()
             rows = [row for row in q.READINESS['transitions'] if row['path'] == relative]
-            latest = [row for row in rows if raw.count(row['current']) == 1]
+            latest = list({row['current']: row for row in rows if raw.count(row['current']) == 1}.values())
             self.assertEqual(len(latest), 1)
             self.assertNotIn(latest[0]['original'], raw)
             self.assertIn('allSatisfy', latest[0]['current'])
@@ -492,7 +547,7 @@ class ReadinessTransitionTests(unittest.TestCase):
             self.assertIn('try ', latest[0]['current'])
 
     def test_unlisted_multihop_and_historical_admission_rollback_refuse(self):
-        first, _, latest, _ = q.READINESS['transitions']
+        first, _, latest, _, _ = q.READINESS['transitions']
         self.assertEqual(first['current'], latest['original'])
         with self.assertRaises(ValueError):
             q.readiness_transition(first['original'].encode(), latest['current'].encode(), first['path'])

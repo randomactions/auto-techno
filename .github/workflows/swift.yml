@@ -481,19 +481,33 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(preparationEvaluatorAvailability|closedHatEvidenceContract|failedAttemptIsRetainable)'
 
-      - name: Run 8 kHz primary unavailability gate
+      - name: Verify current primary native and unsupported-rate readiness
         if: matrix.bank == 'primary'
-        run: >-
-          swift test --no-parallel --skip-build
-          --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter unsupported8KRouteStaysUnavailable
-
-      - name: Run 12 kHz primary unavailability gate
-        if: matrix.bank == 'primary'
-        run: >-
-          swift test --no-parallel --skip-build
-          --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter unsupported12KRouteStaysUnavailable
+        run: |
+          set -euo pipefail
+          swift test --no-parallel --skip-build \
+            --build-path "$RUNNER_TEMP/auto-techno-tests" \
+            --filter 'PrimaryEvaluatorReadinessTests/installedPrimaryRetainsUnavailableLongHorizonHost' \
+            2>&1 | tee "$RUNNER_TEMP/auto-techno-primary-rate-readiness.log"
+          python3 - "$RUNNER_TEMP/auto-techno-primary-rate-readiness.log" <<'PYTHON'
+          import re
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, str(Path("scripts").resolve()))
+          import hosted_macos_verification as native
+          raw = Path(sys.argv[1]).read_text(encoding="utf-8")
+          identity = "AutoTechnoCoreTests.PrimaryEvaluatorReadinessTests/installedPrimaryRetainsUnavailableLongHorizonHost()"
+          result = native.summarize_log(raw, "swift-testing", 1, [identity])
+          native.require(re.findall(r"Test run with (\d+) tests? passed", raw) == ["1"], "one complete native readiness execution")
+          name = "Current qualified artifact seals determine host readiness"
+          for marker in [r'◇ Test "' + re.escape(name) + r'" started\.',
+                         r'✔ Test "' + re.escape(name) + r'" passed after [0-9.]+ seconds\.']:
+              native.require(len(re.findall(marker, raw)) == 1, "one actual named primary readiness control")
+          native.require(result["executedTests"] == 1 and result["explicitlySkippedTests"] == 0,
+                         "primary native/8k/12k readiness matrix must actually execute")
+          native.require("✘" not in raw, "failed native readiness output")
+          print("One actual named current-artifact native/8k/12k readiness matrix verified; no full-platform or runtime qualification.")
+          PYTHON
 
       - name: Run closed-hat evidence tampering
         if: matrix.bank == 'primary'

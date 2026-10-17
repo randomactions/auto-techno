@@ -65,11 +65,32 @@ def validate_rehearsal_identity_template(row):
          'rehearsal transition may change only its two versioned identity pins and comments')
 
 
+PRIMARY_ROUTE_OWNER = 'Tests/AutoTechnoCoreTests/PrimaryEvaluatorReadinessTests.swift'
+PRIMARY_ROUTE_SYMBOL = 'installedPrimaryRetainsUnavailableLongHorizonHost'
+PRIMARY_ROUTE_ORIGINAL_SHA256 = '3a29fb75de7438abdd8e3357db3ab44bf2419d02c0eb2c50f1c7325385dc9afd'
+PRIMARY_ROUTE_BRIDGE_SHA256 = 'd81705e13affc491443fb1bb58a82f60bb0023277b3f87219903ed851f8bcec1'
+PRIMARY_ROUTE_INSERTION = '        // A real current artifact remains unavailable outside its qualified rates.\n        // Missing-artifact refusal is a different control and cannot replace this.\n        for rate in [8_000.0, 12_000.0] {\n            #expect(!artifacts.profile.sampleRates.contains(rate))\n            let unsupported = ProfessionalQualityPreparationEvaluator(\n                sampleRate: rate, artifacts: artifacts)\n            #expect(unsupported.availability == .unsupportedSampleRate)\n            #expect(unsupported.policyVersion == QualityQualificationContract.uncalibratedPolicyVersion)\n            #expect(unsupported.evaluatorVersion == QualityQualificationContract.uncalibratedEvaluatorVersion)\n            #expect(!unsupported.requiresPreparedValidation)\n        }\n'
+PRIMARY_ROUTE_ANCHOR = '        let longSeals = ['
+
+
+def validate_primary_route_template(row):
+    """Only add the declared unsupported-rate assertions inside this check."""
+    need(row['path'] == PRIMARY_ROUTE_OWNER and row['symbol'] == PRIMARY_ROUTE_SYMBOL,
+         'one existing non-capture primary readiness owner')
+    original = row['original']
+    need(hashlib.sha256(original.encode()).hexdigest() == PRIMARY_ROUTE_ORIGINAL_SHA256 and
+         original.count(PRIMARY_ROUTE_ANCHOR) == 1,
+         'exact previous readiness method before strengthening')
+    need(row['current'] == original.replace(PRIMARY_ROUTE_ANCHOR,
+         PRIMARY_ROUTE_INSERTION + PRIMARY_ROUTE_ANCHOR),
+         'primary transition may only add the exact two unsupported-rate controls')
+
+
 READINESS_PATH = Path(__file__).with_name('at0039_readiness_transitions.json')
 READINESS = primary.load(READINESS_PATH)
 need(set(READINESS) == {'schema', 'transitions'} and
-     READINESS['schema'] == 'autotechno-at0039-noncapture-readiness-transitions.v3' and
-     type(READINESS['transitions']) is list and len(READINESS['transitions']) == 4,
+     READINESS['schema'] == 'autotechno-at0039-noncapture-readiness-transitions.v4' and
+     type(READINESS['transitions']) is list and len(READINESS['transitions']) == 5,
      'closed built-in readiness transition catalogue')
 need({row['path'] for row in READINESS['transitions']} == set(READINESS_OWNERS),
      'only the three declared non-capture check owners')
@@ -82,6 +103,16 @@ for row in READINESS['transitions']:
              for k in ('original', 'current')), 'exact bounded admission-test templates')
     if row['path'] == ENGINE52_REHEARSAL_OWNER:
         validate_rehearsal_identity_template(row)
+route_rows = [row for row in READINESS['transitions']
+              if row['path'] == PRIMARY_ROUTE_OWNER and
+              hashlib.sha256(row['original'].encode()).hexdigest() == PRIMARY_ROUTE_ORIGINAL_SHA256]
+need(len(route_rows) == 1, 'one closed unsupported-rate readiness strengthening')
+validate_primary_route_template(route_rows[0])
+bridge_rows = [row for row in READINESS['transitions']
+               if row['path'] == PRIMARY_ROUTE_OWNER and
+               hashlib.sha256(row['original'].encode()).hexdigest() == PRIMARY_ROUTE_BRIDGE_SHA256]
+need(len(bridge_rows) == 1 and bridge_rows[0]['current'] == route_rows[0]['current'],
+     'earlier compiled primary check must reach the same exact strengthened method')
 IMPLEMENTATION = {str(Path(p).resolve()): primary.sha(p) for p in
                   (__file__, primary.__file__, long.__file__,
                    long.verify_history.__code__.co_filename, READINESS_PATH)}

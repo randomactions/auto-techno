@@ -118,6 +118,17 @@ struct PrimaryEvaluatorReadinessTests {
             #expect(ProfessionalQualityPreparationEvaluator(sampleRate: rate,
                 artifacts: artifacts).availability == .available)
         }
+        // A real current artifact remains unavailable outside its qualified rates.
+        // Missing-artifact refusal is a different control and cannot replace this.
+        for rate in [8_000.0, 12_000.0] {
+            #expect(!artifacts.profile.sampleRates.contains(rate))
+            let unsupported = ProfessionalQualityPreparationEvaluator(
+                sampleRate: rate, artifacts: artifacts)
+            #expect(unsupported.availability == .unsupportedSampleRate)
+            #expect(unsupported.policyVersion == QualityQualificationContract.uncalibratedPolicyVersion)
+            #expect(unsupported.evaluatorVersion == QualityQualificationContract.uncalibratedEvaluatorVersion)
+            #expect(!unsupported.requiresPreparedValidation)
+        }
         let longSeals = [LongHorizonProfessionalPolicyArtifacts.expectedProfileFingerprint,
             LongHorizonProfessionalPolicyArtifacts.expectedAdversarialFingerprint,
             LongHorizonProfessionalPolicyArtifacts.expectedHoldoutFingerprint]
