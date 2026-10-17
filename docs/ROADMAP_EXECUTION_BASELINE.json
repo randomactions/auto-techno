@@ -1,8 +1,8 @@
 {
   "schema": "autotechno-roadmap-contract-baseline.v1",
-  "snapshotVersion": 294,
+  "snapshotVersion": 296,
   "digestAlgorithm": "sha256",
-  "snapshotFingerprint": "c03341c23bfb8da88d0d2df323a3551d66d5cf9093b1edf1d86a0e0d552f749e",
+  "snapshotFingerprint": "5164276c29be3155f6e864e5587114064aca40e41ff1caf81641c7d450e44736",
   "documents": [
     {
       "role": "repository-guidance",
@@ -19,20 +19,20 @@
     {
       "role": "product-contract",
       "path": "docs/PRODUCT.md",
-      "byteCount": 36042,
-      "sha256": "10dd6a20986428989a945b8f8a7fa15e9ad7fe4155549da8e85c84df7557b0a1"
+      "byteCount": 37439,
+      "sha256": "9a03921ffd2f9a9ca7781236737976e4205260380af2d692f165f68347b0a1fc"
     },
     {
       "role": "sound-quality-contract",
       "path": "docs/SOUND_QUALITY.md",
-      "byteCount": 131637,
-      "sha256": "f229cc7008a5d99615af148299ae1e3f74bd8a83ddeba4cfcba8ebfa0c51aaf5"
+      "byteCount": 133574,
+      "sha256": "a3a2f11c17ec718cfa91996b9778bcbafd02a3999c95b24622089b30956d1f73"
     },
     {
       "role": "runtime-provenance-contract",
       "path": "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
-      "byteCount": 228056,
-      "sha256": "96c0ecf8e2f586fdd6ea0fffe1dee7301c61a86b951d233c09790a72f998c068"
+      "byteCount": 229906,
+      "sha256": "6930cfe26309daab81f09c8eec85317808d2a0c80a74f654b6ed7f84f1e16478"
     },
     {
       "role": "component-license-asset-manifest-source",
@@ -163,8 +163,8 @@
     {
       "role": "semantic-codebase-map-source",
       "path": "docs/codebase-map.json",
-      "byteCount": 190596,
-      "sha256": "8d71f4b745276b9041e3ec32326bf39a3ed58dadf825b5d5f028c14d1c1e8b44"
+      "byteCount": 191587,
+      "sha256": "18ac7f3ef0787a158e1ed633291c822c4ccc687daddb3f60882c9ce851e9ab68"
     },
     {
       "role": "semantic-codebase-map-rendering",

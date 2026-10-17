@@ -1,10 +1,10 @@
 # Sound Quality Contract
 
 Current source uses canonical engine v52 under quality-contract schema50.
-Current primary seals are absent. The retained v35 resources bind their original
-engine-v51 study and cannot activate engine v52. Fresh complete primary evidence
-must satisfy the unchanged primary v32 policy and continuous v23/profile v33
-contract. Matching Long Horizon v22 seals require all seven development and two
+Current primary seals register the independently audited fresh engine-v52 v36
+products described below. Retained v35 resources bind their original engine-v51
+study and cannot activate engine v52. Primary calibration satisfies the unchanged
+primary v32 policy and continuous v23/profile v33 contract. Matching Long Horizon v22 seals require all seven development and two
 disjoint holdout roots to qualify independently at both native rates, with all18
 complete histories. Runtime promotion also requires every separate resource,
 lifecycle, platform and output gate. Historical studies below retain their
@@ -38,7 +38,8 @@ engine-v48 v33 seals were profile eb1eba16cde88415, adversarial
 b76d744054bfa22f and holdout 19742f5c60933b29. They remain historical offline
 evidence. The subsequent engine-v49 wash-ownership change invalidated those
 primary seals. Historical engine-v51 primary registration is documented below;
-current engine-v52 primary, Long Horizon and full runtime gates remain pending.
+current engine-v52 primary v36 registration is described below; Long Horizon
+and full runtime gates remain pending.
 
 The native long-horizon producer follows the existing Core finite recovery
 continuation after measured retryable rejection, retaining actual accepted PCM
@@ -1906,8 +1907,9 @@ and applicable output gate establish current-source applicability.
 
 ## Historical engine-v51 primary qualification resources
 
-These resources retain their original engine-v51 scope. Engine v52 leaves all
-current primary seals absent and requires fresh complete qualification; the
+These resources retain their original engine-v51 scope. The engine change
+invalidated their current admission; the v36 registration below supplies only
+fresh primary calibration. The
 following installed-control requirements describe the original registration.
 
 The sole `ProfessionalQualityPrimaryArtifacts` owner registers resource revision
@@ -2033,3 +2035,32 @@ cold format; it still requires complete original primary and Long verification
 and exact installed bytes. The new result schema distinguishes this format and
 supplies no capture, installed-positive, resource, platform, runtime or item
 completion authority. Generic passed JSON remains insufficient.
+
+
+## Engine-v52 primary qualification resources
+
+The sole `ProfessionalQualityPrimaryArtifacts` owner registers revision v36 from
+the complete fresh frozen 0b8d8a7 engine-v52 native primary study. The unchanged
+primary v32/continuous v23/profile v33 contract independently qualified all 40
+development and six disjoint holdout trajectories at 44.1 and 48 kHz, 644 original
+reports and 644 actual immediate successors, 34 adversarial cases and 84 holdout
+observations. The installed seals are profile `4c033f30f7b23a6b`, adversarial
+`c0323ada2c13f030` and holdout `df692b018c1d1c62`. Registered JSON is the original
+derived product, allowing only its final packaging line feed. All historical
+resource bytes retain their original scope. No state or history is imported.
+
+The required native installed-positive control must admit the primary evaluator
+independently at both native rates and reject historical engines. Matching Long
+Horizon seals remain absent, so production host admission must still refuse.
+This registration adds no musical state, renderer, callback, parameter, buffer,
+pass or continuation. Fresh independent seven-development/two-disjoint-holdout
+Long studies with all 18 complete histories, final-source applicability, complete
+resource and ordinary-deadline evidence, lifecycle, platform, Release, app and
+applicable physical-output qualification remain mandatory.
+
+The engine52 Long cold inventory requires the measured post-v36 total of 18
+actual runtime resources, including the 15 unchanged historical files and the
+three exact new primary products. All historical engine51 study formats retain
+their original 15-resource requirement. Exact resource names, source and bundle
+hashes, compiler accessor and source-to-runtime joins remain mandatory; a count
+alone cannot establish runtime identity.

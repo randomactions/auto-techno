@@ -42,14 +42,15 @@ class LoaderTests(unittest.TestCase):
             rb'(package static let expectedProfileFingerprint: String\? = )(nil|"[0-9a-f]{16}")',
             rb'\g<1>"abcdef0123456789"', current)
         self.assertEqual(count, 1)
-        q.loader(raw, 'primary')
+        _, names, _ = q.loader(raw, 'primary')
+        profile_name = names['profile'].encode()
         for changed in [
             raw.replace(b'"abcdef0123456789"', b'"abcdef0123456789" + ""'),
             raw.replace(b'"abcdef0123456789"', b'computeSeal()'),
             raw.replace(b'"abcdef0123456789"', b'nil /* unqualified */'),
             raw + b'\npackage static let expectedProfileFingerprint: String? = nil\n',
-            raw.replace(b'professional-quality-primary-profile-v35', b'../foreign'),
-            raw.replace(b'professional-quality-primary-profile-v35', b'professional-quality-primary-profile-v035'),
+            raw.replace(profile_name, b'../foreign'),
+            raw.replace(profile_name, b'professional-quality-primary-profile-v035'),
             raw + '\n// non-ASCII syntax \u2028\n'.encode(),
         ]:
             self.assertNotEqual(changed, raw, 'the adversarial fixture must actually mutate the binding')

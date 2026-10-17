@@ -262,6 +262,20 @@ class CompilerRecipeTests(unittest.TestCase):
             with self.subTest(source=invalid),self.assertRaises(ValueError):
                 v.verify_engine_versions(v.UPPER_COLOR,protocol,cold,invalid)
 
+    def test_post_primary_resource_inventory_is_format_specific_and_exact(self):
+        for fmt in v.FORMATS.values():
+            expected = 18 if fmt == v.UPPER_COLOR else 15
+            cold = dict(sourceFiles=95+fmt.test_files, objects=183,
+                compilerSupport=18, modules=12, actualRuntimeResources=expected)
+            v.verify_harness_inventory(fmt, cold)
+            for count in [True, float(expected), str(expected), 14, 16, 17, 19,
+                          15 if expected == 18 else 18]:
+                with self.subTest(format=fmt.key, count=count), self.assertRaises(ValueError):
+                    v.verify_harness_inventory(fmt, dict(cold, actualRuntimeResources=count))
+            for key in ['sourceFiles', 'objects', 'compilerSupport', 'modules']:
+                with self.subTest(format=fmt.key, key=key), self.assertRaises(ValueError):
+                    v.verify_harness_inventory(fmt, dict(cold, **{key: cold[key]-1}))
+
     def test_upper_color_reuses_complete_recovery_guards_and_exact_observer(self):
         with tempfile.TemporaryDirectory() as directory:
             args=owned_fixture(Path(directory),v.UPPER_COLOR)

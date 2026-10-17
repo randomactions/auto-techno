@@ -37,6 +37,7 @@ class StudyFormat:
     journey_version: int = 2
     engine_version: str = "autotechno-canonical-engine.v51"
     recovery_intent_version: int = 1
+    runtime_resource_count: int = 15
 
     @property
     def observation(self):
@@ -84,7 +85,8 @@ UPPER_COLOR = StudyFormat('v22-upper-color',
     'autotechno-engine52-upper-color-long-cold-launch-audit.v1',
     'autotechno-fresh-engine52-upper-color-long-protocol.v1', 63, 14, 3, 6, 8, 22,
     'run_at0039_engine52_upper_color_long_study_v1.py', journey_version=3,
-    engine_version='autotechno-canonical-engine.v52', recovery_intent_version=2)
+    engine_version='autotechno-canonical-engine.v52', recovery_intent_version=2,
+    runtime_resource_count=18)
 FORMATS = {value.key: value for value in (LEGACY, CURRENT, RECOVERY, UPPER_COLOR)}
 # Compatibility names describe only the original v21 format.
 OBSERVATION, CORPUS, PROFILE, ADVERSARIAL, HOLDOUT = (
@@ -101,6 +103,16 @@ def cold_format(proof):
     matches = [value for value in FORMATS.values() if value.cold_schema == proof.get('schema')]
     need(len(matches) == 1, 'supported original cold schema required')
     return matches[0]
+
+
+def verify_harness_inventory(fmt, cold):
+    # Engine52 v36 adds three actual primary resources to the retained fifteen.
+    # Historical formats retain their exact original inventories.
+    for key, expected in dict(sourceFiles=95+fmt.test_files, objects=183,
+            compilerSupport=18, modules=12,
+            actualRuntimeResources=fmt.runtime_resource_count).items():
+        need(type(cold[key]) is int and cold[key] == expected,
+             'complete known original harness inventory: ' + key)
 
 
 IMPLEMENTATION_SHA256 = {str(Path(name).resolve()): sha(Path(name)) for name in
@@ -332,10 +344,7 @@ class Context:
                  'historicalRetag', 'longHorizonQualified', 'fullPlatformQualified',
                  'runtimeQualified', 'item39Complete']), 'original cold scope and controls')
         cold = proof['cold']
-        for key, expected in dict(sourceFiles=95+fmt.test_files, objects=183,
-                compilerSupport=18, modules=12, actualRuntimeResources=15).items():
-            need(type(cold[key]) is int and cold[key] == expected,
-                 'complete known original harness inventory: ' + key)
+        verify_harness_inventory(fmt, cold)
         need(cold['engineVersion'] == fmt.engine_version,
              'engine identity matches the exact original study format')
         need(cold['source'] == self.source and self.git('rev-parse', 'HEAD') == self.source and

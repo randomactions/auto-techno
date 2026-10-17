@@ -523,7 +523,7 @@ lifecycle and applicable physical-output requirements still gate promotion.
 No score, renderer, callback, continuation or fallback behavior changes here.
 
 
-## Engine-v51 primary qualification resources
+## Historical engine-v51 primary qualification resources
 
 The sole `ProfessionalQualityPrimaryArtifacts` owner registers resource revision
 v35 from the complete fresh, frozen9bd42d6 engine-v51 native study. The existing
@@ -562,3 +562,25 @@ the inventory, admission, evaluator, score, continuation or renderer. Existing
 Receiver work is detached diagnostic work, never audio callback work or ordinary
 deadline evidence. Observed array extents alone do not cover all transients,
 allocator-internal metadata, complete process memory or current runtime promotion.
+
+
+## Engine-v52 primary qualification resources
+
+The sole `ProfessionalQualityPrimaryArtifacts` owner registers revision v36 from
+the complete fresh frozen 0b8d8a7 engine-v52 native primary study. The unchanged
+primary v32/continuous v23/profile v33 contract independently qualified all 40
+development and six disjoint holdout trajectories at 44.1 and 48 kHz, 644 original
+reports and 644 actual immediate successors, 34 adversarial cases and 84 holdout
+observations. The installed seals are profile `4c033f30f7b23a6b`, adversarial
+`c0323ada2c13f030` and holdout `df692b018c1d1c62`. Registered JSON is the original
+derived product, allowing only its final packaging line feed. All historical
+resource bytes retain their original scope. No state or history is imported.
+
+The required native installed-positive control must admit the primary evaluator
+independently at both native rates and reject historical engines. Matching Long
+Horizon seals remain absent, so production host admission must still refuse.
+This registration adds no musical state, renderer, callback, parameter, buffer,
+pass or continuation. Fresh independent seven-development/two-disjoint-holdout
+Long studies with all 18 complete histories, final-source applicability, complete
+resource and ordinary-deadline evidence, lifecycle, platform, Release, app and
+applicable physical-output qualification remain mandatory.
