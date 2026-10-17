@@ -83,7 +83,7 @@ struct CurrentRuntimeTests {
     func longCycleWorldPrimaryIdentityContract() {
         #expect(QualityQualificationContract.schemaVersion == 50)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v51")
+                "autotechno-canonical-engine.v52")
         #expect(AutonomousCandidateEvaluationVector.schemaVersion == 43)
         #expect(ProfessionalQualityObservation.schemaVersion == 21)
         #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 22)
@@ -730,7 +730,7 @@ struct RepositorySurfaceTests {
         }.joined(separator: "\n").lowercased()
 
         for required in [
-            "autotechno-canonical-engine.v51",
+            "autotechno-canonical-engine.v52",
             "quality-contract schema 50",
             "candidate-vector schema 43",
             "candidate-transaction schema 14",
