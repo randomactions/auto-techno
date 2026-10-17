@@ -381,6 +381,10 @@ def completion_receipt_errors(
         errors = results.validate_vocabulary(vocabulary)
         if not errors:
             errors.extend(results.validate_record(record, vocabulary))
+            if not errors:
+                for gate in record["gates"]:
+                    if "execution" in gate:
+                        errors.extend(results.hosted.validate_bound_receipt(root, record, gate["execution"]))
     except (TypeError, ValueError):
         return [f"{prefix}: malformed receipt or vocabulary"]
     if errors:

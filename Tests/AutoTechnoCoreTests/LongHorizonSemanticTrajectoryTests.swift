@@ -12,6 +12,9 @@ struct LongHorizonSemanticTrajectoryTests {
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         let firstData = try encoder.encode(first)
         let replayData = try encoder.encode(replay)
+        if ProcessInfo.processInfo.environment["AUTOTECHNO_TRACE_PLANNING_BASELINE"] == "1" {
+            print("LONG_HORIZON_SEMANTIC_REPORT_JSON " + String(decoding: firstData, as: UTF8.self))
+        }
         let decoded = try JSONDecoder().decode(
             LongHorizonSemanticTrajectoryReport.self,
             from: firstData
@@ -40,7 +43,10 @@ struct LongHorizonSemanticTrajectoryTests {
         #expect(first.observedBarCount == 7_802)
         #expect(first.observedPhraseCount == 725)
         #expect(first.trajectoryFingerprint == "ba7251e9e8c9e144")
-        #expect(stableFingerprint(firstData) == "f94ec7d2d4931c75")
+        // Only the engine wire label changes from v49 to v50; replacing that
+        // label in the current JSON reproduces the prior eb45de7fb11edf26 digest.
+        #expect(first.engineVersion == "autotechno-canonical-engine.v51")
+        #expect(stableFingerprint(firstData) == "7a37a6ec4a27cab0")
         #expect(first.phraseKindPhraseCounts.allSatisfy { $0.count > 0 })
         #expect(first.performanceCharacterPhraseCounts.allSatisfy { $0.count > 0 })
         #expect(first.tensionDwell.highBarCount == 629)

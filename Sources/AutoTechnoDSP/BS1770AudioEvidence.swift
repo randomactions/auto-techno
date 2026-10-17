@@ -46,6 +46,7 @@ package struct BS1770LoudnessMeasurement: Equatable, Sendable {
         left: Left,
         right: Right,
         sampleRate: Double,
+        storageObservation: PreparationStorageObservation? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) where
         Left: RandomAccessCollection,
@@ -58,6 +59,7 @@ package struct BS1770LoudnessMeasurement: Equatable, Sendable {
         guard let result = Self.streamingMeasurement(
             chunks: [(left, right)],
             sampleRate: sampleRate,
+            storageObservation: storageObservation,
             cancellationRequested: cancellationRequested
         ) else { return nil }
         self = result
@@ -66,11 +68,13 @@ package struct BS1770LoudnessMeasurement: Equatable, Sendable {
     package init?(
         blocks: [RenderBlock],
         sampleRate: Double,
+        storageObservation: PreparationStorageObservation? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) {
         guard let result = Self.streamingMeasurement(
             chunks: blocks.map { ($0.left, $0.right) },
             sampleRate: sampleRate,
+            storageObservation: storageObservation,
             cancellationRequested: cancellationRequested
         ) else { return nil }
         self = result
@@ -80,12 +84,14 @@ package struct BS1770LoudnessMeasurement: Equatable, Sendable {
         leftChunks: [[Float]],
         rightChunks: [[Float]],
         sampleRate: Double,
+        storageObservation: PreparationStorageObservation? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool = { false }
     ) {
         guard leftChunks.count == rightChunks.count,
               let result = Self.streamingMeasurement(
                   chunks: zip(leftChunks, rightChunks).map { ($0, $1) },
                   sampleRate: sampleRate,
+                  storageObservation: storageObservation,
                   cancellationRequested: cancellationRequested
               ) else { return nil }
         self = result
@@ -118,6 +124,7 @@ package struct BS1770LoudnessMeasurement: Equatable, Sendable {
     private static func streamingMeasurement<Left, Right>(
         chunks: [(Left, Right)],
         sampleRate: Double,
+        storageObservation: PreparationStorageObservation? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> BS1770LoudnessMeasurement? where
         Left: RandomAccessCollection,
@@ -179,6 +186,10 @@ package struct BS1770LoudnessMeasurement: Equatable, Sendable {
         let peakWorkingByteCount = (
             maximumBufferedFrameCount + boundedAggregationScratchScalarCount
         ) * MemoryLayout<Double>.stride
+        storageObservation?.observe("loudness.rings") { inventory in
+            momentary.registerStorage(inventory, owner: "loudness.momentary")
+            shortTerm.registerStorage(inventory, owner: "loudness.short-term")
+        }
         var consumed = 0
         var finite = true
         for (left, right) in chunks {
@@ -213,6 +224,12 @@ package struct BS1770LoudnessMeasurement: Equatable, Sendable {
         }
         let momentaryEnergies = momentary.values
         let shortTermEnergies = shortTerm.values
+        storageObservation?.observe("loudness.values") { inventory in
+            momentary.registerStorage(inventory, owner: "loudness.momentary")
+            shortTerm.registerStorage(inventory, owner: "loudness.short-term")
+            inventory.register(momentaryEnergies, owner: "loudness.momentary-values")
+            inventory.register(shortTermEnergies, owner: "loudness.short-term-values")
+        }
         guard finite, !momentary.overflowed, !shortTerm.overflowed,
               momentaryEnergies.allSatisfy(\.isFinite),
               shortTermEnergies.allSatisfy(\.isFinite) else {
@@ -253,9 +270,22 @@ package struct BS1770LoudnessMeasurement: Equatable, Sendable {
             Self.absoluteGateLKFS,
             integratedLoudness - 20
         )
-        let loudnessRangePopulation = shortTermLoudness.filter {
+        let loudnessRangeCandidates = shortTermLoudness.filter {
             $0 > loudnessRangeGate
-        }.sorted()
+        }
+        let loudnessRangePopulation = loudnessRangeCandidates.sorted()
+        storageObservation?.observe("loudness.gates") { inventory in
+            momentary.registerStorage(inventory, owner: "loudness.momentary")
+            shortTerm.registerStorage(inventory, owner: "loudness.short-term")
+            inventory.register(momentaryEnergies, owner: "loudness.momentary-values")
+            inventory.register(shortTermEnergies, owner: "loudness.short-term-values")
+            inventory.register(momentaryLoudness, owner: "loudness.momentary-loudness")
+            inventory.register(absoluteGated, owner: "loudness.absolute-gated")
+            inventory.register(relativeGated, owner: "loudness.relative-gated")
+            inventory.register(shortTermLoudness, owner: "loudness.short-term-loudness")
+            inventory.register(loudnessRangeCandidates, owner: "loudness.range-candidates")
+            inventory.register(loudnessRangePopulation, owner: "loudness.range-population")
+        }
         let loudnessRange = loudnessRangePopulation.count > 1
             ? Self.percentile(loudnessRangePopulation, 0.95) -
                 Self.percentile(loudnessRangePopulation, 0.10)
@@ -330,6 +360,12 @@ package struct BS1770LoudnessMeasurement: Equatable, Sendable {
                     overflowed = true
                 }
             }
+        }
+
+        func registerStorage(_ inventory: NumericStorageInventory, owner: String) {
+            inventory.register(ring, owner: owner + ".ring")
+            inventory.register(emittedEnergies, owner: owner + ".emitted")
+            withExtendedLifetime(self) {}
         }
 
         var values: [Double] {
@@ -453,11 +489,13 @@ package enum BS1770AudioEvidence {
     /// required.
     package static func stereoTruePeak(
         blocks: [RenderBlock],
+        storageObservation: PreparationStorageObservation? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool = { false }
     ) -> (left: Double, right: Double)? {
         stereoTruePeak(
             leftChunks: blocks.map(\.left),
             rightChunks: blocks.map(\.right),
+            storageObservation: storageObservation,
             cancellationRequested: cancellationRequested
         )
     }
@@ -465,6 +503,7 @@ package enum BS1770AudioEvidence {
     package static func stereoTruePeak<Left, Right>(
         left: Left,
         right: Right,
+        storageObservation: PreparationStorageObservation? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool = { false }
     ) -> (left: Double, right: Double)? where
         Left: RandomAccessCollection,
@@ -490,12 +529,17 @@ package enum BS1770AudioEvidence {
         }
         leftAccumulator.flush()
         rightAccumulator.flush()
+        storageObservation?.observe("true-peak") { inventory in
+            leftAccumulator.registerStorage(inventory, owner: "true-peak.left")
+            rightAccumulator.registerStorage(inventory, owner: "true-peak.right")
+        }
         return (leftAccumulator.peak, rightAccumulator.peak)
     }
 
     package static func stereoTruePeak(
         leftChunks: [[Float]],
         rightChunks: [[Float]],
+        storageObservation: PreparationStorageObservation? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool = { false }
     ) -> (left: Double, right: Double)? {
         guard !cancellationRequested() else { return nil }
@@ -518,6 +562,10 @@ package enum BS1770AudioEvidence {
         }
         leftAccumulator.flush()
         rightAccumulator.flush()
+        storageObservation?.observe("true-peak") { inventory in
+            leftAccumulator.registerStorage(inventory, owner: "true-peak.left")
+            rightAccumulator.registerStorage(inventory, owner: "true-peak.right")
+        }
         return (leftAccumulator.peak, rightAccumulator.peak)
     }
 
@@ -528,6 +576,10 @@ package enum BS1770AudioEvidence {
     }
 
     private struct StreamingTruePeakAccumulator {
+        func registerStorage(_ inventory: NumericStorageInventory, owner: String) {
+            inventory.register(history, owner: owner + ".history")
+            withExtendedLifetime(self) {}
+        }
         private let tapCount = annex2PolyphaseCoefficients[0].count
         private var history = [Double](
             repeating: 0,

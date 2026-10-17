@@ -104,6 +104,14 @@ their values; each architecture translates them into its own safe DSP bounds.
 | Motion | Stable to animated behavior | Resonance, glide, detune, modulation, ring/resonator movement |
 | Space | Dry/near to spacious/distant placement | Existing echo and filtered-reverb sends |
 
+A measured absolute-rolloff rejection may direct the existing upper color at a
+future retry boundary. Existing ordinal pressure moves color toward its bounded
+endpoint without changing patch, effects, shape, motion, space or note geometry.
+Ordinal zero, hold intent and foundation assignments retain their existing path.
+The indefinite-pitch noise branch exposes its existing low component below the
+authored home color; at and above home it retains its existing arithmetic.
+No filter, continuation, rendering pass or user-facing coordinate is added.
+
 Coordinates clamp to `0...1`. Foundation bass always has `space = 0`. Patch
 changes reset only the bounded state that would otherwise leak the previous
 patch’s filter, envelope, or resonator identity. Tonal Motion's existing effect

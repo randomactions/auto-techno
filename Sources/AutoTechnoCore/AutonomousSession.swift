@@ -1727,7 +1727,8 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
             kind: kind,
             resolvedBars: resolvedBars,
             materialWorld: materialWorld,
-            compositionBars: resolvedComposition
+            compositionBars: resolvedComposition,
+            qualityRecoveryContext: qualityRecoveryContext
         )
         let carrier = LongHorizonEffectCarrierResolver.resolve(
             incoming: incomingEffectCarrierState ??
@@ -2357,7 +2358,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
 
         for localBar in 0..<length {
             let progress = length == 1 ? 1 : Double(localBar) / Double(length - 1)
-            let tension = tension(kind: kind, progress: progress, prior: state.memory.currentPhrase.last?.tension ?? 0.42)
+            let tension = tension(kind: kind, localBar: localBar, length: length, prior: state.memory.currentPhrase.last?.tension ?? 0.42)
             let transformations = transformations(
                 kind: kind,
                 localBar: localBar,
@@ -2370,24 +2371,44 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             let absoluteBar = start + localBar
             let presentationBar = presentationStart > Int.max - localBar
                 ? Int.max : presentationStart + localBar
-            let proposedRoles = roles(
+            var proposedRoles = roles(
                 kind: kind,
                 focus: focusRole,
                 localBar: localBar,
                 length: length,
                 target: energyTarget
             )
+            let continuationRoles = proposedRoles
+            // Spectral recovery can exchange an unfocused motif bar for the
+            // existing percussion voice at a four-bar boundary. Preserve the
+            // sparse role count, foundation, focal role and episode target;
+            // ordinal zero and protected structural phrases stay unchanged.
+            let sparseRecoveryExchange =
+                !structuralKind && qualityRetryOrdinal > 0 &&
+                qualityRecoveryContext.intent.spectralMovement == .increase &&
+                energyTarget.roleDensity == .lower &&
+                focusRole != .motif && focusRole != .percussion &&
+                (absoluteBar + 1).isMultiple(of: 4) &&
+                proposedRoles.contains(.motif) && !proposedRoles.contains(.percussion)
+            if sparseRecoveryExchange {
+                proposedRoles = PerformanceRole.allCases.filter {
+                    $0 == .percussion || ($0 != .motif && proposedRoles.contains($0))
+                }
+            }
+            let barSupportingRoles = sparseRecoveryExchange
+                ? NarrativeArticulation.supportingRoles(activeSupportingRoles + [.percussion])
+                : activeSupportingRoles
             let narrativeStart = localBar == 0
                 ? state.memory.narrativeEvolution.protagonistPresence
                 : narrativeTrajectory.endpoints[localBar - 1]
             let narrative = NarrativeArticulation(
                 presenceStart: narrativeStart,
                 presenceEnd: narrativeTrajectory.endpoints[localBar],
-                activeSupportingRoles: activeSupportingRoles
+                activeSupportingRoles: barSupportingRoles
             )
             let resolvedRoles = narrativeResolvedRoles(
                 proposed: proposedRoles,
-                activeSupportingRoles: activeSupportingRoles
+                activeSupportingRoles: barSupportingRoles
             )
             if absoluteBar > 0, absoluteBar.isMultiple(of: 16) {
                 let chapterEntropy = SceneDNA.derivedSeed(
@@ -2557,7 +2578,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             ))
             activeSupportingRoles = narrativeSupportingRolesAfterBoundary(
                 current: activeSupportingRoles,
-                proposed: proposedRoles,
+                proposed: continuationRoles,
                 focus: focusRole,
                 kind: kind,
                 gesture: gesture,
@@ -3056,9 +3077,77 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         }
     }
 
-    private func tension(kind: AutonomousPhraseKind, progress: Double, prior: Double) -> Double {
+    /// The v49 canonical lock curve has only 130 legal score positions. Pin
+    /// their existing bit patterns so host libm rounding cannot change planning
+    /// continuation. This is detached score arithmetic, not an audio oscillator.
+    /// Invalid coordinates return nil; the director keeps its neutral cycle.
+    package static func planningLockCycle(localBar: Int, phraseLength: Int) -> Double? {
+        guard (4...16).contains(phraseLength), (0..<phraseLength).contains(localBar) else { return nil }
+        let precedingPositions = (phraseLength - 4) * (phraseLength + 3) / 2
+        return Double(bitPattern: planningLockCycleBits[precedingPositions + localBar])
+    }
+
+    // Frozen from the pre-repair canonical v49 grid, in length/local-bar order.
+    // All platforms use this one curve; there is no host selector or new state.
+    private static let planningLockCycleBits: [UInt64] = [
+        // 4 bars
+        0x0000000000000000, 0x3febb67ae8584cab, 0xbfebb67ae8584ca8, 0xbcb1a62633145c07,
+        // 5 bars
+        0x0000000000000000, 0x3ff0000000000000, 0x3ca1a62633145c07, 0xbff0000000000000,
+        0xbcb1a62633145c07,
+        // 6 bars
+        0x0000000000000000, 0x3fee6f0e134454ff, 0x3fe2cf2304755a5f, 0xbfe2cf2304755a5d,
+        0xbfee6f0e13445500, 0xbcb1a62633145c07,
+        // 7 bars
+        0x0000000000000000, 0x3febb67ae8584caa, 0x3febb67ae8584cab, 0x3ca1a62633145c07,
+        0xbfebb67ae8584ca8, 0xbfebb67ae8584caa, 0xbcb1a62633145c07,
+        // 8 bars
+        0x0000000000000000, 0x3fe904c37505de4b, 0x3fef329c0558e969, 0x3fdbc4c04d71abc3,
+        0xbfdbc4c04d71abbf, 0xbfef329c0558e969, 0xbfe904c37505de4c, 0xbcb1a62633145c07,
+        // 9 bars
+        0x0000000000000000, 0x3fe6a09e667f3bcc, 0x3ff0000000000000, 0x3fe6a09e667f3bcd,
+        0x3ca1a62633145c07, 0xbfe6a09e667f3bcc, 0xbff0000000000000, 0xbfe6a09e667f3bce,
+        0xbcb1a62633145c07,
+        // 10 bars
+        0x0000000000000000, 0x3fe491b7523c161c, 0x3fef838b8c811c17, 0x3febb67ae8584cab,
+        0x3fd5e3a8748a0bf8, 0xbfd5e3a8748a0bf4, 0xbfebb67ae8584ca8, 0xbfef838b8c811c18,
+        0xbfe491b7523c161f, 0xbcb1a62633145c07,
+        // 11 bars
+        0x0000000000000000, 0x3fe2cf2304755a5e, 0x3fee6f0e134454ff, 0x3fee6f0e13445500,
+        0x3fe2cf2304755a5f, 0x3ca1a62633145c07, 0xbfe2cf2304755a5d, 0xbfee6f0e134454ff,
+        0xbfee6f0e13445500, 0xbfe2cf2304755a60, 0xbcb1a62633145c07,
+        // 12 bars
+        0x0000000000000000, 0x3fe14cedf8bb580b, 0x3fed1bb48eee2c13, 0x3fefac9e043842f0,
+        0x3fe82f19bb3a28a1, 0x3fd207e7fd768dc6, 0xbfd207e7fd768dba, 0xbfe82f19bb3a28a0,
+        0xbfefac9e043842ef, 0xbfed1bb48eee2c12, 0xbfe14cedf8bb5811, 0xbcb1a62633145c07,
+        // 13 bars
+        0x0000000000000000, 0x3fdfffffffffffff, 0x3febb67ae8584caa, 0x3ff0000000000000,
+        0x3febb67ae8584cab, 0x3fdfffffffffffff, 0x3ca1a62633145c07, 0xbfe0000000000001,
+        0xbfebb67ae8584ca8, 0xbff0000000000000, 0xbfebb67ae8584caa, 0xbfe0000000000004,
+        0xbcb1a62633145c07,
+        // 14 bars
+        0x0000000000000000, 0x3fddbe064267c47c, 0x3fea55e242a4c3d2, 0x3fefc44566966769,
+        0x3fedeba72ef20147, 0x3fe5384d024c2f84, 0x3fcea1e54bc48dbc, 0xbfcea1e54bc48db3,
+        0xbfe5384d024c2f85, 0xbfedeba72ef20146, 0xbfefc44566966769, 0xbfea55e242a4c3d4,
+        0xbfddbe064267c479, 0xbcb1a62633145c07,
+        // 15 bars
+        0x0000000000000000, 0x3fdbc4c04d71abc1, 0x3fe904c37505de4b, 0x3fef329c0558e969,
+        0x3fef329c0558e969, 0x3fe904c37505de4c, 0x3fdbc4c04d71abc3, 0x3ca1a62633145c07,
+        0xbfdbc4c04d71abbf, 0xbfe904c37505de4a, 0xbfef329c0558e969, 0xbfef329c0558e969,
+        0xbfe904c37505de4c, 0xbfdbc4c04d71abc5, 0xbcb1a62633145c07,
+        // 16 bars
+        0x0000000000000000, 0x3fda07f921061ad0, 0x3fe7c7d7a833bec2, 0x3fee6f0e134454ff,
+        0x3fefd31f94f867c7, 0x3febb67ae8584cab, 0x3fe2cf2304755a5f, 0x3fca9cd9ac4258f5,
+        0xbfca9cd9ac4258ec, 0xbfe2cf2304755a5d, 0xbfebb67ae8584ca8, 0xbfefd31f94f867c6,
+        0xbfee6f0e13445500, 0xbfe7c7d7a833bec0, 0xbfda07f921061ad0, 0xbcb1a62633145c07,
+    ]
+
+    private func tension(kind: AutonomousPhraseKind, localBar: Int, length: Int, prior: Double) -> Double {
+        let progress = length == 1 ? 1 : Double(localBar) / Double(length - 1)
         switch kind {
-        case .lock: return min(0.72, max(0.32, prior * 0.72 + 0.18 + sin(progress * .pi * 2) * 0.06))
+        case .lock:
+            let cycle = Self.planningLockCycle(localBar: localBar, phraseLength: length) ?? 0
+            return min(0.72, max(0.32, prior * 0.72 + 0.18 + cycle * 0.06))
         case .contrast: return min(0.92, 0.48 + progress * 0.36)
         case .majorBreak: return max(0.26, 0.68 - progress * 0.34)
         case .energyRelease: return max(0.38, 0.92 - progress * 0.28)

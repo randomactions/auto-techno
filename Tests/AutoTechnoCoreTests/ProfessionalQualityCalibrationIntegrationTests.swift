@@ -2,6 +2,13 @@ import AutoTechnoCore
 import AutoTechnoDSP
 import Foundation
 import Testing
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#elseif canImport(WinSDK)
+import WinSDK
+#endif
 
 @Suite("Representative professional quality calibration", .serialized)
 struct ProfessionalQualityCalibrationIntegrationTests {
@@ -232,6 +239,66 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         }
     }
 
+    @Test("Detached diagnostic serialization preserves actual report and successor bytes")
+    func detachedDiagnosticSerializationPreservesActualProducts() throws {
+        let seed: UInt64 = 48_300
+        let harness = CanonicalJourneyQualificationHarness(
+            engineVersion: QualityQualificationContract.engineVersion,
+            routeFingerprint: "score-only-coverage-selection", routeGeneration: 0)
+        let planned = try #require(harness.planCheckpoints(
+            director: AutonomousSessionDirector(rootSeed: seed)).first)
+        let execution = try executeJourney(seed: seed, sampleRate: 8_000,
+            maximumPhrases: planned.phraseIndex + 2, frozenCheckpoints: [planned],
+            requiresActualSuccessors: true)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        func actualObjects() throws -> [String: Any] {
+            ["originalReports": try JSONSerialization.jsonObject(with: encoder.encode(execution.reports)),
+             "actualSuccessorReceipts": try JSONSerialization.jsonObject(with: encoder.encode(execution.successors)),
+             "renderedPhraseCount": execution.renderedPhraseCount]
+        }
+        let original = try canonicalCacheJSON(actualObjects())
+        let scoped = try detachedDiagnosticJSON(actualObjects)
+        #expect(scoped == original)
+        #expect(try detachedDiagnosticJSON(actualObjects) == original)
+        // Inspect returned bytes after the temporary object pool has drained.
+        let decoded = try #require(JSONSerialization.jsonObject(with: scoped) as? [String: Any])
+        #expect((decoded["originalReports"] as? [Any])?.count == 1)
+        #expect((decoded["actualSuccessorReceipts"] as? [Any])?.count == 1)
+        #expect(execution.reports.count == 1 && execution.successors.count == 1)
+        let observation = try ProfessionalQualityObservation(
+            continuousReport: #require(execution.reports.first),
+            successor: #require(execution.successors.first))
+        #expect(observation.continuousModalSource != nil)
+        // Reduced-rate serialization control has no native-cohort authority.
+        #expect(throws: ProfessionalEvidenceReportBankError.incompleteJourneyCoverage) {
+            try ProfessionalEvidenceReportBank(reports: execution.reports)
+        }
+    }
+
+    @Test("Detached diagnostic scope preserves typed construction and JSON parsing errors")
+    func detachedDiagnosticSerializationPreservesErrors() throws {
+        enum SourceFailure: Error, Equatable { case unavailable }
+        #expect(throws: SourceFailure.unavailable) {
+            try detachedDiagnosticJSON { throw SourceFailure.unavailable }
+        }
+        func failure(_ operation: () throws -> Data) throws -> NSError {
+            do {
+                _ = try operation()
+                Issue.record("invalid diagnostic unexpectedly serialized")
+                throw SourceFailure.unavailable
+            } catch let error as NSError { return error }
+        }
+        func malformedObjects() throws -> [String: Any] {
+            let object = try JSONSerialization.jsonObject(with: Data("{".utf8))
+            return try #require(object as? [String: Any])
+        }
+        let original = try failure { try canonicalCacheJSON(malformedObjects()) }
+        let scoped = try failure { try detachedDiagnosticJSON(malformedObjects) }
+        #expect(scoped.domain == original.domain)
+        #expect(scoped.code == original.code)
+    }
+
     private struct FrozenCoverageCohort: Decodable {
         let schema: String
         let engineVersion: String
@@ -305,87 +372,297 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         #expect(totalCheckpointCount == 322)
     }
 
-    @Test("Execute the unchanged fresh native cohort through actual persistent successor preparation")
+    private static let currentStudyPublishedRef = "refs/remotes/origin/codex/rms-trajectory-floor"
+
+    // Freeze an explicit, unambiguous origin study branch. Ref identity belongs
+    // to launch provenance, not to the renderer or musical policy.
+    private static func validCurrentStudyPublishedRef(_ ref: String) -> Bool {
+        let prefix = "refs/remotes/origin/codex/"
+        guard ref.hasPrefix(prefix), ref.count > prefix.count,
+              ref.utf8.allSatisfy({ (48...57).contains($0) || (65...90).contains($0) ||
+                  (97...122).contains($0) || [45, 46, 47, 95].contains($0) }),
+              !ref.contains(".."), !ref.contains("//"), !ref.hasSuffix("."),
+              !ref.hasSuffix("/") else { return false }
+        return ref.split(separator: "/").allSatisfy {
+            !$0.hasPrefix(".") && !$0.hasSuffix(".lock")
+        }
+    }
+
+    private func currentContinuousExecutionProtocol(
+        head: String, objects: [String], contract: String,
+        selectionProtocolBlob: String, cohortBlob: String, qualificationRequested: Bool,
+        publishedRef: String
+    ) -> [String: Any] {
+        let scope = ProfessionalQualityMeasurementScope.continuousModalWindow
+        return ["schema": "autotechno-current-continuous-execution-protocol.v3",
+            "engineVersion": QualityQualificationContract.engineVersion,
+            "acceptedExecutionHead": head, "acceptedExecutionInputObjects": objects,
+            "contractBaselineFingerprint": contract,
+            "publishedExecutionRef": publishedRef,
+            "selectionProtocolBlob": selectionProtocolBlob, "cohortBlob": cohortBlob,
+            "selectionRule": "ascending-ordinal-complete-score-then-remaining-four-bar.v1",
+            "developmentRoots": 40, "holdoutRoots": 6, "planningCheckpoints": 322,
+            "maximumPhrases": 128,
+            "sampleRates": ProfessionalQualityCalibrationProfile.requiredSampleRates,
+            "originalNativeReportCount": 644, "actualSuccessorReceiptCount": 644,
+            "sourceAuthority": "fresh typed original reports and immediate actual prepared successors",
+            "producer": "ProfessionalQualityCalibrationIntegrationTests.executeJourney",
+            "actualContinuation": "advance accepted Core quality/live/render/DSP/graph every phrase",
+            "finalSuccessorRequired": true, "archiveImport": false,
+            "scope": scope.rawValue, "evidenceVersion": ProfessionalEvidenceReportBank.evidenceVersion,
+            "observationVersion": scope.observationVersion,
+            "profileVersion": scope.profileVersion, "profileSchema": scope.profileSchema,
+            "primaryPolicyFamily": ProfessionalQualityPrimaryEvaluator.policyFamilyVersion,
+            "adversarialSchema": 24, "adversarialVersion": "autotechno-professional-quality-adversarial.v25",
+            "adversarialCaseCount": 34, "distinctAcceptedLiveBaselines": 2,
+            "fixedLiveSeed": 42, "fixedLiveRate": 44_100,
+            "holdoutSchema": 21, "holdoutVersion": "autotechno-professional-quality-holdout.v21",
+            "holdoutObservationCount": 84,
+            "qualificationRequested": qualificationRequested,
+            "maximumRenderPasses": QualityQualificationContract.maximumRenderPasses,
+            "maximumPeakWorkingBytes": AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount,
+            "runtimeActivation": false, "installedResourcesChanged": false,
+            "fullRuntimeQualification": false]
+    }
+
+    private func requireCurrentContinuousExecutionProtocol(
+        _ object: [String: Any], head: String, objects: [String], contract: String,
+        selectionProtocolBlob: String, cohortBlob: String, qualificationRequested: Bool,
+        publishedRef: String
+    ) throws {
+        let identities = [head, selectionProtocolBlob, cohortBlob] + objects
+        guard Self.validCurrentStudyPublishedRef(publishedRef), objects.count == 6,
+              identities.allSatisfy({ $0.count == 40 && $0.allSatisfy({ $0.isHexDigit && !$0.isUppercase }) }),
+              contract.count == 64,
+              contract.allSatisfy({ $0.isHexDigit && !$0.isUppercase }),
+              ProfessionalQualityMeasurementScope.continuousModalWindow.profileVersion ==
+                ProfessionalQualityPrimaryEvaluator.requiredProfileVersion,
+              try canonicalCacheJSON(object) == canonicalCacheJSON(currentContinuousExecutionProtocol(
+                head: head, objects: objects, contract: contract,
+                selectionProtocolBlob: selectionProtocolBlob, cohortBlob: cohortBlob,
+                qualificationRequested: qualificationRequested, publishedRef: publishedRef)) else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+    }
+
+    @Test("Current continuous launch rejects stale identities, partial matrices, archive import and promotion claims")
+    func currentContinuousExecutionProtocolRefusesMutation() throws {
+        let head = String(repeating: "a", count: 40)
+        let objects = (0..<6).map { String(repeating: String($0), count: 40) }
+        let contract = String(repeating: "b", count: 64)
+        let selection = String(repeating: "c", count: 40)
+        let cohort = String(repeating: "d", count: 40)
+        let expected = currentContinuousExecutionProtocol(head: head, objects: objects,
+            contract: contract, selectionProtocolBlob: selection, cohortBlob: cohort,
+            qualificationRequested: true, publishedRef: Self.currentStudyPublishedRef)
+        try requireCurrentContinuousExecutionProtocol(expected, head: head, objects: objects,
+            contract: contract, selectionProtocolBlob: selection, cohortBlob: cohort,
+            qualificationRequested: true, publishedRef: Self.currentStudyPublishedRef)
+        let mutations: [(String, Any)] = [
+            ("schema", "autotechno-current-continuous-execution-protocol.v2"),
+            ("engineVersion", "autotechno-canonical-engine.v48"),
+            ("acceptedExecutionHead", "HEAD"), ("acceptedExecutionInputObjects", Array(objects.reversed())),
+            ("contractBaselineFingerprint", "current"), ("publishedExecutionRef", "refs/heads/main"),
+            ("selectionProtocolBlob", cohort), ("cohortBlob", selection),
+            ("developmentRoots", 36), ("holdoutRoots", 4), ("planningCheckpoints", 321),
+            ("maximumPhrases", 129), ("sampleRates", [8_000]),
+            ("originalNativeReportCount", 643), ("actualSuccessorReceiptCount", 0),
+            ("sourceAuthority", "imported archives"), ("producer", "cold checkpoints"),
+            ("finalSuccessorRequired", false), ("archiveImport", true),
+            ("scope", "legacy"), ("profileVersion", "autotechno-professional-quality-profile.v32"),
+            ("adversarialCaseCount", 33), ("distinctAcceptedLiveBaselines", 1),
+            ("holdoutObservationCount", 83), ("qualificationRequested", false),
+            ("maximumRenderPasses", 3), ("maximumPeakWorkingBytes", 256 * 1_024 * 1_024),
+            ("runtimeActivation", true), ("installedResourcesChanged", true),
+            ("fullRuntimeQualification", true), ("unknownAuthority", "passed")]
+        for (key, value) in mutations {
+            var changed = expected
+            changed[key] = value
+            #expect(throws: ProfessionalQualityCalibrationError.self) {
+                try requireCurrentContinuousExecutionProtocol(changed, head: head, objects: objects,
+                    contract: contract, selectionProtocolBlob: selection, cohortBlob: cohort,
+                    qualificationRequested: true, publishedRef: Self.currentStudyPublishedRef)
+            }
+        }
+    }
+
+    @Test("Current study protocol binds an explicit published ref and refuses aliases")
+    func currentContinuousPublishedRefBinding() throws {
+        let head = String(repeating: "a", count: 40)
+        let objects = (0..<6).map { String(repeating: String($0), count: 40) }
+        let contract = String(repeating: "b", count: 64)
+        let selection = String(repeating: "c", count: 40)
+        let cohort = String(repeating: "d", count: 40)
+        let ref = "refs/remotes/origin/codex/current-calibration"
+        let expected = currentContinuousExecutionProtocol(head: head, objects: objects,
+            contract: contract, selectionProtocolBlob: selection, cohortBlob: cohort,
+            qualificationRequested: true, publishedRef: ref)
+        try requireCurrentContinuousExecutionProtocol(expected, head: head, objects: objects,
+            contract: contract, selectionProtocolBlob: selection, cohortBlob: cohort,
+            qualificationRequested: true, publishedRef: ref)
+        for wrong in [Self.currentStudyPublishedRef, "HEAD", "refs/heads/main",
+            "refs/remotes/origin/main", "refs/remotes/origin/codex/", ref + "^{commit}",
+            ref + "..old", ref + "/.hidden", ref + ".lock", ref + "/", ref + "//next", ref + ".", ref + "\n"] {
+            #expect(throws: ProfessionalQualityCalibrationError.self) {
+                try requireCurrentContinuousExecutionProtocol(expected, head: head, objects: objects,
+                    contract: contract, selectionProtocolBlob: selection, cohortBlob: cohort,
+                    qualificationRequested: true, publishedRef: wrong)
+            }
+            if wrong != Self.currentStudyPublishedRef {
+                #expect(!Self.validCurrentStudyPublishedRef(wrong))
+            }
+        }
+    }
+
+    private struct CurrentContinuousLaunch {
+        let inputs: CurrentCoverageExecutionInputs
+        let protocolURL: URL
+        let protocolBlob: String
+        let output: URL
+        let qualificationRequested: Bool
+        let publishedRef: String
+    }
+
+    private func validatedCurrentContinuousLaunch() throws -> CurrentContinuousLaunch {
+        let environment = ProcessInfo.processInfo.environment
+        let inputs = try validatedCurrentCoverageExecutionInputs()
+        let context = inputs.context
+        guard environment["AUTOTECHNO_CONTINUOUS_EXECUTION_ACCEPTED_HEAD"] == context.head,
+              environment["AUTOTECHNO_CONTINUOUS_EXECUTION_CONTRACT_FINGERPRINT"] == context.contract,
+              let protocolPath = environment["AUTOTECHNO_CONTINUOUS_EXECUTION_PROTOCOL"],
+              let blob = environment["AUTOTECHNO_CONTINUOUS_EXECUTION_PROTOCOL_BLOB"],
+              let outputPath = environment["AUTOTECHNO_CONTINUOUS_EXECUTION_OUTPUT_DIRECTORY"] else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        let protocolURL = URL(fileURLWithPath: protocolPath).standardizedFileURL
+        let output = URL(fileURLWithPath: outputPath, isDirectory: true).standardizedFileURL
+        let prefix = repositoryRoot.appendingPathComponent("docs/local/reports/").path + "/"
+        guard protocolURL.path.hasPrefix(prefix), output.path.hasPrefix(prefix),
+              protocolURL.resolvingSymlinksInPath() == protocolURL,
+              output.resolvingSymlinksInPath() == output,
+              !FileManager.default.fileExists(atPath: output.path),
+              !protocolURL.path.hasPrefix(output.path + "/"),
+              !inputs.cohortURL.path.hasPrefix(output.path + "/"),
+              !context.protocolURL.path.hasPrefix(output.path + "/") else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        let data = try Data(contentsOf: protocolURL)
+        guard data.count <= 64 * 1_024 else { throw ProfessionalQualityCalibrationError.invalidIdentity }
+        try requireCoverageGitBlob(data, expected: blob)
+        let object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let qualification = environment["AUTOTECHNO_RUN_CONTINUOUS_ADVERSARIAL_QUALIFICATION"] == "1"
+        let publishedRef = environment["AUTOTECHNO_CONTINUOUS_EXECUTION_PUBLISHED_REF"] ?? Self.currentStudyPublishedRef
+        try requireCurrentContinuousExecutionProtocol(object, head: context.head, objects: context.objects,
+            contract: context.contract, selectionProtocolBlob: context.protocolBlob,
+            cohortBlob: inputs.cohortBlob, qualificationRequested: qualification, publishedRef: publishedRef)
+        // The external owner fresh-fetches this exact branch immediately before
+        // freezing launch inputs. This test never performs network I/O.
+        guard try git(["rev-parse", "--verify", "--end-of-options", publishedRef + "^{commit}"]) == context.head,
+              try git(["rev-parse", "HEAD"]) == context.head,
+              try git(["status", "--porcelain", "--untracked-files=all"]).isEmpty,
+              try Data(contentsOf: repositoryRoot.appendingPathComponent(
+                "docs/ROADMAP_EXECUTION_BASELINE.json")) == context.baselineData,
+              try git(["hash-object", inputs.cohortURL.path]) == inputs.cohortBlob,
+              try git(["hash-object", context.protocolURL.path]) == context.protocolBlob,
+              try git(["hash-object", protocolURL.path]) == blob else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        return CurrentContinuousLaunch(inputs: inputs, protocolURL: protocolURL,
+            protocolBlob: blob, output: output, qualificationRequested: qualification, publishedRef: publishedRef)
+    }
+
+    @Test("Authenticate the complete current continuous-study launch without creating output or PCM")
+    func validateCurrentContinuousExecutionLaunchInputs() throws {
+        guard ProcessInfo.processInfo.environment["AUTOTECHNO_VALIDATE_CURRENT_CONTINUOUS_LAUNCH"] == "1" else { return }
+        let launch = try validatedCurrentContinuousLaunch()
+        #expect(!FileManager.default.fileExists(atPath: launch.output.path))
+        #expect(launch.inputs.frozen.development.count == 40)
+        #expect(launch.inputs.frozen.holdout.count == 6)
+        progress("current-continuous-launch-validated head=\(launch.inputs.context.head) no-PCM=true")
+    }
+
+    /// One OS operation claims the absent leaf; it cannot adopt another writer's
+    /// directory. Parents must already exist from the private input preparation.
+    private func claimCurrentContinuousOutput(_ output: URL) throws {
+        #if canImport(Darwin) || canImport(Glibc)
+        let claimed = output.path.withCString { mkdir($0, 0o700) == 0 }
+        #elseif canImport(WinSDK)
+        let claimed = output.path.withCString(encodedAs: UTF16.self) {
+            CreateDirectoryW($0, nil)
+        }
+        #else
+        let claimed = false
+        #endif
+        guard claimed else { throw ProfessionalQualityCalibrationError.invalidIdentity }
+    }
+
+    @Test("An exclusive study output claim preserves a competing writer without rendering")
+    func currentContinuousOutputClaimRefusesCompetingWriter() throws {
+        let manager = FileManager.default
+        let parent = manager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try manager.createDirectory(at: parent, withIntermediateDirectories: false)
+        defer { try? manager.removeItem(at: parent) }
+        let output = parent.appendingPathComponent("study", isDirectory: true)
+        // The launch precondition held, then another writer won before claim.
+        #expect(!manager.fileExists(atPath: output.path))
+        try manager.createDirectory(at: output, withIntermediateDirectories: false)
+        let otherManifest = output.appendingPathComponent("execution.json")
+        let otherBytes = Data("competing-writer-manifest".utf8)
+        try otherBytes.write(to: otherManifest, options: .withoutOverwriting)
+        #expect(throws: ProfessionalQualityCalibrationError.self) {
+            try claimCurrentContinuousOutput(output)
+        }
+        #expect(try Data(contentsOf: otherManifest) == otherBytes)
+        #expect(try manager.contentsOfDirectory(atPath: output.path) == ["execution.json"])
+        let fresh = parent.appendingPathComponent("fresh", isDirectory: true)
+        try claimCurrentContinuousOutput(fresh)
+        #expect(try manager.contentsOfDirectory(atPath: fresh.path).isEmpty)
+        #expect(throws: ProfessionalQualityCalibrationError.self) {
+            try claimCurrentContinuousOutput(fresh)
+        }
+        #expect(try manager.contentsOfDirectory(atPath: fresh.path).isEmpty)
+    }
+
+    @Test("Execute the current authenticated native cohort through actual persistent successor preparation")
     func executeFreshContinuousCoverageCohort() throws {
         let environment = ProcessInfo.processInfo.environment
         guard environment["AUTOTECHNO_RUN_CONTINUOUS_CALIBRATION_COVERAGE"] == "1" else { return }
-        guard let acceptedHead = environment["AUTOTECHNO_CONTINUOUS_EXECUTION_ACCEPTED_HEAD"],
-              let contractFingerprint = environment["AUTOTECHNO_CONTINUOUS_EXECUTION_CONTRACT_FINGERPRINT"],
-              let outputPath = environment["AUTOTECHNO_CONTINUOUS_EXECUTION_OUTPUT_DIRECTORY"],
-              try git(["rev-parse", "HEAD"]) == acceptedHead,
-              try git(["status", "--porcelain", "--untracked-files=all"]).isEmpty else {
-            throw ProfessionalQualityCalibrationError.invalidIdentity
-        }
-        let output = URL(fileURLWithPath: outputPath, isDirectory: true).standardizedFileURL
-        guard output.path.hasPrefix(repositoryRoot.appendingPathComponent("docs/local/reports/").path + "/"),
-              !FileManager.default.fileExists(atPath: output.path) else {
-            throw ProfessionalQualityCalibrationError.invalidIdentity
-        }
-        // Remote publication must already contain the qualified foundation's
-        // derived evidence. The external execution launcher fresh-fetches this
-        // ref before freezing the accepted source; this test performs no network I/O.
-        _ = try git(["merge-base", "--is-ancestor",
-            "53f0f3d47b0c0b4169168ea52b41b7ab2a87bdff", "origin/codex/phase1-candidate"])
-        let publishedData = Data(try git(["show", "origin/codex/phase1-candidate:docs/reports/AT_0039_CONTINUOUS_MODAL_OBSERVATION_FOUNDATION.json"]).utf8)
-        let published = try #require(JSONSerialization.jsonObject(with: publishedData) as? [String: Any])
-        let publishedRuntime = try #require(published["runtimeEvidence"] as? [String: Any])
-        guard published["sourceHead"] as? String == "53f0f3d47b0c0b4169168ea52b41b7ab2a87bdff",
-              publishedRuntime["refreshStages"] as? Int == 42,
-              publishedRuntime["preservedAssets"] as? Int == 224,
-              publishedRuntime["exactComparedSamples"] as? Int == 340_230_030,
-              publishedRuntime["changedSamples"] as? Int == 0 else {
-            throw ProfessionalQualityCalibrationError.invalidIdentity
-        }
-        let baseline = try #require(JSONSerialization.jsonObject(with: Data(contentsOf:
-            repositoryRoot.appendingPathComponent("docs/ROADMAP_EXECUTION_BASELINE.json"))) as? [String: Any])
-        guard baseline["snapshotFingerprint"] as? String == contractFingerprint else {
-            throw ProfessionalQualityCalibrationError.profileMismatch
-        }
-        let objects = try git(["rev-parse"] + ["Package.swift", "Sources", "Tests", "scripts",
-            "docs/BASELINE_CORPUS.json", "docs/ROADMAP_EXECUTION_BASELINE.json"].map { "HEAD:\($0)" })
-            .split(separator: "\n").map(String.init)
-        let protocolBlob = try git(["hash-object", "docs/local/reports/AT-0039-continuous-execution-v1/protocol.json"])
-        guard protocolBlob == "9b9e979f02c311ac4b6f92aeee1de5b5a5a73af0" else {
-            throw ProfessionalQualityCalibrationError.invalidIdentity
-        }
-        let qualificationRequested = environment["AUTOTECHNO_RUN_CONTINUOUS_ADVERSARIAL_QUALIFICATION"] == "1"
-        let qualificationProtocolPath = "docs/local/reports/AT-0039-measured-challenge-v1/qualification-protocol.json"
-        let qualificationProtocolBlob = qualificationRequested
-            ? try git(["hash-object", qualificationProtocolPath]) : nil
-        if qualificationRequested {
-            guard qualificationProtocolBlob == "151f8453481bdc454284279f5df4517e89bf44b0" else {
-                throw ProfessionalQualityCalibrationError.invalidIdentity
-            }
-            _ = try git(["merge-base", "--is-ancestor", acceptedHead,
-                "origin/codex/measured-adversarial-challenges"])
-        }
-        let (frozen, original) = try validatedFreshCoverageCohort()
+        let launch = try validatedCurrentContinuousLaunch()
+        let frozen = launch.inputs.frozen, original = launch.inputs.original
+        let context = launch.inputs.context
+        let acceptedHead = context.head, objects = context.objects
+        let contractFingerprint = context.contract, output = launch.output
+        let protocolBlob = launch.protocolBlob
+        let qualificationRequested = launch.qualificationRequested
         func guardAcceptedInputs() throws {
             guard try git(["rev-parse", "HEAD"]) == acceptedHead,
                   try git(["status", "--porcelain", "--untracked-files=all"]).isEmpty,
-                  try git(["hash-object", "docs/local/reports/AT-0039-fresh-modal-coverage-cohort-v1/cohort.json"]) == "da849a3ae636316afbbea231570d7c809de35d95",
-                  try git(["hash-object", "docs/local/reports/AT-0039-continuous-execution-v1/protocol.json"]) == protocolBlob else {
+                  try git(["rev-parse"] + ["Package.swift", "Sources", "Tests", "scripts",
+                    "docs/BASELINE_CORPUS.json", "docs/ROADMAP_EXECUTION_BASELINE.json"].map { "HEAD:\($0)" })
+                    .split(separator: "\n").map(String.init) == objects,
+                  try Data(contentsOf: repositoryRoot.appendingPathComponent(
+                    "docs/ROADMAP_EXECUTION_BASELINE.json")) == context.baselineData,
+                  try git(["hash-object", launch.inputs.cohortURL.path]) == launch.inputs.cohortBlob,
+                  try git(["hash-object", context.protocolURL.path]) == context.protocolBlob,
+                  try git(["hash-object", launch.protocolURL.path]) == protocolBlob,
+                  try git(["rev-parse", "--verify", "--end-of-options", launch.publishedRef + "^{commit}"]) == acceptedHead else {
                 throw ProfessionalQualityCalibrationError.invalidIdentity
-            }
-            if qualificationRequested {
-                guard try git(["hash-object", qualificationProtocolPath]) == qualificationProtocolBlob else {
-                    throw ProfessionalQualityCalibrationError.invalidIdentity
-                }
             }
         }
         try guardAcceptedInputs()
-        try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
-        var manifest: [String: Any] = ["schema": "autotechno-fresh-continuous-calibration-execution.v1",
+        try claimCurrentContinuousOutput(output)
+        var manifest: [String: Any] = ["schema": "autotechno-fresh-continuous-calibration-execution.v2",
             "status": "running", "acceptedExecutionHead": acceptedHead,
             "acceptedExecutionInputObjects": objects, "contractBaselineFingerprint": contractFingerprint,
-            "protocolBlob": protocolBlob, "frozenCohortBlob": "da849a3ae636316afbbea231570d7c809de35d95",
-            "historicalCohortHead": frozen.gitHead, "historicalAcceptedInputObjects": frozen.acceptedInputObjects,
+            "protocolBlob": protocolBlob, "frozenCohortBlob": launch.inputs.cohortBlob,
+            "selectionProtocolBlob": context.protocolBlob,
+            "frozenCohortHead": frozen.gitHead, "frozenAcceptedInputObjects": frozen.acceptedInputObjects,
             "historicalContextRetagged": false, "planningCheckpointCount": 322,
             "maximumPhrases": frozen.maximumPhrases, "sampleRates": frozen.sampleRates,
             "observationVersion": ProfessionalQualityMeasurementContract.continuousModalObservationVersion,
             "replacementQualification": "unavailable-not-activated", "completedTrajectories": []]
-        if let qualificationProtocolBlob {
-            manifest["continuousQualificationProtocolBlob"] = qualificationProtocolBlob
+        if qualificationRequested {
+            manifest["continuousQualificationProtocolBlob"] = protocolBlob
             manifest["offlineContinuousQualification"] = ["status": "pending", "runtimeActivation": false]
         }
         func saveManifest() throws {
@@ -405,10 +682,22 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                 var receipts: [ProfessionalQualityModalSuccessorEvidence] = []
                 var phraseCounts: [String: Int] = [:]
                 for rate in frozen.sampleRates {
-                    let execution = try executeJourney(seed: fixture.rootSeed, sampleRate: rate,
-                        maximumPhrases: frozen.maximumPhrases, frozenCheckpoints: fixture.checkpoints,
-                        requiredMajorBreakBarCount: fixture.requiredMajorBreakBarCount,
-                        requiresActualSuccessors: true)
+                    manifest["activeNativeRoute"] = ["partition": partition, "ordinal": fixture.ordinal,
+                        "rootSeed": fixture.rootSeed, "sampleRate": rate]
+                    try saveManifest()
+                    let execution: JourneyExecution
+                    do {
+                        execution = try executeJourney(seed: fixture.rootSeed, sampleRate: rate,
+                            maximumPhrases: frozen.maximumPhrases, frozenCheckpoints: fixture.checkpoints,
+                            requiredMajorBreakBarCount: fixture.requiredMajorBreakBarCount,
+                            requiresActualSuccessors: true)
+                    } catch {
+                        manifest["status"] = "native-construction-refused"
+                        manifest["nativeConstructionRefusal"] = String(describing: error)
+                        manifest["freshCohortRendered"] = false
+                        try saveManifest()
+                        throw error
+                    }
                     reports.append(contentsOf: execution.reports)
                     receipts.append(contentsOf: execution.successors)
                     phraseCounts[String(Int(rate))] = execution.renderedPhraseCount
@@ -425,14 +714,16 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                     }
                 }.count
                 let filename = "\(partition)-ordinal-\(fixture.ordinal).json"
-                let artifact: [String: Any] = ["frozenPlanningEntry": originalEntry,
-                    "actualReportBank": try JSONSerialization.jsonObject(with: bank.deterministicJSON()),
-                    "actualSuccessorReceipts": try JSONSerialization.jsonObject(with: encoder.encode(receipts)),
-                    "continuousTrajectory": try JSONSerialization.jsonObject(with: encoder.encode(trajectory)),
-                    "renderedPhraseCounts": phraseCounts,
-                    "requiredUnavailableObservationCount": unavailable,
-                    "constructionAuthority": "actual typed products; diagnostic serialization cannot replace source reconstruction"]
-                try canonicalCacheJSON(artifact).write(to: output.appendingPathComponent(filename), options: .withoutOverwriting)
+                let artifact = try detachedDiagnosticJSON {
+                    ["frozenPlanningEntry": originalEntry,
+                     "actualReportBank": try JSONSerialization.jsonObject(with: bank.deterministicJSON()),
+                     "actualSuccessorReceipts": try JSONSerialization.jsonObject(with: encoder.encode(receipts)),
+                     "continuousTrajectory": try JSONSerialization.jsonObject(with: encoder.encode(trajectory)),
+                     "renderedPhraseCounts": phraseCounts,
+                     "requiredUnavailableObservationCount": unavailable,
+                     "constructionAuthority": "actual typed products; diagnostic serialization cannot replace source reconstruction"]
+                }
+                try artifact.write(to: output.appendingPathComponent(filename), options: .withoutOverwriting)
                 if partition == "development" { development.append(trajectory) } else { holdout.append(trajectory) }
                 completed.append(["partition": partition, "ordinal": fixture.ordinal, "artifact": filename,
                     "originalBankFingerprint": trajectory.sourceBankFingerprint,
@@ -471,6 +762,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             }
         }
         try guardAcceptedInputs()
+        manifest.removeValue(forKey: "activeNativeRoute")
         manifest["status"] = "captured-not-activated"
         manifest["originalNativeReportCount"] = 644
         manifest["actualSuccessorReceiptCount"] = 644
@@ -496,10 +788,20 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             try canonicalCacheJSON(result).write(to: output.appendingPathComponent(
                 "offline-continuous-qualification.json"), options: .atomic)
         }
-        guard profile.measurementScope == .continuousModalWindow,
-              profile.fingerprint == "5fedcae807b0ce09",
-              development.fingerprint == "39f157e5cbf2ba2a",
+        // The new protocol freezes inputs, geometry and producers before PCM.
+        // Its outputs are derived from these fresh typed products, never from
+        // a prior archive or a retagged expected output fingerprint.
+        let outputIdentityMatches =
+            profile.profileVersion == ProfessionalQualityPrimaryEvaluator.requiredProfileVersion &&
+            profile.sourceBankFingerprint == development.fingerprint &&
+            profile.sourceTrajectoryCount == development.sourceTrajectoryCount &&
+            profile.engineVersion == QualityQualificationContract.engineVersion &&
+            development.engineVersion == profile.engineVersion && holdout.engineVersion == profile.engineVersion &&
+            profile.evidenceVersion == ProfessionalEvidenceReportBank.evidenceVersion &&
+            profile.isComplete && profile.usesDiverseCalibration
+        guard profile.measurementScope == .continuousModalWindow, outputIdentityMatches,
               development.sourceTrajectoryCount == 40, holdout.sourceTrajectoryCount == 6,
+              development.sourceObservationCount == 560, holdout.sourceObservationCount == 84,
               development.isComplete, holdout.isComplete,
               development.sourceBankFingerprints.isDisjoint(with: holdout.sourceBankFingerprints) else {
             result["status"] = "source-binding-refused"
@@ -522,7 +824,10 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             result["adversarialPassed"] = suite.passed
             result["adversarialCaseCount"] = suite.cases.count
             result["distinctLiveBaselineCount"] = Set(suite.liveBaselineObservationFingerprints).count
-            guard suite.passed else {
+            guard suite.passed, suite.schemaVersion == 24,
+                  suite.suiteVersion == "autotechno-professional-quality-adversarial.v25",
+                  suite.cases.count == 34,
+                  Set(suite.liveBaselineObservationFingerprints).count == 2 else {
                 result["status"] = "adversarial-failed"
                 result["holdoutStatus"] = "not-run-adversarial-prerequisite"
                 try save()
@@ -536,7 +841,12 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             result["holdoutQualified"] = qualification.qualified
             result["holdoutAcceptedObservationCount"] = qualification.acceptedObservationCount
             result["holdoutSourceObservationCount"] = qualification.sourceObservationCount
-            result["status"] = qualification.qualified
+            let completeCurrentHoldout = qualification.qualified &&
+                qualification.schemaVersion == 21 &&
+                qualification.qualificationVersion == "autotechno-professional-quality-holdout.v21" &&
+                qualification.engineVersion == QualityQualificationContract.engineVersion &&
+                qualification.sourceObservationCount == 84 && qualification.acceptedObservationCount == 84
+            result["status"] = completeCurrentHoldout
                 ? "offline-adversarial-and-holdout-passed-not-activated" : "holdout-rejected"
         } catch let error as ProfessionalQualityCalibrationError {
             result["status"] = "construction-refused"
@@ -544,6 +854,253 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         }
         try save()
         return result
+    }
+
+    /// This is a planning protocol, never measured quality or admission evidence.
+    /// Exact source and the inherited outcome-blind quotas are frozen before PCM.
+    private func currentCoverageSelectionProtocol(
+        head: String, inputObjects: [String], contractFingerprint: String
+    ) -> [String: Any] {
+        ["schema": "autotechno-score-only-coverage-selection-protocol.v2",
+         "engineVersion": QualityQualificationContract.engineVersion,
+         "gitHead": head, "acceptedInputObjects": inputObjects,
+         "contractBaselineFingerprint": contractFingerprint,
+         "selectionRule": "ascending-ordinal-complete-score-then-remaining-four-bar.v1",
+         "developmentOrdinals": [775, 1031], "holdoutOrdinals": [1031, 1287],
+         "excludedOrdinalUpperBound": 775,
+         "developmentGeneralCount": 36, "developmentFourBarCount": 4,
+         "holdoutGeneralCount": 4, "holdoutFourBarCount": 2,
+         "maximumPhrases": 128,
+         "sampleRates": ProfessionalQualityCalibrationProfile.requiredSampleRates,
+         "routeFingerprint": "score-only-coverage-selection", "routeGeneration": 0,
+         "originalCheckpointCount": 322, "qualityRevision": 0,
+         "pcmRendered": false, "runtimeActivation": false,
+         "replacementQualification": "unavailable-not-activated"]
+    }
+
+    private func requireCurrentCoverageSelectionProtocol(
+        _ object: [String: Any], head: String, inputObjects: [String],
+        contractFingerprint: String
+    ) throws {
+        guard head.count == 40, head.allSatisfy({ $0.isHexDigit && !$0.isUppercase }),
+              inputObjects.count == 6,
+              inputObjects.allSatisfy({ $0.count == 40 && $0.allSatisfy({ $0.isHexDigit && !$0.isUppercase }) }),
+              contractFingerprint.count == 64,
+              contractFingerprint.allSatisfy({ $0.isHexDigit && !$0.isUppercase }),
+              try canonicalCacheJSON(object) == canonicalCacheJSON(
+                currentCoverageSelectionProtocol(head: head, inputObjects: inputObjects,
+                    contractFingerprint: contractFingerprint)) else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+    }
+
+    @Test("Current score-only freeze refuses historical identities, changed quotas and quality claims")
+    func currentCoverageSelectionProtocolRefusesMutation() throws {
+        let head = String(repeating: "a", count: 40)
+        let objects = (0..<6).map { String(repeating: String($0), count: 40) }
+        let contract = String(repeating: "b", count: 64)
+        let expected = currentCoverageSelectionProtocol(head: head,
+            inputObjects: objects, contractFingerprint: contract)
+        try requireCurrentCoverageSelectionProtocol(expected, head: head,
+            inputObjects: objects, contractFingerprint: contract)
+        let mutations: [(String, Any)] = [
+            ("engineVersion", "autotechno-canonical-engine.v48"),
+            ("schema", "autotechno-score-only-coverage-selection-protocol.v1"),
+            ("gitHead", String(repeating: "c", count: 40)),
+            ("acceptedInputObjects", Array(objects.reversed())),
+            ("contractBaselineFingerprint", String(repeating: "c", count: 64)),
+            ("developmentOrdinals", [774, 1031]), ("holdoutOrdinals", [1030, 1287]),
+            ("excludedOrdinalUpperBound", 774), ("developmentGeneralCount", 35),
+            ("developmentFourBarCount", 5), ("holdoutGeneralCount", 5),
+            ("holdoutFourBarCount", 1), ("maximumPhrases", 129),
+            ("sampleRates", [8_000]), ("routeFingerprint", "other-route"),
+            ("routeGeneration", 1), ("originalCheckpointCount", 321),
+            ("qualityRevision", 1), ("pcmRendered", true), ("runtimeActivation", true),
+            ("replacementQualification", "passed"), ("unknownAuthority", "passed")]
+        for (key, value) in mutations {
+            var changed = expected
+            changed[key] = value
+            #expect(throws: ProfessionalQualityCalibrationError.self) {
+                try requireCurrentCoverageSelectionProtocol(changed, head: head,
+                    inputObjects: objects, contractFingerprint: contract)
+            }
+        }
+        for (badHead, badObjects, badContract) in [
+            ("HEAD", objects, contract), (head, Array(objects.prefix(5)), contract),
+            (head, objects, "current")
+        ] {
+            #expect(throws: ProfessionalQualityCalibrationError.self) {
+                try requireCurrentCoverageSelectionProtocol(expected, head: badHead,
+                    inputObjects: badObjects, contractFingerprint: badContract)
+            }
+        }
+    }
+
+    private func requireCoverageGitBlob(_ data: Data, expected: String) throws {
+        guard data.count <= 8 * 1_024 * 1_024,
+              expected.count == 40,
+              expected.allSatisfy({ $0.isHexDigit && !$0.isUppercase }),
+              try git(["hash-object", "--stdin"], input: data) == expected else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+    }
+
+    @Test("Coverage identities bind parsed bytes even when their path changes and is restored")
+    func currentCoverageParsedByteBindingRejectsPathMutation() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("protocol.json")
+        let first = Data("{\"version\":1}".utf8)
+        let second = Data("{\"version\":2}".utf8)
+        try first.write(to: file)
+        let capturedFirst = try Data(contentsOf: file)
+        let firstBlob = try git(["hash-object", file.path])
+        try second.write(to: file)
+        let capturedSecond = try Data(contentsOf: file)
+        let secondBlob = try git(["hash-object", file.path])
+        #expect(firstBlob != secondBlob)
+        try requireCoverageGitBlob(capturedFirst, expected: firstBlob)
+        #expect(throws: ProfessionalQualityCalibrationError.self) {
+            try requireCoverageGitBlob(capturedFirst, expected: secondBlob)
+        }
+        try first.write(to: file)
+        #expect(try git(["hash-object", file.path]) == firstBlob)
+        try requireCoverageGitBlob(capturedSecond, expected: secondBlob)
+        #expect(throws: ProfessionalQualityCalibrationError.self) {
+            try requireCoverageGitBlob(capturedSecond, expected: firstBlob)
+        }
+    }
+
+    private func currentCoverageSelectionContext() throws -> CoverageSelectionContext {
+        guard try git(["status", "--porcelain", "--untracked-files=all"]).isEmpty else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        let head = try git(["rev-parse", "HEAD"])
+        let objects = try git(["rev-parse"] + ["Package.swift", "Sources", "Tests", "scripts",
+            "docs/BASELINE_CORPUS.json", "docs/ROADMAP_EXECUTION_BASELINE.json"].map { "HEAD:\($0)" })
+            .split(separator: "\n").map(String.init)
+        let baselineURL = repositoryRoot.appendingPathComponent("docs/ROADMAP_EXECUTION_BASELINE.json")
+        let baselineData = try Data(contentsOf: baselineURL)
+        let baseline = try #require(JSONSerialization.jsonObject(with: baselineData) as? [String: Any])
+        let contract = try #require(baseline["snapshotFingerprint"] as? String)
+        let environment = ProcessInfo.processInfo.environment
+        guard let protocolPath = environment["AUTOTECHNO_CALIBRATION_COVERAGE_PROTOCOL"],
+              let expectedProtocolBlob = environment["AUTOTECHNO_CALIBRATION_COVERAGE_PROTOCOL_BLOB"],
+              expectedProtocolBlob.count == 40,
+              expectedProtocolBlob.allSatisfy({ $0.isHexDigit && !$0.isUppercase }) else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        let protocolURL = URL(fileURLWithPath: protocolPath).standardizedFileURL
+        let reportPrefix = repositoryRoot.appendingPathComponent("docs/local/reports/").path + "/"
+        guard protocolURL.path.hasPrefix(reportPrefix),
+              protocolURL.resolvingSymlinksInPath() == protocolURL,
+              FileManager.default.fileExists(atPath: protocolURL.path) else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        let protocolData = try Data(contentsOf: protocolURL)
+        guard protocolData.count <= 64 * 1_024,
+              try git(["hash-object", protocolURL.path]) == expectedProtocolBlob else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        try requireCoverageGitBlob(protocolData, expected: expectedProtocolBlob)
+        let selectionProtocol = try #require(JSONSerialization.jsonObject(with: protocolData) as? [String: Any])
+        try requireCurrentCoverageSelectionProtocol(selectionProtocol, head: head,
+            inputObjects: objects, contractFingerprint: contract)
+        return (head, objects, baselineData, contract, protocolURL, expectedProtocolBlob)
+    }
+
+    private typealias CoverageSelectionContext = (
+        head: String, objects: [String], baselineData: Data, contract: String,
+        protocolURL: URL, protocolBlob: String
+    )
+
+    private struct CurrentCoverageExecutionInputs {
+        let frozen: FrozenCoverageCohort
+        let original: [String: Any]
+        let context: CoverageSelectionContext
+        let cohortURL: URL
+        let cohortBlob: String
+    }
+
+    private func validatedCurrentCoverageExecutionInputs() throws -> CurrentCoverageExecutionInputs {
+        let environment = ProcessInfo.processInfo.environment
+        let context = try currentCoverageSelectionContext()
+        guard let path = environment["AUTOTECHNO_CALIBRATION_COVERAGE_COHORT"],
+              let blob = environment["AUTOTECHNO_CALIBRATION_COVERAGE_COHORT_BLOB"],
+              blob.count == 40, blob.allSatisfy({ $0.isHexDigit && !$0.isUppercase }) else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        let url = URL(fileURLWithPath: path).standardizedFileURL
+        guard url.path.hasPrefix(repositoryRoot.appendingPathComponent("docs/local/reports/").path + "/"),
+              url.resolvingSymlinksInPath() == url,
+              try git(["hash-object", url.path]) == blob else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        let data = try Data(contentsOf: url)
+        guard data.count <= 8 * 1_024 * 1_024 else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        try requireCoverageGitBlob(data, expected: blob)
+        let original = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let frozen = try JSONDecoder().decode(FrozenCoverageCohort.self, from: data)
+        let fixtures = try freshCoverageFixtures()
+        guard frozen.schema == "autotechno-frozen-calibration-coverage-cohort.v2",
+              frozen.engineVersion == QualityQualificationContract.engineVersion,
+              frozen.gitHead == context.head, frozen.acceptedInputObjects == context.objects,
+              frozen.maximumPhrases == 128,
+              frozen.sampleRates == ProfessionalQualityCalibrationProfile.requiredSampleRates,
+              frozen.development == fixtures.development, frozen.holdout == fixtures.holdout,
+              original["protocolBlob"] as? String == context.protocolBlob,
+              original["contractBaselineFingerprint"] as? String == context.contract,
+              original["pcmRendered"] as? Bool == false,
+              original["runtimeActivation"] as? Bool == false,
+              original["historicalCohortsRetagged"] as? Bool == false,
+              original["replacementQualification"] as? String == "unavailable-not-activated",
+              original["selectionRule"] as? String == "ascending-ordinal-complete-score-then-remaining-four-bar.v1",
+              Set(original.keys) == Set(["schema", "engineVersion", "gitHead", "acceptedInputObjects",
+                "maximumPhrases", "protocolBlob", "contractBaselineFingerprint", "pcmRendered",
+                "runtimeActivation", "historicalCohortsRetagged", "selectionRule", "sampleRates",
+                "replacementQualification", "development", "holdout"]) else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        var cache: [String: [[String: Any]]] = [:]
+        var count = 0
+        for (name, entries) in [("development", fixtures.development), ("holdout", fixtures.holdout)] {
+            let originals = try #require(original[name] as? [[String: Any]])
+            guard originals.count == entries.count else {
+                throw ProfessionalQualityCalibrationError.incompleteCheckpointCoverage
+            }
+            for (fixture, originalEntry) in zip(entries, originals) {
+                var replay = try #require(JSONSerialization.jsonObject(with: encoder.encode(fixture)) as? [String: Any])
+                replay["modalScoreGeometry"] = try modalScoreGeometry(fixture: fixture, timingCache: &cache)
+                guard try canonicalCacheJSON(replay) == canonicalCacheJSON(originalEntry),
+                      fixture.checkpoints.count == CanonicalJourneyCheckpoint.allCases.count,
+                      fixture.checkpoints.allSatisfy({ $0.phraseIndex < 127 && $0.qualityRevision == 0 }) else {
+                    throw ProfessionalQualityCalibrationError.profileMismatch
+                }
+                count += fixture.checkpoints.count
+            }
+        }
+        guard count == 322, try git(["hash-object", url.path]) == blob,
+              try git(["hash-object", context.protocolURL.path]) == context.protocolBlob,
+              try git(["rev-parse", "HEAD"]) == context.head,
+              try Data(contentsOf: repositoryRoot.appendingPathComponent(
+                "docs/ROADMAP_EXECUTION_BASELINE.json")) == context.baselineData,
+              try git(["status", "--porcelain", "--untracked-files=all"]).isEmpty else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        progress("current-coverage-replayed head=\(context.head) checkpoints=\(count) no-PCM=true")
+        return CurrentCoverageExecutionInputs(frozen: frozen, original: original,
+            context: context, cohortURL: url, cohortBlob: blob)
+    }
+
+    @Test("Replay immutable current-source score cohort and every native modal geometry without rendering")
+    func validateFrozenCurrentCoverageExecutionInputs() throws {
+        guard ProcessInfo.processInfo.environment["AUTOTECHNO_VALIDATE_CURRENT_CALIBRATION_COVERAGE"] == "1" else { return }
+        _ = try validatedCurrentCoverageExecutionInputs()
     }
 
     @Test("Freeze fresh complete score coverage on accepted clean source before any new-root PCM")
@@ -558,11 +1115,19 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             "docs/local/reports/", isDirectory: true).path + "/"),
               !FileManager.default.fileExists(atPath: destination.path)
         else { throw ProfessionalQualityCalibrationError.invalidIdentity }
-        let head = try git(["rev-parse", "HEAD"])
-        let objects = try git(["rev-parse"] + ["Package.swift", "Sources", "Tests", "scripts",
-            "docs/BASELINE_CORPUS.json", "docs/ROADMAP_EXECUTION_BASELINE.json"].map { "HEAD:\($0)" })
-            .split(separator: "\n").map(String.init)
+        let context = try currentCoverageSelectionContext()
+        let head = context.head, objects = context.objects
+        let baselineURL = repositoryRoot.appendingPathComponent("docs/ROADMAP_EXECUTION_BASELINE.json")
+        let baselineData = context.baselineData, contract = context.contract
+        let protocolURL = context.protocolURL, expectedProtocolBlob = context.protocolBlob
+        guard destination.resolvingSymlinksInPath() == destination, protocolURL != destination else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
         let fixtures = try freshCoverageFixtures()
+        guard (fixtures.development + fixtures.holdout).allSatisfy({
+            $0.checkpoints.count == CanonicalJourneyCheckpoint.allCases.count &&
+                $0.checkpoints.allSatisfy({ $0.phraseIndex < 127 && $0.qualityRevision == 0 })
+        }) else { throw ProfessionalQualityCalibrationError.incompleteCheckpointCoverage }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         var cache: [String: [[String: Any]]] = [:]
@@ -574,18 +1139,24 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                 return object
             }
         }
-        let object: [String: Any] = ["schema": "autotechno-frozen-calibration-coverage-cohort.v1",
+        let object: [String: Any] = ["schema": "autotechno-frozen-calibration-coverage-cohort.v2",
             "engineVersion": QualityQualificationContract.engineVersion,
             "gitHead": head, "acceptedInputObjects": objects, "maximumPhrases": 128,
-            "protocolSha256": "1b10f7880d27d044a41d00b2d2f23af9d1e71226534ace0fd018645a38090877",
-            "originalCohortBlob": try git(["hash-object", "docs/local/reports/AT-0039-foundation-cohort-v1/corpus.json"]),
-            "failedFourBarCohortBlob": try git(["hash-object", "docs/local/reports/AT-0039-four-bar-calibration-cohort-v1/cohort.json"]),
+            "protocolBlob": expectedProtocolBlob,
+            "contractBaselineFingerprint": contract,
+            "pcmRendered": false, "runtimeActivation": false,
+            "historicalCohortsRetagged": false,
             "selectionRule": "ascending-ordinal-complete-score-then-remaining-four-bar.v1",
             "sampleRates": ProfessionalQualityCalibrationProfile.requiredSampleRates,
             "replacementQualification": "unavailable-not-activated",
             "development": try entries(fixtures.development), "holdout": try entries(fixtures.holdout)]
         let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys, .withoutEscapingSlashes])
         guard data.count <= 8 * 1024 * 1024,
+              try git(["hash-object", protocolURL.path]) == expectedProtocolBlob,
+              try git(["rev-parse"] + ["Package.swift", "Sources", "Tests", "scripts",
+                "docs/BASELINE_CORPUS.json", "docs/ROADMAP_EXECUTION_BASELINE.json"].map { "HEAD:\($0)" })
+                .split(separator: "\n").map(String.init) == objects,
+              try Data(contentsOf: baselineURL) == baselineData,
               try git(["rev-parse", "HEAD"]) == head,
               try git(["status", "--porcelain", "--untracked-files=all"]).isEmpty
         else { throw ProfessionalQualityCalibrationError.invalidIdentity }
@@ -675,13 +1246,34 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             .deletingLastPathComponent().deletingLastPathComponent()
     }
 
-    private func git(_ arguments: [String]) throws -> String {
+    private func git(_ arguments: [String], input: Data? = nil) throws -> String {
         let process = Process()
         let output = Pipe()
+        #if os(Windows)
+        // The native runner installs Git on PATH; Unix absolute paths cannot
+        // execute on Windows. Keep the executable separate from argument data.
+        let searchPath = ProcessInfo.processInfo.environment.first {
+            $0.key.caseInsensitiveCompare("PATH") == .orderedSame
+        }?.value ?? ""
+        let candidates = searchPath.split(separator: ";").map {
+            URL(fileURLWithPath: String($0), isDirectory: true).appendingPathComponent("git.exe")
+        }
+        guard let executable = candidates.first(where: {
+            FileManager.default.isExecutableFile(atPath: $0.path)
+        }) else { throw ProfessionalQualityCalibrationError.invalidIdentity }
+        process.executableURL = executable
+        #else
         process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        #endif
         process.arguments = ["-C", repositoryRoot.path] + arguments
         process.standardOutput = output
+        let inputPipe = input.map { _ in Pipe() }
+        if let inputPipe { process.standardInput = inputPipe }
         try process.run()
+        if let input, let inputPipe {
+            try inputPipe.fileHandleForWriting.write(contentsOf: input)
+            try inputPipe.fileHandleForWriting.close()
+        }
         let data = output.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
         guard process.terminationStatus == 0 else {
@@ -1289,6 +1881,8 @@ struct ProfessionalQualityCalibrationIntegrationTests {
     }
 
     @Test("Render one explicitly selected planned boundary")
+    // Offline diagnostic values exceed the native cooperative worker stack in Debug.
+    @MainActor
     func renderSelectedPlannedBoundary() throws {
         guard let rawSeed = ProcessInfo.processInfo.environment[
             "AUTOTECHNO_CALIBRATION_BOUNDARY_SEED"
@@ -1329,6 +1923,8 @@ struct ProfessionalQualityCalibrationIntegrationTests {
     }
 
     @Test("Trace one explicitly selected accumulated journey")
+    // Offline diagnostic values exceed the native cooperative worker stack in Debug.
+    @MainActor
     func traceSelectedAccumulatedJourney() throws {
         guard let rawSeed = ProcessInfo.processInfo.environment[
             "AUTOTECHNO_CALIBRATION_TRACE_SEED"
@@ -1923,6 +2519,18 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                 checkpoints: CanonicalJourneyCheckpoint.allCases.map(\.rawValue)
             )
         }
+    }
+
+    /// Release temporary Foundation object graphs after detached serialization.
+    /// Only canonical Data escapes; fresh typed evidence remains with its owner.
+    private func detachedDiagnosticJSON(
+        _ makeObject: () throws -> [String: Any]
+    ) throws -> Data {
+        #if canImport(ObjectiveC)
+        return try autoreleasepool { try canonicalCacheJSON(makeObject()) }
+        #else
+        return try canonicalCacheJSON(makeObject())
+        #endif
     }
 
     func canonicalCacheJSON(_ object: [String: Any]) throws -> Data {

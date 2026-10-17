@@ -291,6 +291,7 @@ enum SpectralTextureVoice {
             let attackFrames = max(1, Int((attackSeconds * sampleRate).rounded()))
             let indefinitePitch = note.instrument.musicalPitchIdentity ==
                 .indefinitePitch
+            let noiseHomeColor = InstrumentPalette.homeColor(for: note.instrument.patch)
             let targetFrequency = indefinitePitch ? 0 : max(45, note.endFrequency)
             let requestedStart = indefinitePitch ? 0 : max(45, note.frequency)
             if !indefinitePitch { state.frequency = requestedStart }
@@ -383,8 +384,18 @@ enum SpectralTextureVoice {
                     let high = source - state.low
                     state.band += (high - state.band) *
                         min(0.64, coefficient * 0.74)
-                    colored = high * (0.62 - automation.motion * 0.16) +
+                    let ordinaryColor = high * (0.62 - automation.motion * 0.16) +
                         state.band * (0.38 + automation.motion * 0.16)
+                    if automation.color < noiseHomeColor {
+                        // Extend the same color below its authored home. Reuse
+                        // the existing low component; no filter, state, source,
+                        // pass or post-mix processing is added. At/above home
+                        // the preceding arithmetic and PCM remain exact.
+                        let upperWeight = automation.color / noiseHomeColor
+                        colored = ordinaryColor * upperWeight + state.low * (1 - upperWeight)
+                    } else {
+                        colored = ordinaryColor
+                    }
                 } else if let harmonicTailTreatment {
                     let sourceFrequency =
                         harmonicTailTreatment.startFoldedSourceFrequency +

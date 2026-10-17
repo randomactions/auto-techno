@@ -81,18 +81,18 @@ struct CurrentRuntimeTests {
 
     @Test("Long-cycle groove and effect-world identities advance as one exact contract")
     func longCycleWorldPrimaryIdentityContract() {
-        #expect(QualityQualificationContract.schemaVersion == 49)
+        #expect(QualityQualificationContract.schemaVersion == 50)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v48")
+                "autotechno-canonical-engine.v52")
         #expect(AutonomousCandidateEvaluationVector.schemaVersion == 43)
         #expect(ProfessionalQualityObservation.schemaVersion == 21)
         #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 22)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
                 "autotechno-professional-quality-profile.v30")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v30")
+                "autotechno-candidate-evaluator.primary-calibrated.v32")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v30")
+                "autotechno-quality.primary-calibrated.v32")
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 22)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
                 "autotechno-professional-quality-adversarial.v23")
@@ -103,16 +103,18 @@ struct CurrentRuntimeTests {
                 "primary-structural-bs1770-signal-role-upper-modal-tail-reveal-harmonic-tail-swell-pad-rhythm-amplitude-gate-foundation-rhythm-foundation-pocket-climax-hang-harmonic-disclosure-kick-source-dynamics-granular-memory-pitch-identity-transition-tail-material-world-polymetric-effect-carrier-upper-pump-spatial-dust-source-terminal-declick-live-commit-recovery.v27")
         #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 14)
         #expect(AutonomousPreparedCommitProvenance.schemaVersion == 3)
-        #expect(ProfessionalEvidenceReportBank.schemaVersion == 29)
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 30)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
-                "autotechno-professional-evidence.v29")
-        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v30"))
-        #expect(ProfessionalQualityPrimaryArtifacts.adversarialResource
-            .hasSuffix("-v30"))
-        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v30"))
+                "autotechno-professional-evidence.v30")
+        #expect(ProfessionalQualityPrimaryArtifacts.profileResource ==
+                "professional-quality-primary-profile-v36")
+        #expect(ProfessionalQualityPrimaryArtifacts.adversarialResource ==
+                "professional-quality-primary-adversarial-suite-v36")
+        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource ==
+                "professional-quality-primary-holdout-v36")
     }
 
-    @Test("Only the exact qualified v30 primary resources are installed")
+    @Test("Historical v30 resources remain present but cannot activate the current policy")
     func primaryResourcesAreV30FailClosed() throws {
         let resourceDirectory = repositoryRoot
             .appendingPathComponent("Sources/AutoTechnoDSP/Resources")
@@ -130,17 +132,15 @@ struct CurrentRuntimeTests {
             #expect(ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v30"))
         }
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-        #expect(artifacts.profile.fingerprint ==
-                ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint)
-        #expect(artifacts.adversarialSuite.passed)
-        #expect(artifacts.holdoutQualification.qualified)
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try historicalV30PrimaryArtifacts()
+        }
     }
 
-    @Test("The v30 candidate identity and live controller remain canonical")
+    @Test("The continuous candidate identity and live controller remain canonical")
     func primaryEvaluatorAndLiveControllerAreCanonical() {
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v30")
+                "autotechno-candidate-evaluator.primary-calibrated.v32")
         #expect(LiveMasterHeadroomController.version ==
                 "autotechno-live-master-headroom-controller.v2")
         #expect(LiveMasterHeadroomController.minimumTrimDB == -3)
@@ -549,8 +549,8 @@ struct RepositorySurfaceTests {
             includingPropertiesForKeys: [.isRegularFileKey]
         ))
         for case let file as URL in docsEnumerator where file.pathExtension == "md" {
-            let relativePath = file.path.replacingOccurrences(
-                of: docs.path + "/", with: ""
+            let relativePath = file.resolvingSymlinksInPath().path.replacingOccurrences(
+                of: docs.resolvingSymlinksInPath().path + "/", with: ""
             )
             guard !relativePath.hasPrefix("history/"),
                   !relativePath.hasPrefix("local/"),
@@ -730,8 +730,8 @@ struct RepositorySurfaceTests {
         }.joined(separator: "\n").lowercased()
 
         for required in [
-            "autotechno-canonical-engine.v48",
-            "quality-contract schema 49",
+            "autotechno-canonical-engine.v52",
+            "quality-contract schema 50",
             "candidate-vector schema 43",
             "candidate-transaction schema 14",
             "professional evidence v29",
@@ -897,10 +897,11 @@ struct RepositorySurfaceTests {
             includingPropertiesForKeys: [.isRegularFileKey]
         ))
         for case let file as URL in enumerator where file.pathExtension == "md" {
-            let relativePath = file.path.replacingOccurrences(
-                of: docs.path + "/", with: ""
+            let relativePath = file.resolvingSymlinksInPath().path.replacingOccurrences(
+                of: docs.resolvingSymlinksInPath().path + "/", with: ""
             )
-            guard !relativePath.hasPrefix("history/"),
+            guard !relativePath.hasPrefix("local/"),
+                  !relativePath.hasPrefix("history/"),
                   !relativePath.hasPrefix("superpowers/specs/"),
                   !relativePath.hasPrefix("superpowers/plans/") else { continue }
             files.append(file)

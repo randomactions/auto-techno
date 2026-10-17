@@ -1,11 +1,22 @@
+#if !defined(_WIN32)
 #define _POSIX_C_SOURCE 200112L
+#endif
 
 #include "CAutoTechnoRealtimePrivate.h"
 
 #include <stdlib.h>
 #include <string.h>
+#if defined(_WIN32)
+#include <malloc.h>
+#endif
 
 ATLivePCMQueue *ATLivePCMQueueCreate(void) {
+#if defined(_WIN32)
+    void *storage = _aligned_malloc(sizeof(ATLivePCMQueue), _Alignof(ATLivePCMQueue));
+    if (storage == NULL) {
+        return NULL;
+    }
+#else
     void *storage = NULL;
     const int allocationResult = posix_memalign(
         &storage,
@@ -15,6 +26,7 @@ ATLivePCMQueue *ATLivePCMQueueCreate(void) {
     if (allocationResult != 0) {
         return NULL;
     }
+#endif
 
     memset(storage, 0, sizeof(ATLivePCMQueue));
     ATLivePCMQueue *queue = storage;
@@ -27,7 +39,11 @@ ATLivePCMQueue *ATLivePCMQueueCreate(void) {
 }
 
 void ATLivePCMQueueDestroy(ATLivePCMQueue *queue) {
+#if defined(_WIN32)
+    _aligned_free(queue);
+#else
     free(queue);
+#endif
 }
 
 size_t ATLivePCMQueueStorageByteCount(void) {

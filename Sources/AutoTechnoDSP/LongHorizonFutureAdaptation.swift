@@ -6,9 +6,9 @@ import Foundation
 /// runtime verdict uses only the exact current route rate.
 package enum LongHorizonRuntimePolicySchema {
   package static let observationVersion =
-    "autotechno-long-horizon-runtime-observation.v2"
+    "autotechno-long-horizon-runtime-observation.v6"
   package static let adaptationVersion =
-    "autotechno-long-horizon-future-adaptation.v2"
+    "autotechno-long-horizon-future-adaptation.v6"
   package static let minimumDecisionIntervalBars = 256
 }
 
@@ -50,9 +50,9 @@ package struct LongHorizonRuntimePolicyObservation: Codable, Equatable,
       semanticReport.observedPhraseCount > 0,
       semanticReport.observedBarCount > 0,
       signalReport.availability == .available,
-      signalReport.schemaVersion == LongHorizonSignalTrajectorySchema.schemaVersion,
+      signalReport.schemaVersion == LongHorizonSignalTrajectoryReportSchema.schemaVersion,
       signalReport.schemaIdentifier
-        == LongHorizonSignalTrajectorySchema.schemaIdentifier,
+        == LongHorizonSignalTrajectoryReportSchema.schemaIdentifier,
       signalReport.sampleRate.isFinite,
       signalReport.sampleRate > 0,
       signalReport.observationCount > 0,
@@ -126,32 +126,12 @@ package struct LongHorizonRuntimePolicyObservation: Codable, Equatable,
     sampleRate: Double
   ) throws {
     guard calibrationObservation.isComplete,
-      let rateIndex = calibrationObservation.sampleRates.firstIndex(of: sampleRate)
+      let route = calibrationObservation.routes.first(where: { $0.sampleRate == sampleRate })
     else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
-    self.init(
-      engineVersion: calibrationObservation.engineVersion,
-      primaryPolicyVersion: calibrationObservation.primaryPolicyVersion,
-      rootSeed: calibrationObservation.rootSeed,
-      semanticFingerprint: calibrationObservation.semanticFingerprint,
-      observedPhraseCount: calibrationObservation.observedPhraseCount,
-      observedBarCount: calibrationObservation.observedBarCount,
-      semanticValues: calibrationObservation.semanticValues,
-      sampleRate: sampleRate,
-      signalFingerprint: calibrationObservation.signalFingerprints[rateIndex],
-      signalObservationCount:
-        calibrationObservation.signalObservationCounts[rateIndex],
-      signalOmittedPhraseCount:
-        calibrationObservation.signalOmittedPhraseCounts[rateIndex],
-      operatorDeltas: calibrationObservation.operatorDeltas.filter {
-        $0.sampleRate == sampleRate
-      },
-      effects: calibrationObservation.effects)
-    guard isStructurallyComplete else {
-      throw LongHorizonProfessionalPolicyError.invalidEvidence
-    }
+    self = route
   }
 
-  private init(
+  package init(
     engineVersion: String,
     primaryPolicyVersion: String,
     rootSeed: UInt64,
@@ -182,6 +162,8 @@ package struct LongHorizonRuntimePolicyObservation: Codable, Equatable,
     self.effects = effects
     sourceFingerprint = Self.makeFingerprint(
       rootSeed: rootSeed,
+      observedPhraseCount: observedPhraseCount, observedBarCount: observedBarCount,
+      signalObservationCount: signalObservationCount, signalOmittedPhraseCount: signalOmittedPhraseCount,
       semanticFingerprint: semanticFingerprint,
       primaryPolicyVersion: primaryPolicyVersion,
       sampleRate: sampleRate,
@@ -205,23 +187,32 @@ package struct LongHorizonRuntimePolicyObservation: Codable, Equatable,
       && operatorDeltas.count
         == LongHorizonEpisodeOperator.allCases.count
         * LongHorizonSignalMetric.allCases.count
+      && Set(operatorDeltas.map { "\($0.operatorKind.rawValue):\($0.metric.rawValue)" }).count == operatorDeltas.count
       && operatorDeltas.allSatisfy {
         $0.sampleRate == sampleRate && $0.transitionCount > 0
           && $0.meanDelta.isFinite
       }
       && effects.map(\.family) == LongHorizonEffectFamily.allCases
       && effects.allSatisfy {
-        $0.observedBarCount > 0
+        $0.observedBarCount == observedBarCount
           && $0.eligibleBarCount >= 0 && $0.activeBarCount >= 0
           && $0.tailOnlyBarCount >= 0 && $0.recoveryCount >= 0
           && $0.maximumActiveRunBars >= 0
           && $0.wetBarOccupancy.isFinite
           && (0...1).contains($0.wetBarOccupancy)
           && ($0.maximumReturnToSourceDB?.isFinite ?? true)
+          && ($0.family == .generatedGraph
+            ? ($0.materialWorldCount ?? 0) > 0
+              && ($0.meanEffectWorldDistance.map { $0.isFinite && (0...1).contains($0) } ?? false)
+              && ($0.maximumEffectWorldDistance.map { $0.isFinite && (0...1).contains($0) } ?? false)
+            : $0.materialWorldCount == nil && $0.meanEffectWorldDistance == nil
+              && $0.maximumEffectWorldDistance == nil)
       }
       && sourceFingerprint
         == Self.makeFingerprint(
           rootSeed: rootSeed,
+          observedPhraseCount: observedPhraseCount, observedBarCount: observedBarCount,
+          signalObservationCount: signalObservationCount, signalOmittedPhraseCount: signalOmittedPhraseCount,
           semanticFingerprint: semanticFingerprint,
           primaryPolicyVersion: primaryPolicyVersion,
           sampleRate: sampleRate,
@@ -252,6 +243,8 @@ package struct LongHorizonRuntimePolicyObservation: Codable, Equatable,
 
   private static func makeFingerprint(
     rootSeed: UInt64,
+    observedPhraseCount: Int, observedBarCount: Int,
+    signalObservationCount: Int, signalOmittedPhraseCount: Int,
     semanticFingerprint: String,
     primaryPolicyVersion: String,
     sampleRate: Double,
@@ -263,6 +256,8 @@ package struct LongHorizonRuntimePolicyObservation: Codable, Equatable,
     var hasher = LongHorizonRuntimeHasher()
     hasher.mix(LongHorizonRuntimePolicySchema.observationVersion)
     hasher.mix(rootSeed)
+    hasher.mix(observedPhraseCount); hasher.mix(observedBarCount)
+    hasher.mix(signalObservationCount); hasher.mix(signalOmittedPhraseCount)
     hasher.mix(semanticFingerprint)
     hasher.mix(primaryPolicyVersion)
     hasher.mix(sampleRate)
@@ -288,6 +283,9 @@ package struct LongHorizonRuntimePolicyObservation: Codable, Equatable,
       hasher.mix(effect.maximumActiveRunBars)
       hasher.mix(effect.wetBarOccupancy)
       hasher.mix(effect.maximumReturnToSourceDB ?? -Double.greatestFiniteMagnitude)
+      hasher.mix(effect.materialWorldCount ?? -1)
+      hasher.mix(effect.meanEffectWorldDistance ?? -Double.greatestFiniteMagnitude)
+      hasher.mix(effect.maximumEffectWorldDistance ?? -Double.greatestFiniteMagnitude)
     }
     return hasher.hex
   }
@@ -371,10 +369,26 @@ extension LongHorizonProfessionalProfileEvaluator {
         case (let value?, let upper?): value <= upper
         case (_?, nil): false
         }
+      let materialWorldWithinBound: Bool
+      if effect.family == .generatedGraph {
+        materialWorldWithinBound =
+          (effect.materialWorldCount ?? 0) >=
+            (bound.minimumMaterialWorldCount ?? Int.max)
+          && (effect.meanEffectWorldDistance ?? .infinity) <=
+            (bound.maximumMeanEffectWorldDistance ?? -.infinity)
+          && (effect.maximumEffectWorldDistance ?? .infinity) <=
+            (bound.maximumEffectWorldDistance ?? -.infinity)
+      } else {
+        materialWorldWithinBound =
+          effect.materialWorldCount == nil
+          && effect.meanEffectWorldDistance == nil
+          && effect.maximumEffectWorldDistance == nil
+      }
       if effect.wetBarOccupancy > bound.maximumWetBarOccupancy
         || tailOccupancy > bound.maximumTailBarOccupancy
         || effect.maximumActiveRunBars > bound.maximumActiveRunBars
         || !returnWithinBound
+        || !materialWorldWithinBound
       {
         failedEffects.append(effect.family)
         dimensions.insert(.effectFatigue)
@@ -478,6 +492,47 @@ package struct LongHorizonFutureAdaptationUpdate: Sendable {
   package let decision: LongHorizonTrajectoryDecision?
 }
 
+/// Sealed projection of the canonical reducer for private successor planning.
+/// No source PCM or persistent accepted-state authority escapes this value.
+package struct LongHorizonProspectiveAdaptation: Sendable {
+  package let sourceIdentityFingerprint: String
+  package let incomingSessionStateFingerprint: String
+  package let incomingAdaptationStateFingerprint: String
+  package let policyVersion: String
+  package let projectedState: LongHorizonFutureAdaptationState
+  package let decision: LongHorizonTrajectoryDecision?
+
+  fileprivate init(sourceIdentityFingerprint: String,
+    incomingState: AutonomousSessionState,
+    incomingAdaptation: LongHorizonFutureAdaptationState,
+    policy: LongHorizonProfessionalPolicy,
+    update: LongHorizonFutureAdaptationUpdate) {
+    self.sourceIdentityFingerprint = sourceIdentityFingerprint
+    incomingSessionStateFingerprint = AutonomousCandidateFingerprint.sessionState(incomingState)
+    incomingAdaptationStateFingerprint = incomingAdaptation.fingerprint
+    policyVersion = policy.policyVersion
+    projectedState = update.state
+    decision = update.decision
+  }
+
+  /// A rejected, replaced, route-changed or otherwise rebound source cannot
+  /// promote a prospective update into the accepted continuation.
+  package func admittedUpdate(
+    for prepared: PreparedAutonomousPhrase,
+    incomingState: AutonomousSessionState,
+    incomingAdaptation: LongHorizonFutureAdaptationState,
+    policy: LongHorizonProfessionalPolicy
+  ) -> LongHorizonFutureAdaptationUpdate? {
+    guard prepared.commitEligible,
+      ProfessionalQualityModalSuccessorEvidence.identity(prepared) == sourceIdentityFingerprint,
+      AutonomousCandidateFingerprint.sessionState(incomingState) == incomingSessionStateFingerprint,
+      incomingAdaptation.fingerprint == incomingAdaptationStateFingerprint,
+      policy.policyVersion == policyVersion
+    else { return nil }
+    return LongHorizonFutureAdaptationUpdate(state: projectedState, decision: decision)
+  }
+}
+
 /// Bounded streaming state copied into detached phrase preparation. It owns no
 /// PCM, AVAudioEngine object, callback state, renderer, or mutable plan.
 package struct LongHorizonFutureAdaptationState: Sendable {
@@ -556,33 +611,71 @@ package struct LongHorizonFutureAdaptationState: Sendable {
     incomingState: AutonomousSessionState,
     policy: LongHorizonProfessionalPolicy
   ) -> LongHorizonFutureAdaptationUpdate? {
+    guard prepared.commitEligible,
+      let signalEvidence = LongHorizonSignalPhraseEvidence.make(prepared: prepared),
+      let effectEvidence = prepared.longHorizonEffectDoseEvidence
+    else { return nil }
+    return reducing(
+      plan: prepared.plan, quality: prepared.qualityContinuationState,
+      liveMasterHeadroom: prepared.liveMasterHeadroomContinuationState,
+      signalEvidence: signalEvidence, effectEvidence: effectEvidence,
+      incomingState: incomingState, policy: policy)
+  }
+
+  /// Detached, tentative evidence under the same reducer and policy. The
+  /// returned seal binds the exact prospective source before any future plan.
+  package func projecting(
+    preview: AutonomousCandidatePreparedPreview,
+    incomingState: AutonomousSessionState,
+    policy: LongHorizonProfessionalPolicy
+  ) -> LongHorizonProspectiveAdaptation? {
+    guard preview.hasProspectiveAcceptanceBinding,
+      let signalEvidence = LongHorizonSignalPhraseEvidence.make(preview: preview),
+      let effectEvidence = preview.longHorizonEffectDoseEvidence,
+      let update = reducing(
+        plan: preview.plan, quality: preview.prospectiveQualityState,
+        liveMasterHeadroom: preview.prospectiveLiveMasterState,
+        signalEvidence: signalEvidence, effectEvidence: effectEvidence,
+        incomingState: incomingState, policy: policy)
+    else { return nil }
+    return LongHorizonProspectiveAdaptation(
+      sourceIdentityFingerprint: preview.sourceIdentityFingerprint,
+      incomingState: incomingState, incomingAdaptation: self, policy: policy, update: update)
+  }
+
+  private func reducing(
+    plan: AutonomousPhrasePlan,
+    quality: QualityContinuationState,
+    liveMasterHeadroom: LiveMasterHeadroomContinuationState,
+    signalEvidence: LongHorizonSignalPhraseEvidence,
+    effectEvidence: LongHorizonEffectDosePhraseEvidence,
+    incomingState: AutonomousSessionState,
+    policy: LongHorizonProfessionalPolicy
+  ) -> LongHorizonFutureAdaptationUpdate? {
     guard schemaVersion == LongHorizonRuntimePolicySchema.adaptationVersion,
       rootSeed == incomingState.rootSeed,
       expectedPhraseIndex == incomingState.phraseIndex,
       expectedBar == incomingState.memory.totalBars,
-      prepared.plan.phraseIndex == expectedPhraseIndex,
-      prepared.plan.startBar == expectedBar,
-      prepared.commitEligible,
+      plan.phraseIndex == expectedPhraseIndex,
+      plan.startBar == expectedBar,
       profileFingerprint == policy.profile.fingerprint,
       primaryPolicyVersion == policy.profile.primaryPolicyVersion,
-      let signalEvidence = LongHorizonSignalPhraseEvidence.make(
-        prepared: prepared),
       let signalIndex = policy.profile.sampleRates.firstIndex(
         of: signalEvidence.sampleRate),
-      let effectEvidence = prepared.longHorizonEffectDoseEvidence
+      effectEvidence.isComplete
     else { return nil }
 
     var candidate = self
     guard
       candidate.semantic.observe(
-        plan: prepared.plan,
+        plan: plan,
         incomingState: incomingState) == .accepted,
       candidate.effects.observe(effectEvidence) == .accepted,
       candidate.signals[signalIndex].observe(signalEvidence) == .accepted
     else { return nil }
-    let end = prepared.plan.startBar.addingReportingOverflow(
-      prepared.plan.barCount)
-    let nextPhrase = prepared.plan.phraseIndex.addingReportingOverflow(1)
+    let end = plan.startBar.addingReportingOverflow(
+      plan.barCount)
+    let nextPhrase = plan.phraseIndex.addingReportingOverflow(1)
     guard !end.overflow, !nextPhrase.overflow else { return nil }
     candidate.expectedPhraseIndex = nextPhrase.partialValue
     candidate.expectedBar = end.partialValue
@@ -610,9 +703,9 @@ package struct LongHorizonFutureAdaptationState: Sendable {
     }
 
     let projected = incomingState.advance(
-      using: prepared.plan,
-      quality: prepared.qualityContinuationState,
-      liveMasterHeadroom: prepared.liveMasterHeadroomContinuationState)
+      using: plan,
+      quality: quality,
+      liveMasterHeadroom: liveMasterHeadroom)
     let continuation = projected.memory.longHorizon
     let recoveryEligible =
       continuation.currentEpisode.operatorKind != .recover
@@ -630,7 +723,7 @@ package struct LongHorizonFutureAdaptationState: Sendable {
       observation: observation,
       verdict: verdict,
       policyVersion: policy.policyVersion,
-      observedThroughPhraseIndex: prepared.plan.phraseIndex,
+      observedThroughPhraseIndex: plan.phraseIndex,
       observedThroughBar: end.partialValue,
       recoveryEligible: recoveryEligible,
       materialReframeEligible: materialReframeEligible)

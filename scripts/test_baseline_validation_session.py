@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import shlex
 import struct
 import subprocess
 import sys
@@ -167,7 +168,12 @@ class ValidationSessionTests(unittest.TestCase):
         fallback = mock.Mock(return_value=subprocess.CompletedProcess([], 0, stdout="passed"))
         runner = session.ValidationSessionRunner(self.root, fallback)
         self.invoke(runner, "stereo_compatibility_baseline_report.py", "generate")
+        gate_fixtures.PhaseOneGateTests().trace_fixture(self.root)
         expected = gate_fixtures.PhaseOneGateTests().report()
+        expected["checks"][-2]["command"] = shlex.join([
+            "python3", "scripts/performance_envelope_report.py", "check",
+            *session.gate.performance_trace_arguments(self.root)])
+        gate_fixtures.PhaseOneGateTests().reseal(expected)
         policy_path = self.root / session.gate.lifecycle.POLICY_PATH
         policy_path.parent.mkdir(parents=True, exist_ok=True)
         policy_path.write_text(json.dumps(gate_fixtures.PhaseOneGateTests().policy()))
@@ -209,6 +215,7 @@ class ValidationSessionTests(unittest.TestCase):
         self.assertEqual(fallback.call_count, 4)
 
     def test_aggregate_subprocesses_inherit_driver_environment(self):
+        gate_fixtures.PhaseOneGateTests().trace_fixture(self.root)
         fallback = mock.Mock(return_value=subprocess.CompletedProcess([], 0, stdout="passed"))
         runner = session.ValidationSessionRunner(self.root, fallback)
         env = {**os.environ, "DEVELOPER_DIR": "/fixture/xcode", "CLANG_MODULE_CACHE_PATH": "/fixture/cache"}
