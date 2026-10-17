@@ -507,6 +507,7 @@ package enum ProfessionalQualityRecoveryIntentReducer {
         _ failures: [ProfessionalQualityRecoveryFailure]
     ) -> AutonomousQualityRecoveryIntent {
         var spectral: AutonomousQualityRecoveryDirection = .hold
+        var upperColor: AutonomousQualityRecoveryDirection = .hold
         var kickCrestReduction: AutonomousQualityRecoveryDirection = .hold
         for failure in failures where failure.value.isFinite &&
                 failure.lowerBound.isFinite && failure.upperBound.isFinite &&
@@ -520,6 +521,8 @@ package enum ProfessionalQualityRecoveryIntentReducer {
                 direction = .hold
             }
             switch failure.metric {
+            case .spectralRolloff85MeanHz:
+                upperColor = upperColor.merging(direction)
             case .spectralCentroidSpreadHz,
                     .barCentroidSpanHz,
                     .movementScore,
@@ -534,6 +537,7 @@ package enum ProfessionalQualityRecoveryIntentReducer {
         }
         return AutonomousQualityRecoveryIntent(
             spectralMovement: spectral,
+            upperColor: upperColor,
             kickCrestReduction: kickCrestReduction
         )
     }

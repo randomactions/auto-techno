@@ -122,7 +122,8 @@
       "evidence": [
         "PhraseInterestReport",
         "resolved event and pitch provenance",
-        "accepted-score motif recurrence, mutation, register, and density baseline"
+        "accepted-score motif recurrence, mutation, register, and density baseline",
+        "The existing future retry context carries versioned upper color into the canonical synth plan; ordinal zero and neutral recovery retain existing assignments, with no second score."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoCore/RepeatHoldEvolutionPolicy.swift",
@@ -144,7 +145,8 @@
         "Tests/AutoTechnoCoreTests/IdentityReturnContinuationTests.swift",
         "Tests/AutoTechnoCoreTests/ScoreMotifBaselineAnalyzerTests.swift",
         "Tests/AutoTechnoCoreTests/ScoreMotifBaselineIntegrationTests.swift",
-        "Tests/AutoTechnoCoreTests/SymbolicInterestRetryTests.swift"
+        "Tests/AutoTechnoCoreTests/SymbolicInterestRetryTests.swift",
+        "Tests/AutoTechnoCoreTests/LongHorizonEnergyCoordinationTests.swift"
       ],
       "contracts": [
         "docs/PRODUCT.md",
@@ -252,6 +254,10 @@
         {
           "symbol": "FoundationPitchResolver",
           "path": "Sources/AutoTechnoCore/FoundationPitchResolver.swift"
+        },
+        {
+          "symbol": "InstrumentAssignment",
+          "path": "Sources/AutoTechnoCore/InstrumentPalette.swift"
         }
       ],
       "state": [
@@ -272,7 +278,8 @@
       ],
       "evidence": [
         "score-owned assignment, pitch, automation, modal material, and coupling provenance",
-        "Final authored anchor selection after canonical composition, timing and held polymetric relocation; source-index lineage, late/legato home fallback, authored home-correction eligibility and both-native same-pass tonal tail regression. Core owns relation placement; DSP windows and bounds remain unchanged, with no continuing-journey qualification."
+        "Final authored anchor selection after canonical composition, timing and held polymetric relocation; source-index lineage, late/legato home fallback, authored home-correction eligibility and both-native same-pass tonal tail regression. Core owns relation placement; DSP windows and bounds remain unchanged, with no continuing-journey qualification.",
+        "InstrumentAssignment applies bounded ordinal-directed upper color in the existing SynthPerformancePlan. Foundation, patch, effects, shape, motion, space and note geometry are protected; patch home color comes from the existing authored palette."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoCore/FoundationPitchResolver.swift",
@@ -284,7 +291,8 @@
         "Tests/AutoTechnoCoreTests/InstrumentPaletteTests.swift",
         "Tests/AutoTechnoCoreTests/ModalPercussionPlanningTests.swift",
         "Tests/AutoTechnoCoreTests/UpperTimbrePlanningTests.swift",
-        "Tests/AutoTechnoCoreTests/TonalEnvelopeBoundaryTests.swift"
+        "Tests/AutoTechnoCoreTests/TonalEnvelopeBoundaryTests.swift",
+        "Tests/AutoTechnoCoreTests/LongHorizonEnergyCoordinationTests.swift"
       ],
       "contracts": [
         "docs/INSTRUMENT_PALETTE.md",
@@ -399,6 +407,10 @@
         {
           "symbol": "AutonomousQualityRecoveryStep",
           "path": "Sources/AutoTechnoCore/QualityQualification.swift"
+        },
+        {
+          "symbol": "AutonomousQualityRecoveryIntent",
+          "path": "Sources/AutoTechnoCore/QualityQualification.swift"
         }
       ],
       "state": [
@@ -439,7 +451,8 @@
         "scripts/macos_release_delivery.py preserves the exact existing bank-zero SwiftPM Release executable and complete source-matched runtime resource bundle in a bounded source/run/attempt-bound validation archive after native tests, tooling, Release and map checks. The pinned official artifact action retains this delivery for local QA. Verification authenticates the original successful bank-zero job and its ordered build/check/package/upload steps, exact emitted stdout receipt, archive/file hashes, native Mach-O architecture and full regular-file inventory before optional exclusive extraction; traversal, links, duplicates, malformed metadata, changed source/runtime bytes, missing steps and promotion claims refuse. scripts/test_macos_release_delivery.py owns synthetic byte-preservation and refusal controls. Delivery changes no app/resource resolution layout or binary bytes and supplies no app launch, route, physical-output, full-platform, quality, runtime or item-completion authority; those checks remain mandatory on the actual final-source build.",
         "Versioned original-primary auditor with strict bounded JSON/archive/path checks, original Git/build/runtime byte bindings, all46native trajectories/644actualreports and successors, exact tuple multiplicities and derived artifact fingerprints; independent cold/terminal anchors are required and the aggregate item guard stays fail-closed.",
         "scripts/at0039_long_verification.py requires independently pinned original cold and terminal proofs, exact original compiler/module/runtime bytes, every native history and observer record, per-rate source reductions and original native verdict stdout; scripts/test_at0039_long_verification.py refuses prefixes, missing native gates, averaged deltas, changed archives and generic passed JSON. Collection only describes already-preserved original terminal products; it never constructs histories or changes producer files. Full item-completion guard remains fail-closed.",
-        "The original Long-product reader has a closed v21/dose2, v22/dose3 and v22-recovery/dose3/journey3 harness registry. Pinned original cold proofs choose exact inventories,26or53or57cold tests and artifact names; compiled source must independently match policy/runtime/dose versions. Exact linked compiler source/object partitions, known Testing main and bound Bundle.module accessor prevent unused inventories or fake test-output entrypoints. Current formats require owned dependency copies, isolated cache, four pre-Testing refusals and the exact archived observer schema delta. The recovery format binds the extended cold selector, explicit cold/protocol journey3 version, actual compiled journey writer and an exact tracked unpatched integrity observer. Tests preserve all three44-file original archive roundtrips and reject mixed versions, missing native gates, undeclared compiler inputs, altered dependencies, forged stdout and generic passed JSON. No captures or state are constructed, frozen inputs are never edited and full item completion remains unavailable."
+        "The original Long-product reader has a closed v21/dose2, v22/dose3 and v22-recovery/dose3/journey3 harness registry. Pinned original cold proofs choose exact inventories,26or53or57cold tests and artifact names; compiled source must independently match policy/runtime/dose versions. Exact linked compiler source/object partitions, known Testing main and bound Bundle.module accessor prevent unused inventories or fake test-output entrypoints. Current formats require owned dependency copies, isolated cache, four pre-Testing refusals and the exact archived observer schema delta. The recovery format binds the extended cold selector, explicit cold/protocol journey3 version, actual compiled journey writer and an exact tracked unpatched integrity observer. Tests preserve all three44-file original archive roundtrips and reject mixed versions, missing native gates, undeclared compiler inputs, altered dependencies, forged stdout and generic passed JSON. No captures or state are constructed, frozen inputs are never edited and full item completion remains unavailable.",
+        "Engine v52 and recovery-intent schema2 bind independent upper color plus all existing recovery coordinates into plan and quality-decision continuation identity; old or incomplete intent encodings refuse. Current primary seals are absent; historical engine-v51 resources retain original scope."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoCore/LiveFeedback.swift",
@@ -449,7 +462,8 @@
         "Tests/AutoTechnoCoreTests/LiveFeedbackCoreTests.swift",
         "Tests/AutoTechnoCoreTests/LiveFeedbackTestSupport.swift",
         "Tests/AutoTechnoCoreTests/QualityQualificationFoundationTests.swift",
-        "Tests/AutoTechnoCoreTests/AutonomousQualityRecoveryHostPolicyTests.swift"
+        "Tests/AutoTechnoCoreTests/AutonomousQualityRecoveryHostPolicyTests.swift",
+        "Tests/AutoTechnoCoreTests/LongHorizonEnergyCoordinationTests.swift"
       ],
       "contracts": [
         "docs/SOUND_QUALITY.md",
@@ -553,7 +567,8 @@
         "Synchronous helper-working observations join actual caller buses/workspace/typed state with echo delay/reverse, spatial-dust dual delays and regenerated memory-source PCM. One shared local inventory excludes inout outputs before the borrow; callee registers actual outputs. Bounded physical per-phase counts preserve coverage under existing32-phase maxima and conditional overlap without double-counting. Native exact PCM/evidence and exhausted fallback controls remain partial allocation evidence, with unchanged resource and qualification authority. AudioSlice registers the actual copied source window, source and borrowed destination in the same helper scope; no mutable destination alias is retained. Canonical cut/granular recall controls at8k/44100/48000 require whole RenderedBar/typed state replay and exhausted equivalence, actual memory/window geometry and unchanged original whole-render phase coverage. Partial allocation authority and ceilings remain unchanged.",
         "The existing rumble routine is package-visible for canonical source-support controls. Candidate audio-safety admission binds its 0.68-second natural window to the score onset and original destination frame count, allowing end-of-bar clipping but rejecting shorter source evidence even when terminal de-clicking is complete. Independent rational support fixtures test the same predicate. Existing PCM, evidence encoding, continuation, other-voice duration contracts and callback work remain unchanged; this does not establish a nonlinear full-mix truncation counterfactual.",
         "The same detached source-support predicate also binds kick's 0.32-second natural duration to the score onset and original bar boundary. Shared kick/rumble full-phrase tests use independent rational support oracles; actual canonical kick truncation must refuse prepared admission. Existing PCM, state, fallback and callback work remain unchanged.",
-        "NumericStorageBorrowObserver receives one begin/end pair per physical snapshot and each nonempty original buffer while pinned. The receiver returns no admission or quality value. Nil path preserves exact snapshot wire, counts and alias/capacity/metadata calculations; conditional maxima do not duplicate callbacks, and existing32phase/4096owner exhaustion stays fail-closed. This enables actual allocation-base inspection without assuming Swift array object layout; local observations are not complete allocation/RSS/deadline or runtime qualification."
+        "NumericStorageBorrowObserver receives one begin/end pair per physical snapshot and each nonempty original buffer while pinned. The receiver returns no admission or quality value. Nil path preserves exact snapshot wire, counts and alias/capacity/metadata calculations; conditional maxima do not duplicate callbacks, and existing32phase/4096owner exhaustion stays fail-closed. This enables actual allocation-base inspection without assuming Swift array object layout; local observations are not complete allocation/RSS/deadline or runtime qualification.",
+        "The existing indefinite-pitch SpectralTextureVoice noise branch blends its existing high/band result toward its existing low state below authored home color. At/above home retains original arithmetic; no new filter, buffer, continuation, pass, bus or callback work."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AlienAnalogVoice.swift",
@@ -584,7 +599,8 @@
         "Tests/AutoTechnoCoreTests/TonalEnvelopeBoundaryTests.swift",
         "Tests/AutoTechnoCoreTests/UpperPercussionTailDSPTests.swift",
         "Tests/AutoTechnoCoreTests/UpperSpectralRevealDSPTests.swift",
-        "Tests/AutoTechnoCoreTests/UpperTimbreDSPTests.swift"
+        "Tests/AutoTechnoCoreTests/UpperTimbreDSPTests.swift",
+        "Tests/AutoTechnoCoreTests/LongHorizonEnergyCoordinationTests.swift"
       ],
       "contracts": [
         "docs/SYNTH_TRACK_RENDERING_MATRIX.md",
@@ -888,7 +904,8 @@
         "The upper-percussion tail applicability render fixture uses the test MainActor to avoid native Debug cooperative-stack exhaustion at test entry. Its absent, natural-body and clearance score/render evidence assertions are unchanged; four-test calibration-fixture-readiness native coverage does not replace full platform or quality qualification.",
         "The modal-evidence projection test also isolates its large render fixture on the test MainActor after native Debug cooperative-stack exhaustion. The calibration-fixture-readiness component covers both four-test bank groups, including exact modal metric projection, conditional modal bounds, holdout disjointness and corpus capacity; assertions and production behavior remain unchanged. The dotted-rhythm crest population fixture uses the same test MainActor boundary after a separately captured cooperative-stack failure; its candidate search, selected-bar populations and crest calculations remain unchanged. Calibration fixture coverage includes the seven identities from that failed native bank as well as the eight already covered identities; full platform verification remains separate. The subsequent kick-foundation population fixture crash is addressed with the same test-only MainActor boundary, preserving candidate search and paired-bar assertions. The calibration component reuses bounded native log streaming and crash replay; debugger output never replaces an original failure or creates a qualification receipt. The transient-density population fixture also uses the test MainActor after bounded native replay proves cooperative-worker stack exhaustion; its varied rendered-bar population and density-span assertions remain intact. The pad population projection fixture uses the same test MainActor boundary after native bank12 replay confirms stack exhaustion; candidate search, phrase/modulation populations and exact projection assertions stay unchanged. Calibration component coverage now includes the three identities from that failed bank, for eighteen total controls. The modal event population fixture also uses the test MainActor after native crash replay confirms stack exhaustion; complete candidate populations and exact event projection assertions are preserved. The active spectral-reveal projection fixture likewise uses the test MainActor after native bank3 replay identifies a 664320-byte frame exceeding its cooperative-worker stack; candidate selection and all rendered-event projection assertions remain intact. The calibration component includes this nineteenth control; production rendering and callback isolation are unchanged.",
         "Current engine-v51 primary calibration registers v35 from the complete frozen9bd42d6 typed40/6 native study,644original reports/644actual successors,34adversarial cases and84holdout observations. Exact-seal readiness retains historical v33/v34 rejection and independently available native rates; matching Long Horizon, full final-source qualification and host promotion remain mandatory.",
-        "The unchanged large spectralRevealPopulationAcrossCandidates fixture executes on the main actor to avoid the original hosted Debug cooperative-worker stack guard. Seed1...1024, two candidate populations, actual8kHz PCM and all metric assertions remain unchanged. The existing calibration fixture scope additionally executes this exact target; component scheduling is not a full platform or sound-quality qualification and changes no production actor/callback work."
+        "The unchanged large spectralRevealPopulationAcrossCandidates fixture executes on the main actor to avoid the original hosted Debug cooperative-worker stack guard. Seed1...1024, two candidate populations, actual8kHz PCM and all metric assertions remain unchanged. The existing calibration fixture scope additionally executes this exact target; component scheduling is not a full platform or sound-quality qualification and changes no production actor/callback work.",
+        "Absolute spectral-rolloff failures reduce to Core-owned upper color independently of movement. Existing score, PCM and evidence controls trace future recovery at both rates under a test policy; no quality threshold changes or current primary/Long/resource/runtime admission."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AudioQualityReport.swift",
@@ -972,7 +989,8 @@
         "Tests/AutoTechnoCoreTests/PhrasePreparationReplayIdentityTests.swift",
         "Tests/AutoTechnoCoreTests/BaselineProducerWitnessTests.swift",
         "Tests/AutoTechnoCoreTests/UpperTimbreBorrowedAnalysisTests.swift",
-        "Tests/AutoTechnoCoreTests/RenderFingerprintParityTests.swift"
+        "Tests/AutoTechnoCoreTests/RenderFingerprintParityTests.swift",
+        "Tests/AutoTechnoCoreTests/LongHorizonEnergyCoordinationTests.swift"
       ],
       "contracts": [
         "docs/SOUND_QUALITY.md",
@@ -1615,7 +1633,7 @@
       "symbol": "AutonomousQualityRetryContinuation",
       "path": "Sources/AutoTechnoCore/QualityQualification.swift",
       "scope": "host-control",
-      "pcmRelationship": "Both hosts reuse the same finite calibrated rejection transition for detached future proposals; rejected PCM never commits, and accepted presentation alone opens successor waves. A discarded tentative chain may contribute its actual retryable descendant decision only after the shared failure receipt matches the exact root replay request; no child or parent PCM escapes."
+      "pcmRelationship": "Both hosts reuse the same finite calibrated rejection transition for detached future proposals; rejected PCM never commits, and accepted presentation alone opens successor waves. A discarded tentative chain may contribute its actual retryable descendant decision only after the shared failure receipt matches the exact root replay request; no child or parent PCM escapes. Versioned recovery-intent schema2 carries bounded upper color to future canonical assignments; all recovery coordinates bind quality-decision identity, and rejected PCM never advances accepted state."
     },
     {
       "id": "long-horizon-adaptation-state",
@@ -1769,7 +1787,7 @@
         "autonomous-session-state"
       ],
       "producesState": [],
-      "artifact": "score-owned composition and role relations",
+      "artifact": "score-owned composition and role relations and versioned bounded future upper-color recovery",
       "pcmConsequence": "none",
       "failureBehavior": "Preserve the canonical plan or reject malformed score relations."
     },
@@ -1783,7 +1801,7 @@
         "autonomous-session-state"
       ],
       "producesState": [],
-      "artifact": "instrument, pitch, articulation, and material-world intent",
+      "artifact": "instrument, pitch, articulation, and material-world intent with canonical recovered upper-color assignments",
       "pcmConsequence": "none",
       "failureBehavior": "Use the bounded score-owned fallback without adding another engine."
     },
@@ -1867,7 +1885,7 @@
         "quality-continuation",
         "live-master-continuation"
       ],
-      "artifact": "candidate vector, verdict, and atomic commit provenance; bounded same-pass modal observation continuation and source-bound descriptive windows; optional required detached validation of a private prospective source, actual continuous observation proof, retained qualified successor for unfinished source windows and cached final source identity",
+      "artifact": "candidate vector, verdict, and atomic commit provenance; bounded same-pass modal observation continuation and source-bound descriptive windows; optional required detached validation of a private prospective source, actual continuous observation proof, retained qualified successor for unfinished source windows and cached final source identity; reason-coded absolute rolloff reduction into future Core upper color",
       "pcmConsequence": "qualifies-without-changing-pcm",
       "failureBehavior": "Reject or report qualification unavailable; never weaken a hard gate. Required validation missing or unsupported stays unavailable; mismatched accepted source identity or cancellation cannot produce an admitted product. Installed policy remains unchanged."
     },

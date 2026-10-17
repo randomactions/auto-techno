@@ -66,7 +66,7 @@ mistaken for a completed feedback system.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
    primary-evaluation transaction under quality-contract schema 50, candidate-
    vector schema 43, candidate-transaction schema 14, and canonical engine
-   identity `autotechno-canonical-engine.v51`. Each
+   identity `autotechno-canonical-engine.v52`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
@@ -3197,7 +3197,11 @@ seals, independent complete histories, full final-source verification and every
 remaining resource/lifecycle/output gate are still mandatory.
 
 
-## Engine-v51 primary qualification resources
+## Historical engine-v51 primary qualification resources
+
+These resources retain their original engine-v51 scope. Engine v52 leaves all
+current primary seals absent and requires fresh complete qualification; the
+following installed-control requirements describe the original registration.
 
 The sole `ProfessionalQualityPrimaryArtifacts` owner registers resource revision
 v35 from the complete fresh, frozen9bd42d6 engine-v51 native study. The existing
@@ -3385,3 +3389,32 @@ validation, and the authoritative item-specific completion verifier remain
 separate requirements. `item39Complete`, runtime, platform and complete-resource
 qualification remain false. Synthetic reader controls prove rejection behavior,
 not a native study, installed product qualification or roadmap completion.
+
+
+## Directed upper-color recovery
+
+Engine v52 extends the existing `AutonomousQualityRecoveryIntent` to schema2.
+A finite out-of-range absolute spectral-rolloff observation reduces in DSP to a
+bounded increase or decrease of upper color. Core's existing retry continuation
+carries that direction into an unscheduled future `SynthPerformancePlan`.
+Ordinal pressure is the existing retry ordinal divided by its existing maximum;
+color moves within `0...1` toward the requested endpoint. Ordinal zero, hold and
+foundation assignments retain their existing path. Patch, effects, note geometry,
+shape, motion and space are preserved. Opposing directions merge to hold.
+
+The same canonical assignment reaches score analysis, typed plan identity and
+phrase rendering, including the existing home-timbre correction. Quality-decision
+continuation identity binds all recovery coordinates and their schema. Unsupported
+or incomplete old intent encodings refuse instead of silently dropping color.
+No new planner, renderer, instrument, user control or accepted state is introduced.
+Rejected attempts never advance accepted continuation; existing wave, repeat,
+render-count, resource and fallback bounds remain unchanged.
+
+For the existing indefinite-pitch noise branch, color below the patch's authored
+home blends its existing high/band result toward its already-computed low
+component. This adds no filter, state, buffer, pass or bus. At and above home the
+existing arithmetic remains unchanged. Source controls at both native rates
+check actual spectral response and frequency independence. Mechanical prepared
+controls trace reducer, future score, PCM and evidence under an explicit test
+policy; they do not establish installed quality, complete resource/deadline or
+Long qualification. Fresh complete engine-v52 qualification remains mandatory.

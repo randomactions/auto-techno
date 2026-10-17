@@ -583,6 +583,8 @@ private extension AutonomousTypedFingerprint {
         sink.raw(value.qualityRecoveryContext.intent.symbolicDensity.rawValue)
         sink.field("spectralMovement")
         sink.raw(value.qualityRecoveryContext.intent.spectralMovement.rawValue)
+        sink.field("upperColor")
+        sink.raw(value.qualityRecoveryContext.intent.upperColor.rawValue)
         sink.field("kickCrestReduction")
         sink.raw(value.qualityRecoveryContext.intent.kickCrestReduction.rawValue)
         sink.field("longHorizonEffectSentence")
@@ -596,7 +598,8 @@ private extension AutonomousTypedFingerprint {
             kind: value.kind,
             resolvedBars: value.resolvedBars,
             materialWorld: value.materialWorld,
-            compositionBars: value.phraseComposition
+            compositionBars: value.phraseComposition,
+            qualityRecoveryContext: value.qualityRecoveryContext
         )
         sink.field("resolvedUpperNotes")
         sink.collection(synthPerformance.bars.count)
@@ -2501,6 +2504,16 @@ private extension AutonomousTypedFingerprint {
         sink.field("candidateFingerprint"); encode(value.candidateFingerprint, into: &sink)
         sink.field("evidenceFingerprint"); encode(value.evidenceFingerprint, into: &sink)
         sink.field("eligibleFutureSample"); encode(value.eligibleFutureSample, into: &sink)
+        sink.field("recoveryIntent"); encode(value.recoveryIntent, into: &sink)
+    }
+
+    static func encode(_ value: AutonomousQualityRecoveryIntent, into sink: inout StreamingFNV1a) {
+        sink.aggregate("AutonomousQualityRecoveryIntent")
+        sink.field("schemaVersion"); sink.int(value.schemaVersion)
+        sink.field("symbolicDensity"); sink.raw(value.symbolicDensity.rawValue)
+        sink.field("spectralMovement"); sink.raw(value.spectralMovement.rawValue)
+        sink.field("upperColor"); sink.raw(value.upperColor.rawValue)
+        sink.field("kickCrestReduction"); sink.raw(value.kickCrestReduction.rawValue)
     }
 
     static func encode(_ value: String?, into sink: inout StreamingFNV1a) {

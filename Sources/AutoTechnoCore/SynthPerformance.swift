@@ -583,7 +583,8 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                  resolvedBars: [ResolvedPerformanceBar],
                  materialWorld: LongHorizonMaterialWorldPlan = .neutral,
                  forceHomeUpperTimbre: Bool = false,
-                 compositionBars suppliedComposition: [PhraseCompositionBar]? = nil) {
+                 compositionBars suppliedComposition: [PhraseCompositionBar]? = nil,
+                 qualityRecoveryContext: AutonomousQualityRecoveryContext = .neutral) {
         let synthWorld = SynthWorldDNA(scene: scene, dna: dna)
         let authoredCompositionBars = suppliedComposition ??
             PhraseCompositionResolver.resolve(
@@ -625,7 +626,8 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                 mutationAmount: mutation,
                 forceHomeUpperTimbre: forceHomeUpperTimbre,
                 relationalSteps: relationalSteps,
-                composition: composition
+                composition: composition,
+                qualityRecoveryContext: qualityRecoveryContext
             )
             let polymetric =
                 LongHorizonPolymetricGrammarResolver.relocateUpperNotes(
@@ -650,7 +652,8 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                     mutationAmount: mutation,
                     forceHomeUpperTimbre: false,
                     relationalSteps: relationalSteps,
-                    composition: authoredComposition
+                    composition: authoredComposition,
+                    qualityRecoveryContext: qualityRecoveryContext
                 ).notes
             } else {
                 eligibilityNotes = upperNotes
@@ -799,7 +802,8 @@ package struct SynthPerformancePlan: Equatable, Sendable {
         mutationAmount: Double,
         forceHomeUpperTimbre: Bool,
         relationalSteps: [RelationalArticulation],
-        composition: PhraseCompositionBar
+        composition: PhraseCompositionBar,
+        qualityRecoveryContext: AutonomousQualityRecoveryContext
     ) -> (notes: [ResolvedUpperNote], timingRelation: UpperTimingRelation) {
         let performance = resolved.performance
         func instrument(_ role: SynthRole) -> InstrumentAssignment {
@@ -813,7 +817,7 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                 forceHome: forceHomeUpperTimbre,
                 pulseEchoEnabled: resolved.pulseEchoEnabled,
                 performanceCharacter: resolved.performanceCharacter
-            )
+            ).applyingUpperColorRecovery(qualityRecoveryContext)
         }
         let motifPitches = resolvedMotifPitches(
             dna: dna,

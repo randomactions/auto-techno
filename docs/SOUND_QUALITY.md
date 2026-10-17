@@ -1,13 +1,14 @@
 # Sound Quality Contract
 
-Current source uses canonical engine v51 under quality-contract schema50. The
-registered primary v35 resources bind the complete fresh engine-v51 study under
-the unchanged primary v32 policy and continuous v23/profile v33 contract. The
-matching Long Horizon v22 seals require all seven development and two disjoint
-holdout roots to qualify independently at both native rates, with all18complete
-histories. Runtime promotion also requires every separate resource, lifecycle,
-platform and output gate. Historical studies below retain their original versions
-and scope.
+Current source uses canonical engine v52 under quality-contract schema50.
+Current primary seals are absent. The retained v35 resources bind their original
+engine-v51 study and cannot activate engine v52. Fresh complete primary evidence
+must satisfy the unchanged primary v32 policy and continuous v23/profile v33
+contract. Matching Long Horizon v22 seals require all seven development and two
+disjoint holdout roots to qualify independently at both native rates, with all18
+complete histories. Runtime promotion also requires every separate resource,
+lifecycle, platform and output gate. Historical studies below retain their
+original versions and scope.
 
 The current primary contract is v32 and requires actual prepared continuous
 observation v23/profile v33 validation. A reproduced full native long-horizon
@@ -36,8 +37,8 @@ and 84/84 accepted holdout observations under contract snapshot 93. Those
 engine-v48 v33 seals were profile eb1eba16cde88415, adversarial
 b76d744054bfa22f and holdout 19742f5c60933b29. They remain historical offline
 evidence. The subsequent engine-v49 wash-ownership change invalidated those
-primary seals. Current engine-v51 primary registration is documented above and
-below; matching Long Horizon v21 and full runtime gates still remain pending.
+primary seals. Historical engine-v51 primary registration is documented below;
+current engine-v52 primary, Long Horizon and full runtime gates remain pending.
 
 The native long-horizon producer follows the existing Core finite recovery
 continuation after measured retryable rejection, retaining actual accepted PCM
@@ -237,7 +238,7 @@ signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
 candidate uses quality-contract schema 50, candidate-vector schema 43,
 candidate-transaction schema 14, and canonical engine identity
-`autotechno-canonical-engine.v51`. Its explicit modal, tuned-inharmonic,
+`autotechno-canonical-engine.v52`. Its explicit modal, tuned-inharmonic,
 deliberate-dissonance, and indefinite-pitch rules are defined in
 [`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md). It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
@@ -1903,7 +1904,11 @@ matching independent Long qualification and every resource, lifecycle, platform
 and applicable output gate establish current-source applicability.
 
 
-## Engine-v51 primary qualification resources
+## Historical engine-v51 primary qualification resources
+
+These resources retain their original engine-v51 scope. Engine v52 leaves all
+current primary seals absent and requires fresh complete qualification; the
+following installed-control requirements describe the original registration.
 
 The sole `ProfessionalQualityPrimaryArtifacts` owner registers resource revision
 v35 from the complete fresh, frozen9bd42d6 engine-v51 native study. The existing
@@ -1977,3 +1982,32 @@ v22 separate the corrected interpretation from historical evidence. Long seals
 remain nil. Fresh complete seven-development/two-disjoint-holdout qualification
 with all18 independent native histories, final-source applicability and every
 resource, lifecycle, platform and applicable output gate remain required.
+
+
+## Directed upper-color recovery
+
+Engine v52 extends the existing `AutonomousQualityRecoveryIntent` to schema2.
+A finite out-of-range absolute spectral-rolloff observation reduces in DSP to a
+bounded increase or decrease of upper color. Core's existing retry continuation
+carries that direction into an unscheduled future `SynthPerformancePlan`.
+Ordinal pressure is the existing retry ordinal divided by its existing maximum;
+color moves within `0...1` toward the requested endpoint. Ordinal zero, hold and
+foundation assignments retain their existing path. Patch, effects, note geometry,
+shape, motion and space are preserved. Opposing directions merge to hold.
+
+The same canonical assignment reaches score analysis, typed plan identity and
+phrase rendering, including the existing home-timbre correction. Quality-decision
+continuation identity binds all recovery coordinates and their schema. Unsupported
+or incomplete old intent encodings refuse instead of silently dropping color.
+No new planner, renderer, instrument, user control or accepted state is introduced.
+Rejected attempts never advance accepted continuation; existing wave, repeat,
+render-count, resource and fallback bounds remain unchanged.
+
+For the existing indefinite-pitch noise branch, color below the patch's authored
+home blends its existing high/band result toward its already-computed low
+component. This adds no filter, state, buffer, pass or bus. At and above home the
+existing arithmetic remains unchanged. Source controls at both native rates
+check actual spectral response and frequency independence. Mechanical prepared
+controls trace reducer, future score, PCM and evidence under an explicit test
+policy; they do not establish installed quality, complete resource/deadline or
+Long qualification. Fresh complete engine-v52 qualification remains mandatory.

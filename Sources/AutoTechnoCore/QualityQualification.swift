@@ -19,9 +19,9 @@ package enum QualityQualificationContract {
     /// lineage and the retained cross-phrase consequences.
     package static let schemaVersion = 50
     package static let reasonCodeVersion = 1
-    /// Version 51 binds bounded source-presence restoration during directed
-    /// kick crest recovery; earlier primary seals remain historical.
-    package static let engineVersion = "autotechno-canonical-engine.v51"
+    /// Version 52 binds directed upper-color recovery and the existing noise
+    /// voice's lower color range. Earlier primary seals remain historical.
+    package static let engineVersion = "autotechno-canonical-engine.v52"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1
@@ -129,27 +129,30 @@ package enum AutonomousQualityRecoveryDirection: String, Codable, Equatable, Has
 /// owners rather than authorizing a quality bypass or a second planner.
 package struct AutonomousQualityRecoveryIntent: Codable, Equatable, Hashable,
         Sendable {
-    package static let schemaVersion = 1
+    package static let schemaVersion = 2
     package static let neutral = Self()
 
     package let schemaVersion: Int
     package let symbolicDensity: AutonomousQualityRecoveryDirection
     package let spectralMovement: AutonomousQualityRecoveryDirection
+    package let upperColor: AutonomousQualityRecoveryDirection
     package let kickCrestReduction: AutonomousQualityRecoveryDirection
 
     package init(
         symbolicDensity: AutonomousQualityRecoveryDirection = .hold,
         spectralMovement: AutonomousQualityRecoveryDirection = .hold,
+        upperColor: AutonomousQualityRecoveryDirection = .hold,
         kickCrestReduction: AutonomousQualityRecoveryDirection = .hold
     ) {
         schemaVersion = Self.schemaVersion
         self.symbolicDensity = symbolicDensity
         self.spectralMovement = spectralMovement
+        self.upperColor = upperColor
         self.kickCrestReduction = kickCrestReduction
     }
 
     package var isNeutral: Bool {
-        symbolicDensity == .hold && spectralMovement == .hold &&
+        symbolicDensity == .hold && spectralMovement == .hold && upperColor == .hold &&
             kickCrestReduction == .hold
     }
 
@@ -157,8 +160,27 @@ package struct AutonomousQualityRecoveryIntent: Codable, Equatable, Hashable,
         Self(
             symbolicDensity: symbolicDensity.merging(other.symbolicDensity),
             spectralMovement: spectralMovement.merging(other.spectralMovement),
+            upperColor: upperColor.merging(other.upperColor),
             kickCrestReduction:
                 kickCrestReduction.merging(other.kickCrestReduction)
+        )
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case schemaVersion, symbolicDensity, spectralMovement, upperColor, kickCrestReduction
+    }
+
+    package init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        guard try values.decode(Int.self, forKey: .schemaVersion) == Self.schemaVersion else {
+            throw DecodingError.dataCorruptedError(forKey: .schemaVersion, in: values,
+                debugDescription: "Unsupported recovery-intent schema")
+        }
+        self.init(
+            symbolicDensity: try values.decode(AutonomousQualityRecoveryDirection.self, forKey: .symbolicDensity),
+            spectralMovement: try values.decode(AutonomousQualityRecoveryDirection.self, forKey: .spectralMovement),
+            upperColor: try values.decode(AutonomousQualityRecoveryDirection.self, forKey: .upperColor),
+            kickCrestReduction: try values.decode(AutonomousQualityRecoveryDirection.self, forKey: .kickCrestReduction)
         )
     }
 }

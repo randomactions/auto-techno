@@ -1727,7 +1727,8 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
             kind: kind,
             resolvedBars: resolvedBars,
             materialWorld: materialWorld,
-            compositionBars: resolvedComposition
+            compositionBars: resolvedComposition,
+            qualityRecoveryContext: qualityRecoveryContext
         )
         let carrier = LongHorizonEffectCarrierResolver.resolve(
             incoming: incomingEffectCarrierState ??

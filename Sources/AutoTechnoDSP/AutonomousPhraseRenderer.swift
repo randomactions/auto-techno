@@ -2132,7 +2132,8 @@ package enum AutonomousPhraseRenderer {
             resolvedBars: plan.resolvedBars,
             materialWorld: plan.materialWorld,
             forceHomeUpperTimbre: forceHomeUpperTimbre,
-            compositionBars: plan.phraseComposition
+            compositionBars: plan.phraseComposition,
+            qualityRecoveryContext: plan.qualityRecoveryContext
         )
         var workspace = RenderWorkspace()
         var blocks: [RenderBlock] = []
