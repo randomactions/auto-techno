@@ -1300,15 +1300,15 @@ struct ModalSuccessorReportJoinTests {
         ], options: [.sortedKeys]))
         FileHandle.standardOutput.write(Data([0x0A]))
         // Full report identity includes engine and render continuation identity.
-        // The native engine51 macOS fixture records the current digest while
-        // retaining every membership, missing-population and fitting check.
+        // The retained engine51 macOS pin awaits its current native observation;
+        // every membership, missing-population and fitting check stays required.
         // This one-bank fixture cannot qualify or activate a policy.
         #expect(bank.engineVersion == QualityQualificationContract.engineVersion)
         // Exact PCM-derived reports are pinned per supported native platform.
-        // The native engine51 Windows bank supplies its own observed digest;
+        // The native engine52 Windows bank supplies its own observed digest;
         // platform-specific observations do not substitute for one another.
         #if os(Windows)
-        #expect(complete.sourceBankFingerprint == "23ec2dcab253c23d")
+        #expect(complete.sourceBankFingerprint == "46f0e549a8a8d394")
         #else
         #expect(complete.sourceBankFingerprint == "5f97f337cef22b01")
         #endif
