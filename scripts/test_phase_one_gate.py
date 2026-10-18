@@ -7,10 +7,12 @@ import copy
 import importlib.util
 import io
 import json
+import os
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -325,6 +327,179 @@ class PhaseOneGateTests(unittest.TestCase):
         report["context"]["routeIds"] = [{"unhashable": True}]
         self.reseal(report)
         self.assertTrue(gate.validate_report(report, self.policy()))
+
+
+class PhaseOneOriginalExecutionTests(unittest.TestCase):
+    trace_fixture = PhaseOneGateTests.trace_fixture
+    write_trace_report = PhaseOneGateTests.write_trace_report
+    """Real temporary Git/child execution; synthetic evidence is never qualification."""
+    def fixture(self, bad_child=None, invalid_utf8=False):
+        temporary = tempfile.TemporaryDirectory(); self.addCleanup(temporary.cleanup)
+        base = Path(temporary.name); root = base / "source"; root.mkdir()
+        (root / "scripts").mkdir(); (root / ".gitignore").write_text("docs/local/\n")
+        (root / "scripts/phase_one_gate.py").write_bytes(MODULE_PATH.read_bytes())
+        for _, args in gate.CHECKS:
+            path = root / "scripts" / args[0]
+            body = "import sys\nsys.stdout.buffer.write(b'original child bytes\\r\\n')\n"
+            if path.name == bad_child:
+                body = "import sys\nsys.stdout.buffer.write(b'actual failed child\\r\\n')\nsys.exit(7)\n"
+            if invalid_utf8 and path.name == gate.CHECKS[0][1][0]:
+                body = "import sys\nsys.stdout.buffer.write(bytes([255]))\n"
+            path.write_text(body)
+        for name in gate.execution_evidence_paths():
+            path = root / name; path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text('{"synthetic":true}\n')
+        self.trace_fixture(root)
+        self.git(root, "init", "--quiet", "--initial-branch=codex/phase-one-execution-tests")
+        self.git(root, "add", "."); self.commit(root)
+        return root, base / "execution", self.git(root, "rev-parse", "HEAD").strip()
+
+    @staticmethod
+    def git(root, *args):
+        return subprocess.check_output(["git", "-c", "core.fsmonitor=false", "-C", str(root), *args], text=True)
+
+    def commit(self, root):
+        self.git(root, "-c", "user.name=Fixture", "-c", "user.email=fixture@invalid", "commit", "--quiet", "-am", "synthetic software fixture")
+
+    @staticmethod
+    def synthetic_aggregate(root, output, runner):
+        gate.run_checks(root, runner)
+        print("synthetic aggregate only, no Phase-1 qualification", file=output)
+        return 0
+
+    def execute(self, root, directory, source, aggregate=None):
+        with mock.patch.object(gate, "run_check", aggregate or self.synthetic_aggregate):
+            return gate.run_recorded_check(root, directory, source, io.StringIO())
+
+    def test_original_bytes_all_commands_and_nonpromotion_boundary(self):
+        root, directory, source = self.fixture()
+        self.assertEqual(self.execute(root, directory, source), 0)
+        record = json.loads((directory / "original-execution.json").read_text())
+        self.assertEqual([x["id"] for x in record["checks"]], [x[0] for x in gate.CHECKS])
+        self.assertTrue(record["all19SubordinateChecksRecorded"])
+        self.assertEqual(len(record["checks"]), 19)
+        for row in record["checks"]:
+            self.assertEqual((directory / row["log"]).read_bytes(), b"original child bytes\r\n")
+            self.assertEqual(row["logSHA256"], gate.file_sha256(directory / row["log"]))
+        for field in ("runtimeQualification", "automatedQualityQualification", "item39Complete"):
+            self.assertIs(record[field], False)
+        with self.assertRaises(gate.PhaseOneGateError):
+            self.execute(root, directory, source)
+
+    def test_failed_child_keeps_original_and_stops_without_retry(self):
+        root, directory, source = self.fixture(bad_child=gate.CHECKS[1][1][0])
+        self.assertEqual(self.execute(root, directory, source), 1)
+        record = json.loads((directory / "original-execution.json").read_text())
+        self.assertEqual(record["status"], "refused"); self.assertEqual(len(record["checks"]), 2)
+        self.assertEqual(record["checks"][-1]["exitCode"], 7)
+        self.assertEqual((directory / record["checks"][-1]["log"]).read_bytes(), b"actual failed child\r\n")
+        self.assertFalse(record["all19SubordinateChecksRecorded"])
+
+    def test_success_flag_without_child_execution_cannot_qualify(self):
+        root, directory, source = self.fixture()
+        self.assertEqual(self.execute(root, directory, source, lambda *_: 0), 1)
+        record = json.loads((directory / "original-execution.json").read_text())
+        self.assertFalse(record["all19SubordinateChecksRecorded"])
+        self.assertEqual(record["checks"], [])
+
+    def test_wrong_or_dirty_source_refuses_before_creating_outputs(self):
+        root, directory, source = self.fixture()
+        for target in ("0" * 40, True):
+            with self.assertRaises(gate.PhaseOneGateError):
+                self.execute(root, directory, target)
+            self.assertFalse(directory.exists())
+        (root / "scripts" / gate.CHECKS[0][1][0]).write_text("changed")
+        with self.assertRaises(gate.PhaseOneGateError):
+            self.execute(root, directory, source)
+        self.assertFalse(directory.exists())
+
+    def test_git_clean_cache_cannot_hide_different_tracked_bytes(self):
+        root, directory, source = self.fixture()
+        name = "scripts/" + gate.CHECKS[0][1][0]
+        self.git(root, "update-index", "--assume-unchanged", name)
+        (root / name).write_text("different actual tracked bytes")
+        self.assertEqual(self.git(root, "status", "--porcelain").strip(), "")
+        with self.assertRaisesRegex(gate.PhaseOneGateError, "actual tracked bytes"):
+            self.execute(root, directory, source)
+        self.assertFalse(directory.exists())
+
+    def test_source_or_evidence_mutation_refuses_after_actual_children(self):
+        for name in ("scripts/" + gate.CHECKS[0][1][0], str(gate.WHOLE_PCM_PATH)):
+            with self.subTest(name=name):
+                root, directory, source = self.fixture()
+                def changed(root, output, runner):
+                    self.synthetic_aggregate(root, output, runner)
+                    (root / name).write_text("changed during check")
+                    return 0
+                self.assertEqual(self.execute(root, directory, source, changed), 1)
+                record = json.loads((directory / "original-execution.json").read_text())
+                self.assertFalse(record["inputsUnchanged"])
+                self.assertTrue(record["all19SubordinateChecksRecorded"])
+                self.assertFalse(record["phaseOneGateCheckPassed"])
+
+    def test_unregistered_command_never_executes(self):
+        root, directory, source = self.fixture()
+        def extra(root, output, runner):
+            command = gate.check_command(root, *gate.CHECKS[0]) + ["--skip-validation"]
+            runner(command, cwd=root, check=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            return 0
+        self.assertEqual(self.execute(root, directory, source, extra), 1)
+        record = json.loads((directory / "original-execution.json").read_text())
+        self.assertEqual(record["checks"], []); self.assertEqual(list(directory.glob("01-*.log")), [])
+
+    def test_derived_assessment_before_and_after_are_both_preserved(self):
+        root, directory, source = self.fixture()
+        path = root / gate.ASSESSMENT_PATH; path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"original assessment")
+        def changed(root, output, runner):
+            self.synthetic_aggregate(root, output, runner)
+            path.write_bytes(b"fresh derived assessment")
+            return 0
+        self.assertEqual(self.execute(root, directory, source, changed), 0)
+        self.assertEqual((directory / "before-lifecycle-assessment.json").read_bytes(), b"original assessment")
+        self.assertEqual((directory / "after-lifecycle-assessment.json").read_bytes(), b"fresh derived assessment")
+
+    def test_non_utf8_original_output_is_preserved_and_refused(self):
+        root, directory, source = self.fixture(invalid_utf8=True)
+        self.assertEqual(self.execute(root, directory, source), 1)
+        record = json.loads((directory / "original-execution.json").read_text())
+        self.assertEqual((directory / record["checks"][0]["log"]).read_bytes(), bytes([255]))
+        self.assertFalse(record["all19SubordinateChecksRecorded"])
+
+    def test_all_children_pass_cannot_hide_aggregate_refusal(self):
+        root, directory, source = self.fixture()
+        def refused(root, output, runner):
+            self.synthetic_aggregate(root, output, runner)
+            return 1
+        self.assertEqual(self.execute(root, directory, source, refused), 1)
+        record = json.loads((directory / "original-execution.json").read_text())
+        self.assertTrue(record["all19SubordinateChecksRecorded"])
+        self.assertTrue(record["all19SubordinateExitCodesZero"])
+        self.assertFalse(record["phaseOneGateCheckPassed"])
+
+    def test_reduced_registry_and_oversized_output_cannot_pass(self):
+        root, directory, source = self.fixture()
+        with mock.patch.object(gate, "CHECKS", gate.CHECKS[:-1]):
+            with self.assertRaises(gate.PhaseOneGateError):
+                self.execute(root, directory, source)
+        self.assertFalse(directory.exists())
+        with mock.patch.object(gate, "MAX_EXECUTION_LOG", 5):
+            self.assertEqual(self.execute(root, directory, source), 1)
+        record = json.loads((directory / "original-execution.json").read_text())
+        self.assertEqual((directory / record["checks"][0]["log"]).read_bytes(), b"original child bytes\r\n")
+        self.assertFalse(record["phaseOneGateCheckPassed"])
+
+    def test_recording_requires_explicit_check_source_and_external_output(self):
+        for arguments in (["generate", "--source", "a" * 40], ["check", "--source", "a" * 40],
+                          ["validate", "--execution-directory", "/unused"]):
+            with self.assertRaises(SystemExit), mock.patch("sys.stderr", io.StringIO()):
+                gate.parse_args(arguments)
+        root, _, source = self.fixture()
+        with self.assertRaises(gate.PhaseOneGateError):
+            self.execute(root, root / "invalid-output", source)
+        with mock.patch.dict(os.environ, {"AUTOTECHNO_SKIP_VALIDATION": "1"}):
+            with self.assertRaises(gate.PhaseOneGateError):
+                self.execute(root, root.parent / "unregistered-output", source)
 
 
 if __name__ == "__main__":
