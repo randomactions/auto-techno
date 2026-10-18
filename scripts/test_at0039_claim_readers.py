@@ -65,9 +65,72 @@ def full_phrase(behavior=None,voice=None):
         unavailable=['all-foundation-behaviors','unauthorized-truncation' if voice else 'companion-and-truncation-faults','accepted-continuous-journey','production-calibration','perceptual-quality','full-prepared-commit-fault-matrix','population-error-intervals'])
 
 
+def source_support(kick):
+    rows=[]
+    for seed in r.ROOTS:
+        for rate in r.RATES:
+            frames=round(rate*240/130)
+            events=[]
+            for index,step in enumerate([0,15]):
+                # Independent destination geometry using exact integer rounding.
+                start=round(step*frames/16)
+                natural=rate*(.32 if kick else .68)
+                count=min(round(natural),frames-start)
+                events.append(dict(bar=0,scoreEventIndex=index,step=step,barFrames=frames,
+                    expectedFrames=count,renderedFrames=count,terminalComplete=True,admissionComplete=True))
+            row=dict(rootSeed=seed,sampleRate=rate,planFingerprint='a'*16,graphFingerprint='b'*16,
+                sampleHash='c'*16,frameCount=frames*8,support=events,exactReplay=True,preparedProductPresent=True,
+                preparedMatchesDirectRender=True,vectorComplete=True,transactionComplete=True,audioSafetyValid=True,
+                evaluationHardGatesPassed=True,commitEligible=True,commitFailureDiagnostics=[])
+            row['scoreKickEvents' if kick else 'scoreRumbleEvents']=len(events)
+            rows.append(row)
+    return dict(schema=r.KICK_SUPPORT if kick else r.RUMBLE_SUPPORT,
+        scope='canonical-nonlinear-render-and-preparer-duration-binding',rows=rows)
+
+
 class ClaimReadersTests(unittest.TestCase):
     def test_source_energy_reintegrates_the_independent_sample_equations(self):
         self.assertEqual(r.read(energy())['checks']['rows'],36)
+
+    def test_normal_full_phrase_support_recomputes_natural_and_clipped_lengths(self):
+        for kick in [False,True]:
+            checked=r.read(source_support(kick))
+            self.assertEqual(checked['checks']['rows'],4)
+            self.assertTrue(checked['checks']['sourceSupportEquationRecomputed'])
+            self.assertFalse(checked['checks']['pairedMutationQualification'])
+            self.assertFalse(checked['checks']['installedQualification'])
+            self.assertFalse(checked['nativeExecutionAuthenticated'])
+            absolute=source_support(kick)
+            for row in absolute['rows']:
+                for event in row['support']:event['bar']+=17
+            self.assertEqual(r.read(absolute)['checks'],checked['checks'])
+
+    def test_source_support_cannot_move_expected_and_actual_lengths_together(self):
+        for kick in [False,True]:
+            for index in [0,1]:
+                product=source_support(kick);event=product['rows'][0]['support'][index]
+                event['expectedFrames']-=1;event['renderedFrames']-=1
+                with self.assertRaises(ValueError):r.read(product)
+
+    def test_source_support_requires_every_actual_event_replay_and_prepared_witness(self):
+        for kick in [False,True]:
+            for change in [lambda p:p['rows'].pop(),lambda p:p['rows'][0]['support'].pop(),
+                lambda p:p['rows'][0]['support'].__setitem__(1,copy.deepcopy(p['rows'][0]['support'][0])),
+                lambda p:p['rows'][0]['support'][0].update(admissionComplete=False),
+                lambda p:p['rows'][0].update(exactReplay=False),lambda p:p['rows'][0].update(preparedMatchesDirectRender=False),
+                lambda p:p['rows'][0]['support'][0].update(bar=8),
+                lambda p:p['rows'][0].update(frameCount=1),lambda p:p['rows'][0].update(audioSafetyValid=1)]:
+                product=source_support(kick);change(product)
+                with self.assertRaises(ValueError):r.read(product)
+
+    def test_source_support_observed_admission_is_not_promoted_to_installed_qualification(self):
+        product=source_support(True)
+        product['rows'][0].update(evaluationHardGatesPassed=False,commitEligible=False,commitFailureDiagnostics=['observed-refusal'])
+        result=r.read(product)
+        self.assertEqual(result['checks']['observedCommitEligibleRows'],3)
+        self.assertFalse(result['checks']['installedQualification'])
+        product['rows'][0]['commitEligible']=True
+        with self.assertRaises(ValueError):r.read(product)
 
     def test_expected_and_observed_energy_cannot_be_forged_together(self):
         p=energy(); w=p['rows'][0]['windows'][0]; w['expectedKick']=w['observedKick']=1
@@ -159,6 +222,33 @@ class ClaimReadersTests(unittest.TestCase):
         for count in (1,3):
             with self.assertRaises(ValueError): audit.reports_from_native(body,r.ENERGY,name,suite,count)
         with self.assertRaises(ValueError): audit.reports_from_native(body.replace('passed after','failed after'),r.ENERGY,name,suite,2)
+
+    def test_adjacent_registered_native_start_can_interleave_a_buffered_report(self):
+        name='Canonical full-phrase rumble support reaches candidate admission'
+        peer='Canonical full-phrase kick support reaches candidate admission'
+        suite='Source-terminal de-clicking'
+        raw=json.dumps(dict(schema=r.RUMBLE_SUPPORT,value='original-byte-identity'))
+        cut=raw.index('original-byte-identity')+8
+        begin=f'◇ Test "{name}" started.\n'
+        passed=f'✔ Test "{name}" passed after 0.3 seconds.\n'
+        start=f'◇ Test "{peer}" started.\n'
+        finish=f'✔ Test "{peer}" passed after 0.4 seconds.\n'
+        def body(annotation=start, completion=finish):
+            return begin+raw[:cut]+passed+annotation+raw[cut:]+'\n'+completion
+        expected=json.loads(raw)
+        self.assertEqual(audit.reports_from_native(body(),r.RUMBLE_SUPPORT,name,suite,1),[expected])
+        bad=[body(start.replace(peer,'foreign native test')),
+             body(completion=''),body(start+start),
+             begin+raw[:cut]+start+passed+raw[cut:]+'\n'+finish,
+             body('arbitrary foreign text\n'+start),
+             body(completion=finish.replace('passed after','failed after')),
+             body().replace(passed,'')]
+        for sample in bad:
+            with self.subTest(sample=sample):
+                with self.assertRaises(ValueError):
+                    audit.reports_from_native(sample,r.RUMBLE_SUPPORT,name,suite,1)
+        with self.assertRaises(ValueError):
+            audit.reports_from_native(body(),r.RUMBLE_SUPPORT,name,'foreign suite',1)
 
     def test_native_identity_registry_matches_existing_test_owners(self):
         root=Path(__file__).resolve().parents[1]

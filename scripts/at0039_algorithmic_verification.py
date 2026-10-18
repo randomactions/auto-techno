@@ -175,8 +175,10 @@ def report_from_native(body, schema):
 def reports_from_native(body, schema, name, suite, count):
     """Reconstruct only a closed report from its original native slice text.
 
-    CI line timestamps and the two exact declared test/suite lifecycle messages
-    may interleave even inside a JSON key. No other text is discarded. The whole
+    CI line timestamps and exact declared test/suite lifecycle messages may
+    interleave even inside a JSON key. A registered adjacent serial test start
+    is also recognized only after this test passes and before its own pass.
+    No unknown text is discarded. The whole
     original job remains the evidence; this is not the producer's raw-file hash.
     """
     require(type(body) is str and 0 < len(body) <= hosted.MAX_LOG_BYTES, 'bounded original native body')
@@ -189,6 +191,23 @@ def reports_from_native(body, schema, name, suite, count):
         boundaries.append(found[0])
     alternatives = [r'[◇✔] Test "' + re.escape(name) + '"', r'[◇✔] Suite "' + re.escape(suite) + '"']
     pattern = '(?:' + '|'.join(alternatives) + r') (?:started\.|passed after [0-9]+(?:\.[0-9]+)? seconds\.)(?:\r?\n)?'
+    # Swift Testing may announce the next serial test before the previous
+    # stdout write drains. Only its exact registered same-owner/suite start
+    # may be removed, after this test's pass and with its own unique pass.
+    # Unknown lifecycle text, concurrent starts, duplicates and failures stay.
+    declared=[c for c in claim_cases() if c[2:5]==(name,suite,schema)]
+    successors=[]
+    if len(declared)==1:
+        starts=list(re.finditer(r'◇ Test "([^"\r\n]+)" started\.',plain[boundaries[1].end():]))
+        if starts:
+            peer=starts[0].group(1)
+            siblings=[c for c in claim_cases() if c[0]==declared[0][0] and c[3]==suite and c[2]==peer and c[4]!=schema]
+            peer_starts=list(re.finditer(r'◇ Test "'+re.escape(peer)+r'" started\.',plain))
+            peer_passes=list(re.finditer(r'✔ Test "'+re.escape(peer)+r'" passed after [0-9]+(?:\.[0-9]+)? seconds\.',plain))
+            if (len(siblings)==len(peer_starts)==len(peer_passes)==1
+                    and boundaries[1].end()<=peer_starts[0].start()<peer_passes[0].start()):
+                successors.append(r'◇ Test "'+re.escape(peer)+r'" started\.(?:\r?\n)?')
+    pattern = '(?:'+pattern+'|'+('|'.join(successors) if successors else r'(?!)')+')'
     # Keep a segment-level origin map, rather than normalizing arbitrary text or
     # storing an unbounded integer index for every character of a large log.
     pieces, origins, offset, length = [], [], 0, 0
@@ -277,6 +296,8 @@ def claim_cases():
         ('FoundationRhythmicRelationTests','algorithmicFullPhraseOutputFrameFaults()','Full-phrase output frame loss cannot bind to the original transaction','Score-owned foundation rhythm',claims.OUTPUT,1,None),
         ('ModalPercussionDSPTests','algorithmicModalContinuationFaults()','AT-0039 canonical modal continuation detects lost voices and lost records','Modal percussion DSP',claims.MODAL,1,None),
         ('SourceTerminalDeclickTests','algorithmicRumbleDurationFaults()','AT-0039 rumble support distinguishes bar clipping from unauthorized shortening','Source-terminal de-clicking',claims.RUMBLE,1,None),
+        ('SourceTerminalDeclickTests','algorithmicKickFullPhraseSupport()','Canonical full-phrase kick support reaches candidate admission','Source-terminal de-clicking',claims.KICK_SUPPORT,1,None),
+        ('SourceTerminalDeclickTests','algorithmicRumbleFullPhraseSupport()','Canonical full-phrase rumble support reaches candidate admission','Source-terminal de-clicking',claims.RUMBLE_SUPPORT,1,None),
         ('ModalSuccessorReportJoinTests','nativePreparedAdmissionFaultMatrix(rate:)','Prepared admission faults refuse at both native sample rates','Modal successor report join',claims.PREPARED,2,None),
         ('ModalSuccessorReportJoinTests','nativePreparedSuccessorBindingFaultMatrix(rate:)','Actual successor input mismatches refuse native prepared admission','Modal successor report join',claims.SUCCESSOR,2,None),
     ]

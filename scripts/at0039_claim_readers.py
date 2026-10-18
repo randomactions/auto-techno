@@ -22,6 +22,8 @@ FULL_BEHAVIOR = 'autotechno-full-phrase-bass-behavior-faults.v1'
 OUTPUT = 'autotechno-full-phrase-output-frame-faults.v1'
 MODAL = 'autotechno-modal-continuation-fault-component.v1'
 RUMBLE = 'autotechno-rumble-duration-fault-component.v1'
+KICK_SUPPORT = 'autotechno-kick-full-phrase-source-support.v1'
+RUMBLE_SUPPORT = 'autotechno-rumble-full-phrase-source-support.v1'
 PREPARED = 'autotechno-native-prepared-admission-faults.v1'
 SUCCESSOR = 'autotechno-native-successor-binding-faults.v1'
 
@@ -448,6 +450,58 @@ def rumble(report):
     return dict(rows=16, pairedRates=list(RATES), independentConstructorHoldout=False)
 
 
+def native_source_support(report):
+    """Normal canonical source/preparer controls; paired mutations stay separate."""
+    fields(report,['schema','scope','rows'])
+    require(report['schema'] in (KICK_SUPPORT,RUMBLE_SUPPORT),'native source support schema')
+    exact(report['scope'],'canonical-nonlinear-render-and-preparer-duration-binding')
+    finite_tree(report)
+    rows=report['rows']
+    population(rows,('rootSeed','sampleRate'),[(seed,rate) for seed in ROOTS for rate in RATES])
+    kick=report['schema']==KICK_SUPPORT
+    event_count='scoreKickEvents' if kick else 'scoreRumbleEvents'
+    committed=0
+    for row in rows:
+        fields(row,['rootSeed','sampleRate','planFingerprint','graphFingerprint','sampleHash','frameCount',event_count,
+                    'support','exactReplay','preparedProductPresent','preparedMatchesDirectRender','vectorComplete',
+                    'transactionComplete','audioSafetyValid','evaluationHardGatesPassed','commitEligible','commitFailureDiagnostics'])
+        for key in ['planFingerprint','graphFingerprint','sampleHash']: fingerprint(row[key])
+        frames=(48*row['sampleRate']+13)//26
+        integer(row['frameCount'],1)
+        exact(row['frameCount']%frames,0)
+        integer(row[event_count],1)
+        support=row['support']
+        require(type(support) is list and len(support)==row[event_count],'all declared source events')
+        identities=[]
+        for event in support:
+            fields(event,['bar','scoreEventIndex','step','barFrames','expectedFrames','renderedFrames','terminalComplete','admissionComplete'])
+            integer(event['bar']); integer(event['scoreEventIndex']); integer(event['step'],maximum=15)
+            identities.append((event['bar'],event['scoreEventIndex']))
+            exact(event['barFrames'],frames)
+            start=(event['step']*frames+8)//16
+            expected=min(row['sampleRate']*(8 if kick else 17)//25,frames-start)
+            exact(event['expectedFrames'],expected); exact(event['renderedFrames'],expected)
+            exact(event['terminalComplete'],True); exact(event['admissionComplete'],True)
+        # Bars retain absolute session positions; only the span is phrase-local.
+        require(max(e['bar'] for e in support)-min(e['bar'] for e in support)<row['frameCount']//frames,
+                'source events fit within one reported phrase')
+        require(len(set(identities))==len(identities) and any(e['step']==0 for e in support),
+                'unique source events and frozen positive step-zero selection')
+        for key in ['exactReplay','preparedProductPresent','preparedMatchesDirectRender','vectorComplete','transactionComplete','audioSafetyValid']:
+            exact(row[key],True)
+        # These two fields are observations in the native normal-source product,
+        # not that test's installed-quality assertion. Keep refusal visible.
+        require(type(row['evaluationHardGatesPassed']) is bool and type(row['commitEligible']) is bool,'observed admission booleans')
+        diagnostics=row['commitFailureDiagnostics']
+        require(type(diagnostics) is list and all(type(x) is str and x for x in diagnostics),'observed admission diagnostics')
+        if row['commitEligible']:
+            exact(row['evaluationHardGatesPassed'],True); exact(diagnostics,[])
+        committed+=row['commitEligible']
+    return dict(rows=4,pairedRates=list(RATES),sourceVoice='kick' if kick else 'rumble',
+                sourceSupportEquationRecomputed=True,observedCommitEligibleRows=committed,
+                normalSourceControlsOnly=True,pairedMutationQualification=False,installedQualification=False)
+
+
 def prepared(report):
     successor=report['schema']==SUCCESSOR
     fields(report,['schema','qualification','rootSeed','phraseIndex','sampleRate','sampleHash','exactControlReplay','rows'] + ([] if successor else ['sourceIdentity','unavailable']))
@@ -490,7 +544,8 @@ def prepared(report):
 
 READERS = {ENERGY:energy, KICK:kick, BASS:bass, COMPANION:companion, RELEASE:release,
            FULL_BASS:full_phrase, FULL_COMPANION:full_phrase, FULL_BEHAVIOR:full_phrase, OUTPUT:output,
-           MODAL:modal, RUMBLE:rumble, PREPARED:prepared, SUCCESSOR:prepared}
+           MODAL:modal, RUMBLE:rumble, KICK_SUPPORT:native_source_support,
+           RUMBLE_SUPPORT:native_source_support, PREPARED:prepared, SUCCESSOR:prepared}
 
 
 def read(report):
