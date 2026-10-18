@@ -1,8 +1,8 @@
 {
   "schema": "autotechno-roadmap-contract-baseline.v1",
-  "snapshotVersion": 306,
+  "snapshotVersion": 307,
   "digestAlgorithm": "sha256",
-  "snapshotFingerprint": "b84e7ed285bd2d4deabe950f9f92898ef90393c700970cecec18be39a28a2dea",
+  "snapshotFingerprint": "81c9141b09a5219665e0e53e07d33670c22ada30e2f71332a29666f4f4b1741a",
   "documents": [
     {
       "role": "repository-guidance",
@@ -25,14 +25,14 @@
     {
       "role": "sound-quality-contract",
       "path": "docs/SOUND_QUALITY.md",
-      "byteCount": 133574,
-      "sha256": "a3a2f11c17ec718cfa91996b9778bcbafd02a3999c95b24622089b30956d1f73"
+      "byteCount": 133597,
+      "sha256": "161dba2b39c57ccee8bc177014de4289ebee37be24b7b65c1c69bb19c9936f5a"
     },
     {
       "role": "runtime-provenance-contract",
       "path": "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
       "byteCount": 232232,
-      "sha256": "f1538059c631579c1f360b8d3834bb898a23070d3be295f2aa5f4dcc10abbcc7"
+      "sha256": "3dd25aaebc4a9ddf438ecb2b21185148a9883c604cd0d3878c84963573a6cec3"
     },
     {
       "role": "component-license-asset-manifest-source",
@@ -163,14 +163,14 @@
     {
       "role": "semantic-codebase-map-source",
       "path": "docs/codebase-map.json",
-      "byteCount": 194864,
-      "sha256": "02774ee8112ddb3838612d97c8e0417966d8712a836b0099ca7bcd4a3331f62e"
+      "byteCount": 195140,
+      "sha256": "46e86dd3f3f251151031e5f5570c8705702806381c95142a7171b7fe3744a636"
     },
     {
       "role": "semantic-codebase-map-rendering",
       "path": "docs/CODEBASE_MAP.md",
-      "byteCount": 391139,
-      "sha256": "930ef86c6aee007ec73088e3ecd9e581e68137bdf1fde34e28e213a1d643c5ce"
+      "byteCount": 393095,
+      "sha256": "209a4231cabd6dca6e3c561e6fdb79cbcfd8ce19a03fcf5fd3a9375f809e9bb1"
     }
   ]
 }

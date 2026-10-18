@@ -49,6 +49,7 @@ READINESS_OWNERS = {
     'Tests/AutoTechnoCoreTests/LongHorizonSignalTrajectoryTests.swift': 'eightHourTrajectoryIsBounded',
 }
 ENGINE52_REHEARSAL_OWNER = 'Tests/AutoTechnoCoreTests/LongHorizonSignalTrajectoryTests.swift'
+ENGINE54_REHEARSAL_ORIGINAL_SHA256 = '94090a7179958a2308effc6466948d0d71104dd5af74bc44a54e089d0e7a8d95'
 def validate_rehearsal_identity_template(row):
     """No rehearsal generation or evidence predicate may change with its pins."""
     need(row['path'] == ENGINE52_REHEARSAL_OWNER and
@@ -56,8 +57,16 @@ def validate_rehearsal_identity_template(row):
     code = lambda text: ''.join(line for line in text.splitlines(keepends=True)
                                if not line.lstrip().startswith('//'))
     expected = code(row['original'])
-    for old, new in [('"autotechno-canonical-engine.v51"', '"autotechno-canonical-engine.v52"'),
-                     ('"1e90955e389c8215"', '"9cb5deaba047abf2"')]:
+    if hashlib.sha256(row['original'].encode()).hexdigest() == ENGINE54_REHEARSAL_ORIGINAL_SHA256:
+        # The engine54 capture compiled the existing non-capture test before
+        # its two stale identity pins were updated from actual native output.
+        # Every generation, storage, replay and unavailable-evidence check stays.
+        pins = [('"autotechno-canonical-engine.v52"', '"autotechno-canonical-engine.v54"'),
+                ('"9cb5deaba047abf2"', '"6697de8de20cbdf6"')]
+    else:
+        pins = [('"autotechno-canonical-engine.v51"', '"autotechno-canonical-engine.v52"'),
+                ('"1e90955e389c8215"', '"9cb5deaba047abf2"')]
+    for old, new in pins:
         need(expected.count(old) == 1 and new not in expected,
              'one original versioned rehearsal identity pin')
         expected = expected.replace(old, new)
@@ -89,8 +98,8 @@ def validate_primary_route_template(row):
 READINESS_PATH = Path(__file__).with_name('at0039_readiness_transitions.json')
 READINESS = primary.load(READINESS_PATH)
 need(set(READINESS) == {'schema', 'transitions'} and
-     READINESS['schema'] == 'autotechno-at0039-noncapture-readiness-transitions.v4' and
-     type(READINESS['transitions']) is list and len(READINESS['transitions']) == 5,
+     READINESS['schema'] == 'autotechno-at0039-noncapture-readiness-transitions.v5' and
+     type(READINESS['transitions']) is list and len(READINESS['transitions']) == 6,
      'closed built-in readiness transition catalogue')
 need({row['path'] for row in READINESS['transitions']} == set(READINESS_OWNERS),
      'only the three declared non-capture check owners')
@@ -199,18 +208,19 @@ def readiness_transition(original, current, relative, *, compiled_engine=None):
     """One forward transition; every byte outside the known method stays exact.
 
     These Testing checks are not called by the canonical capture entrypoints.
-    The synthetic rehearsal transition additionally requires the exact compiled
-    engine52 source; an engine51 study cannot receive its identity pins. No
+    Each synthetic rehearsal transition additionally requires its exact compiled
+    engine52 or engine54 source; an older study cannot receive later identity pins. No
     client-provided mapping, arbitrary test edit or rollback is accepted. Actual installed-positive native execution remains a separate gate.
     """
-    if relative == ENGINE52_REHEARSAL_OWNER:
-        need(compiled_engine == 'autotechno-canonical-engine.v52',
-             'synthetic rehearsal identity transition requires compiled engine52')
     rows = [row for row in READINESS['transitions'] if row['path'] == relative and
             original.count(row['original'].encode()) == 1 and
             current.count(row['current'].encode()) == 1]
     need(len(rows) == 1, 'compiled source/test changed: ' + relative)
     row = rows[0]
+    if relative == ENGINE52_REHEARSAL_OWNER:
+        version = '54' if digest(row['original'].encode()) == ENGINE54_REHEARSAL_ORIGINAL_SHA256 else '52'
+        need(compiled_engine == 'autotechno-canonical-engine.v' + version,
+             'synthetic rehearsal identity transition requires compiled engine' + version)
     old, new = row['original'].encode(), row['current'].encode()
     need(original.count(old) == current.count(new) == 1 and
          new not in original and old not in current and

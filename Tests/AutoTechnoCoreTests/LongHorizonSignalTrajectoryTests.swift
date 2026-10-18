@@ -312,10 +312,10 @@ struct LongHorizonSignalTrajectoryTests {
     #expect(report.recentPhrases.allSatisfy { $0.schemaVersion == 2 && $0.schemaIdentifier == "autotechno-long-horizon-signal-trajectory.v2" })
     #expect(report.trajectoryFingerprint.count == 16)
     // Signal phrase v2 and report v3 bind the finite relative-level domain.
-    // Engine v52 binds upper-color recovery in typed plan identities.
+    // Engine v54 binds ordinary composition minimalization in typed plan identities.
     // This synthetic rehearsal remains unavailable as calibration evidence.
-    #expect(QualityQualificationContract.engineVersion == "autotechno-canonical-engine.v52")
-    #expect(report.trajectoryFingerprint == "9cb5deaba047abf2")
+    #expect(QualityQualificationContract.engineVersion == "autotechno-canonical-engine.v54")
+    #expect(report.trajectoryFingerprint == "6697de8de20cbdf6")
     #expect(encoded.count < 500_000)
     print(
       "LONG_HORIZON_SIGNAL_8H observations=\(report.observationCount) "

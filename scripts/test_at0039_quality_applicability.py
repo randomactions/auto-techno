@@ -13,6 +13,22 @@ import at0039_quality_applicability as q
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def rehearsal_row(version=52):
+    rows = [row for row in q.READINESS['transitions']
+            if row['path'] == q.ENGINE52_REHEARSAL_OWNER and
+            ('"autotechno-canonical-engine.v%d"' % version) in row['current']]
+    assert len(rows) == 1
+    return rows[0]
+
+
+def fixture_compiled_engine(row):
+    if row['path'] != q.ENGINE52_REHEARSAL_OWNER:
+        return None
+    return ('autotechno-canonical-engine.v54' if
+            '"autotechno-canonical-engine.v54"' in row['current'] else
+            'autotechno-canonical-engine.v52')
+
+
 class LoaderTests(unittest.TestCase):
     def test_real_loaders_parse_with_three_resource_and_seal_bindings(self):
         for family, relative in q.LOADERS.items():
@@ -287,7 +303,7 @@ class SourceClosureTests(unittest.TestCase):
 
     def test_complete_source_closure_admits_only_declared_readiness_transition(self):
         metadata = json.loads((self.runner / 'build-metadata.json').read_text())
-        for row in q.READINESS['transitions']:
+        for row in q.READINESS['transitions'][:5]:
             old, current = self.old / row['path'], self.target / row['path']
             old.parent.mkdir(parents=True, exist_ok=True)
             current.parent.mkdir(parents=True, exist_ok=True)
@@ -313,7 +329,7 @@ class SourceClosureTests(unittest.TestCase):
 
 
     def test_rehearsal_source_closure_reads_the_bound_engine_owner(self):
-        row = q.READINESS['transitions'][-1]
+        row = rehearsal_row(52)
         metadata = json.loads((self.runner / 'build-metadata.json').read_text())
         for base, field in ((self.old, 'original'), (self.target, 'current')):
             path = base / row['path']
@@ -327,6 +343,35 @@ class SourceClosureTests(unittest.TestCase):
         self.git('add', '.')
         self.commit()
         with self.assertRaisesRegex(ValueError, 'compiled engine52'):
+            self.check()
+
+    def test_engine54_transition_reads_actual_compiled_engine_and_digest(self):
+        row = rehearsal_row(54)
+        metadata = json.loads((self.runner / 'build-metadata.json').read_text())
+        for base, field in ((self.old, 'original'), (self.target, 'current')):
+            path = base / row['path']
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text('unchanged capture owner\n' + row[field])
+        metadata['sources'][str(self.old / row['path'])] = q.primary.sha(self.old / row['path'])
+        relative = 'Sources/AutoTechnoCore/QualityQualification.swift'
+        for engine in ('52', '54'):
+            for base in (self.old, self.target):
+                (base / relative).write_text('let engine = "autotechno-canonical-engine.v' + engine + '"\n')
+            metadata['sources'][str(self.old / relative)] = q.primary.sha(self.old / relative)
+            (self.runner / 'build-metadata.json').write_text(json.dumps(metadata))
+            self.git('add', '.')
+            self.commit()
+            if engine == '52':
+                with self.assertRaisesRegex(ValueError, 'compiled engine54'):
+                    self.check()
+            else:
+                result = self.check()
+                self.assertEqual(len(result['nonCaptureReadinessTransitions']), 2)
+                self.assertTrue(all(not r['actualInstalledPositiveNativeVerified']
+                                    for r in result['nonCaptureReadinessTransitions']))
+        metadata['sources'][str(self.old / relative)] = '0' * 64
+        (self.runner / 'build-metadata.json').write_text(json.dumps(metadata))
+        with self.assertRaisesRegex(ValueError, 'original input changed'):
             self.check()
 
 
@@ -508,18 +553,56 @@ class NativeArtifactByteTests(unittest.TestCase):
 
 
 class ReadinessTransitionTests(unittest.TestCase):
-    def test_only_four_exact_forward_transitions_in_three_owners_are_admitted(self):
+    def test_engine54_entry_keeps_exact_original_method_and_all_nonidentity_guards(self):
+        row = rehearsal_row(54)
+        self.assertEqual(q.digest(row['original'].encode()),
+                         '94090a7179958a2308effc6466948d0d71104dd5af74bc44a54e089d0e7a8d95')
+        q.validate_rehearsal_identity_template(row)
+        for old, new in [('15_600', '0'), ('500_000', '500_001'),
+                         ('"unavailable"', '"available"'),
+                         ('6697de8de20cbdf6', '0000000000000000'),
+                         ('report.omittedBarCount == 0', 'report.omittedBarCount >= 0')]:
+            changed = row['current'].replace(old, new)
+            self.assertNotEqual(changed, row['current'])
+            with self.subTest(value=old), self.assertRaises(ValueError):
+                q.validate_rehearsal_identity_template(dict(row, current=changed))
+        # Resealing both templates around a weakened generator is not a new
+        # permitted original source. Its exact original digest stays mandatory.
+        for field in ('original', 'current'):
+            changed = dict(row)
+            changed[field] = changed[field].replace('15_600', '0')
+            with self.assertRaises(ValueError):
+                q.validate_rehearsal_identity_template(changed)
+        changed = dict(row, original=row['original'].replace('15_600', '0'),
+                       current=row['current'].replace('15_600', '0'))
+        with self.assertRaises(ValueError):
+            q.validate_rehearsal_identity_template(changed)
+
+    def test_engine54_entry_refuses_unbound_older_future_and_multihop_inputs(self):
+        row = rehearsal_row(54)
+        for engine in (None, 'autotechno-canonical-engine.v51',
+                       'autotechno-canonical-engine.v52', 'autotechno-canonical-engine.v53',
+                       'autotechno-canonical-engine.v55'):
+            with self.subTest(engine=engine), self.assertRaisesRegex(ValueError, 'compiled engine54'):
+                q.readiness_transition(row['original'].encode(), row['current'].encode(),
+                                       row['path'], compiled_engine=engine)
+        legacy = rehearsal_row(52)
+        with self.assertRaises(ValueError):
+            q.readiness_transition(legacy['original'].encode(), row['current'].encode(),
+                                   row['path'], compiled_engine='autotechno-canonical-engine.v54')
+
+    def test_only_six_exact_forward_transitions_in_three_owners_are_admitted(self):
         for row in q.READINESS['transitions']:
             # Every surrounding byte stays exact, not just a file hash or label.
             original = b'prefix\n' + row['original'].encode() + b'\nsuffix'
             current = b'prefix\n' + row['current'].encode() + b'\nsuffix'
-            result = q.readiness_transition(original, current, row['path'], compiled_engine='autotechno-canonical-engine.v52' if row['path'] == q.ENGINE52_REHEARSAL_OWNER else None)
+            result = q.readiness_transition(original, current, row['path'], compiled_engine=fixture_compiled_engine(row))
             self.assertEqual(result['symbol'], row['symbol'])
             self.assertFalse(result['actualInstalledPositiveNativeVerified'])
             for tampered in (current + b'changed capture helper', current.replace(b'#expect(', b'#expect(true || ', 1),
                              current + row['current'].encode(), original):
                 with self.subTest(path=row['path']), self.assertRaises(ValueError):
-                    q.readiness_transition(original, tampered, row['path'], compiled_engine='autotechno-canonical-engine.v52' if row['path'] == q.ENGINE52_REHEARSAL_OWNER else None)
+                    q.readiness_transition(original, tampered, row['path'], compiled_engine=fixture_compiled_engine(row))
 
     def test_unlisted_test_and_reverse_transition_refuse(self):
         for row in q.READINESS['transitions']:
@@ -530,7 +613,7 @@ class ReadinessTransitionTests(unittest.TestCase):
                                       'Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationIntegrationTests.swift')
 
     def test_published_target_has_exact_current_templates_and_no_other_file_delta(self):
-        self.assertEqual(len(q.READINESS['transitions']), 5)
+        self.assertEqual(len(q.READINESS['transitions']), 6)
         self.assertEqual(len({row['path'] for row in q.READINESS['transitions']}), 3)
         for relative in q.READINESS_OWNERS:
             raw = (ROOT / relative).read_text()
@@ -547,7 +630,7 @@ class ReadinessTransitionTests(unittest.TestCase):
             self.assertIn('try ', latest[0]['current'])
 
     def test_unlisted_multihop_and_historical_admission_rollback_refuse(self):
-        first, _, latest, _, _ = q.READINESS['transitions']
+        first, _, latest, _, _ = q.READINESS['transitions'][:5]
         self.assertEqual(first['current'], latest['original'])
         with self.assertRaises(ValueError):
             q.readiness_transition(first['original'].encode(), latest['current'].encode(), first['path'])
@@ -559,7 +642,7 @@ class ReadinessTransitionTests(unittest.TestCase):
                 q.readiness_transition(old.encode(), new.encode(), latest['path'])
 
     def test_rehearsal_catalogue_cannot_declare_relaxed_generation_or_numeric_guards(self):
-        row = q.READINESS['transitions'][-1]
+        row = rehearsal_row(52)
         q.validate_rehearsal_identity_template(row)
         for old, new in [('15_600', '0'), ('500_000', '500_001'),
                          ('"unavailable"', '"available"'), ('9cb5deaba047abf2', '0000000000000000')]:
@@ -569,7 +652,7 @@ class ReadinessTransitionTests(unittest.TestCase):
                 q.validate_rehearsal_identity_template(dict(row, current=changed))
 
     def test_rehearsal_transition_refuses_unbound_or_engine51_source(self):
-        row = q.READINESS['transitions'][-1]
+        row = rehearsal_row(52)
         for version in (None, 'autotechno-canonical-engine.v51', 'autotechno-canonical-engine.v53'):
             with self.subTest(version=version), self.assertRaisesRegex(ValueError, 'compiled engine52'):
                 q.readiness_transition(row['original'].encode(), row['current'].encode(),
@@ -586,7 +669,7 @@ class ReadinessTransitionTests(unittest.TestCase):
         original = b'func capture() { requireGate() }\n' + row['original'].encode()
         current = b'func capture() { skipGate() }\n' + row['current'].encode()
         with self.assertRaisesRegex(ValueError, 'exceeds the exact'):
-            q.readiness_transition(original, current, row['path'], compiled_engine='autotechno-canonical-engine.v52' if row['path'] == q.ENGINE52_REHEARSAL_OWNER else None)
+            q.readiness_transition(original, current, row['path'], compiled_engine=fixture_compiled_engine(row))
 
 
 if __name__ == '__main__':

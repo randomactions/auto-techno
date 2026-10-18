@@ -42,15 +42,15 @@ struct LongHorizonSemanticTrajectoryTests {
         #expect(first.qualificationReason == "no-calibrated-long-horizon-policy")
         #expect(first.observedBarCount == 7_802)
         #expect(first.observedPhraseCount == 725)
-        #expect(first.trajectoryFingerprint == "ba7251e9e8c9e144")
-        #expect(first.engineVersion == "autotechno-canonical-engine.v52")
+        #expect(first.trajectoryFingerprint == "ed436c478a3e9b37")
+        #expect(first.engineVersion == "autotechno-canonical-engine.v54")
         #if os(macOS)
-        // Observed engine52 bytes retain the exact trajectory and scalar facts.
-        // Changing only the wire label to v50 reproduces 7a37a6ec4a27cab0;
-        // v49 reproduces eb45de7fb11edf26. Keep every current byte pinned.
-        #expect(stableFingerprint(firstData) == "2b2d952f1e026312")
+        // Observed engine54 macOS bytes bind ordinary composition minimalization.
+        // Scalar, storage, replay and unavailable-qualification checks stay exact.
+        // This macOS JSON identity does not supply a Windows native observation.
+        #expect(stableFingerprint(firstData) == "4877a49bedd86628")
         #else
-        // Retain the historical pin until this platform's native engine52
+        // Retain the historical pin until this platform's native engine54
         // observation exists; macOS output cannot qualify Windows.
         #expect(stableFingerprint(firstData) == "7a37a6ec4a27cab0")
         #endif
