@@ -300,6 +300,18 @@ package struct LongHorizonMaterialWorldPlan: Codable, Equatable, Sendable {
             polymetricGrammar == episode.materialWorld.polymetricGrammar
     }
 
+    /// Bind the existing immutable world to its actual presentation boundary.
+    /// Bounds are checked before deriving progress, including malformed clocks.
+    package func isConsistent(
+        with episode: LongHorizonEpisodeIntent,
+        atPresentationBar bar: Int
+    ) -> Bool {
+        guard isConsistent(with: episode), episode.startedAtBar >= 0,
+              bar >= episode.startedAtBar,
+              episode.minimumHoldUntilBar >= episode.startedAtBar else { return false }
+        return progress == Self(episode: episode, startBar: bar).progress
+    }
+
     /// The target world is stable for the episode, while its score-facing
     /// realization stages categorical handoffs and continuously morphs the
     /// effect coordinates. Every child reaches its full target no later than

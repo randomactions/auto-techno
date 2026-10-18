@@ -6,6 +6,10 @@ Every phrase now binds the current episode's world ID, fingerprint, parent,
 generation, handoff, six axes, and progress into the typed plan fingerprint.
 The detached generated graph binds the same world plus requested and realized
 effect vectors; a mismatch against incoming continuation fails preparation.
+World progress must equal the canonical episode progress at the plan's exact
+presentation start bar, including coherent repeats. A stale or future progress
+value fails detached input validation before a render reservation; Core rejects
+the same mismatch without partially advancing musical or quality continuation.
 
 No material decision or analysis enters the real-time callback. Core resolves
 future score boundaries, detached DSP preparation advances at most one graph
@@ -3487,3 +3491,15 @@ three exact new primary products. All historical engine51 study formats retain
 their original 15-resource requirement. Exact resource names, source and bundle
 hashes, compiler accessor and source-to-runtime joins remain mandatory; a count
 alone cannot establish runtime identity.
+
+## Candidate ordinary composition minimalization
+
+The existing canonical phrase-composition resolver applies an ordinary Lock or
+Contrast bar's score-owned `minimalize` gesture to its optional slice/arpeggiator/
+pad composition layer. It retains the same resolved ensemble, foundation and
+identity, with no new rest timer, capability-specific counter or callback work.
+Harmonic continuation retains the last realized voicing across that reduced bar.
+Major Break, Energy Release and Identity Return retain their existing composition
+semantics. Other gestures and all quality, historical recurrence, resource,
+continuation and admission gates remain unchanged. This is an engine54 authoring
+candidate; component/score pilot results do not confer current qualification.

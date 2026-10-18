@@ -783,6 +783,83 @@ struct PhraseCompositionTests {
         Issue.record("Expected a naturally reachable rhythmic pad phrase")
     }
 
+    @Test("Ordinary minimalization reduces composition and retains harmonic continuation")
+    func ordinaryMinimalizationOwnsComposition() throws {
+        let scene = fixtureScene()
+        let dna = SceneDNA(scene: scene)
+        let events = [
+            EnsembleResolvedEvent(voice: .motif, step: 2,
+                                  intensity: 0.72, relocated: false),
+            EnsembleResolvedEvent(voice: .atmosphere, step: 0,
+                                  intensity: 0.54, relocated: false),
+        ]
+        func resolved(_ bar: Int, _ gesture: ArrangementGesture) -> ResolvedPerformanceBar {
+            fixtureResolved(bar: bar, section: .groove, character: .melodicGlow,
+                roles: [.foundation, .motif, .atmosphere], events: events,
+                arrangementGesture: gesture, interlockChapter: .breath)
+        }
+        for kind in [AutonomousPhraseKind.lock, .contrast] {
+            let input = [resolved(0, .steady), resolved(1, .minimalize), resolved(2, .steady)]
+            let actual = PhraseCompositionResolver.resolve(
+                scene: scene, dna: dna, kind: kind, resolvedBars: input)
+            let reference = PhraseCompositionResolver.resolve(
+                scene: scene, dna: dna, kind: kind, resolvedBars: [input[0], input[2]])
+            #expect(actual.count == input.count && actual.map(\.bar) == [0, 1, 2])
+            #expect(actual[1] == .neutral(bar: 1))
+            #expect(actual[0].padVoicing != nil && actual[0].arpeggiator != nil)
+            #expect(actual[2] == reference[1])
+            #expect(actual[0] == reference[0])
+            #expect(actual == PhraseCompositionResolver.resolve(
+                scene: scene, dna: dna, kind: kind, resolvedBars: input))
+            for gesture in [ArrangementGesture.steady, .gearShift, .turnaround] {
+                let composition = PhraseCompositionResolver.resolve(scene: scene,
+                    dna: dna, kind: kind, resolvedBars: [resolved(2, gesture)])
+                #expect(composition.first?.padVoicing != nil)
+                #expect(composition.first?.arpeggiator != nil)
+            }
+        }
+        // Structural phrase composition keeps its preexisting semantics.
+        // At bar2 the major-break pad rhythm is neutral for both gestures.
+        for kind in [AutonomousPhraseKind.majorBreak, .energyRelease, .identityReturn] {
+            let minimal = PhraseCompositionResolver.resolve(scene: scene, dna: dna,
+                kind: kind, resolvedBars: [resolved(2, .minimalize)])
+            let steady = PhraseCompositionResolver.resolve(scene: scene, dna: dna,
+                kind: kind, resolvedBars: [resolved(2, .steady)])
+            #expect(minimal == steady)
+            if kind != .identityReturn { #expect(minimal.first?.padVoicing != nil) }
+        }
+
+        // A whole reduced retry must carry the incoming realized harmony.
+        // This is a fresh score-only state fixture, not accepted prior PCM.
+        let director = AutonomousSessionDirector(rootSeed: 283)
+        var state = director.initialState()
+        var checkedWholePhrase = false
+        for _ in 0..<128 {
+            let natural = director.plan(from: state)
+            if natural.kind == .lock && !state.memory.harmonicContinuation.voices.isEmpty {
+                let incoming = state
+                let retry = director.plan(from: state, qualityRecoveryContext:
+                    AutonomousQualityRecoveryContext(
+                        ordinal: AutonomousSessionDirector.maximumQualityRetryOrdinal,
+                        intent: AutonomousQualityRecoveryIntent(symbolicDensity: .decrease)))
+                #expect(state == incoming)
+                #expect(retry.kind == .lock)
+                #expect(retry.resolvedBars.allSatisfy { $0.arrangementGesture == .minimalize })
+                #expect(retry.phraseComposition.allSatisfy { $0 == .neutral(bar: $0.bar) })
+                #expect(retry.endingHarmonicContinuation == incoming.memory.harmonicContinuation)
+                var advanced = incoming
+                advanced.advancePlanning(using: retry)
+                #expect(advanced.memory.totalBars == incoming.memory.totalBars + retry.barCount)
+                #expect(advanced.memory.harmonicContinuation == incoming.memory.harmonicContinuation)
+                #expect(advanced.phraseIndex == incoming.phraseIndex + 1)
+                checkedWholePhrase = true
+                break
+            }
+            state.advancePlanning(using: natural)
+        }
+        #expect(checkedWholePhrase)
+    }
+
     @Test("Arpeggiation and pad harmony share modal pitches and minimal motion")
     func harmonicComposition() throws {
         let scene = fixtureScene()
@@ -800,7 +877,8 @@ struct PhraseCompositionTests {
                                           intensity: 0.54, relocated: false),
                     EnsembleResolvedEvent(voice: .percussion, step: 1,
                                           intensity: 0.64, relocated: false),
-                ]
+                ],
+                arrangementGesture: .steady
             )
         }
         let composition = PhraseCompositionResolver.resolve(

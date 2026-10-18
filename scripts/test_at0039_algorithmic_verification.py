@@ -210,6 +210,45 @@ class AlgorithmicVerificationTests(unittest.TestCase):
         self.assertTrue(audit.hosted.verify(bundle, native.SOURCE, logs)['completeNativeSuitesAndReleaseBuild'])
         with self.assertRaises(ValueError): audit.verify(bundle, native.SOURCE, logs)
 
+    def test_default_core_partition_keeps_complete_original_scope(self):
+        # These are the exact suites/method filters of the original combined
+        # core/evidence group; move execution ownership without losing coverage.
+        import re
+        workflow = (Path(__file__).resolve().parents[1] /
+                    '.github/workflows/swift.yml').read_text()
+        blocks = re.split(r'^      - name: ', workflow, flags=re.MULTILINE)[1:]
+        def step(name):
+            found = [block for block in blocks if block.splitlines()[0] == name]
+            self.assertEqual(len(found), 1)
+            return found[0]
+        core = step('Run core and evidence tests')
+        self.assertIn("if: matrix.bank == 'core-evidence'", core)
+        expression = re.findall(r"--filter '([^']+)'", core)
+        self.assertEqual(len(expression), 1)
+        self.assertEqual(set(expression[0].removeprefix('(').removesuffix(')').split('|')), {
+            'ClimaxHangTests', 'FoundationRhythmicRelationTests',
+            'GeneratedDSPTopologyTests', 'FeedbackDelayNetworkTests',
+            'IdentityReturnContinuationTests', 'KickSyntaxTests',
+            'PercussionEchoTextureTests', 'PhraseCompositionTests',
+            'QualityQualificationFoundationTests', 'SpectrumMaskingAnalyzerTests',
+            'StreamingPerceptualEvidenceTests', 'TPTAntialiasedNonlinearCoreTests',
+            'fixedSessionIdentity', 'currentPlanningIsDeterministic'})
+        self.assertIn("--skip 'FoundationRhythmicRelationTests/(algorithmicFoundation(Bass|Companion|Release)Faults|algorithmicFullPhrase((Absent|Monotone|Point|Pump|SubPulse)Bass|OutputFrame)Faults)'", core)
+        self.assertIn('swift test --no-parallel', core)
+        self.assertEqual(workflow.count('- name: Run core and evidence tests'), 1)
+        bootstrap = step('Build core and evidence test modules')
+        self.assertIn("if: matrix.bank == 'core-evidence'", bootstrap)
+        self.assertIn('swift build --build-tests', bootstrap)
+        self.assertNotIn('swift test', bootstrap)
+        upper = step('Build tests and run upper score slices')
+        self.assertIn("if: matrix.bank != 'core-evidence'", upper)
+        banks = re.findall(r'bank: \[([^\]]+)\]', workflow)
+        self.assertEqual(len(banks), 1)
+        self.assertEqual([value.strip() for value in banks[0].split(',')],
+                         ['foundation', 'primary', 'modal', 'remaining', 'core-evidence'])
+        self.assertIn('fail-fast: false', workflow)
+        self.assertIn('timeout-minutes: 360', workflow)
+
     def test_foreign_source_partial_banks_or_modified_original_logs_refuse(self):
         bundle, logs = fixture()
         for change in [lambda b, l: b.update(source='c'*40),

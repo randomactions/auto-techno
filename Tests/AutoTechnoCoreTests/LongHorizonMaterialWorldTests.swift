@@ -119,6 +119,77 @@ struct LongHorizonMaterialWorldTests {
                 target.distance(from: midpoint.resolvedAxes.effect)
         )
         #expect(target.distance(from: settled.resolvedAxes.effect) == 0)
+        // Identity/axis binding is insufficient: progress must belong to the
+        // exact presentation boundary, including coherent repeats.
+        #expect(opening.isConsistent(with: episode,
+                                    atPresentationBar: episode.startedAtBar))
+        #expect(!opening.isConsistent(with: episode,
+                                     atPresentationBar: episode.startedAtBar + 1))
+        #expect(!opening.isConsistent(with: episode, atPresentationBar: -1))
+        for repeatBars in [UInt64(0), UInt64(16)] {
+            let context = AutonomousQualityRecoveryContext(presentedRepeatBars: repeatBars)
+            let source = director.plan(from: state, qualityRecoveryContext: context)
+            var controls: [AutonomousPhrasePlan] = []
+            let offsets = repeatBars == 0 ? [0, 1] : [0, -1, 1]
+            for offset in offsets {
+                let world = LongHorizonMaterialWorldPlan(
+                    episode: episode, startBar: source.presentationStartBar + offset)
+                let candidate = AutonomousPhrasePlan(
+                    phraseIndex: source.phraseIndex, startBar: source.startBar,
+                    barCount: source.barCount, kind: source.kind,
+                    scene: source.scene, dna: source.dna, resolvedBars: source.resolvedBars,
+                    openedDebt: source.openedDebt, paidDebtIDs: source.paidDebtIDs,
+                    requestsTopologyMutation: source.requestsTopologyMutation,
+                    interest: source.interest, endingInterlockState: source.endingInterlockState,
+                    endingSpatialContrastState: source.endingSpatialContrastState,
+                    endingNarrativeState: source.endingNarrativeState,
+                    harmonicContinuation: source.incomingHarmonicContinuation,
+                    resampledMemory: source.incomingResampledMemory,
+                    longHorizonSelection: source.longHorizonSelection,
+                    longHorizonEnergyCoordination: source.longHorizonEnergyCoordination,
+                    materialWorld: world,
+                    incomingEffectCarrierState: state.memory.longHorizon.effectCarrierState,
+                    qualityRecoveryContext: source.qualityRecoveryContext,
+                    presentationStartBar: source.presentationStartBar)
+                controls.append(candidate)
+                var advanced = state
+                advanced.advancePlanning(using: candidate)
+                if offset == 0 {
+                    #expect(candidate == source)
+                    #expect(advanced.phraseIndex == state.phraseIndex + 1)
+                    #expect(advanced.memory.longHorizon.nextExpectedPresentationBar ==
+                            source.presentationStartBar + source.barCount)
+                } else {
+                    #expect(world != source.materialWorld)
+                    #expect(advanced == state)
+                }
+            }
+            for rate in [44_100.0, 48_000.0] {
+                var renderState = RenderState()
+                renderState.barIndex = source.startBar
+                for (index, candidate) in controls.enumerated() {
+                    let result = AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(
+                        plan: candidate, sessionSeed: state.rootSeed, memory: state.memory,
+                        sampleRate: rate, incomingRenderState: renderState,
+                        incomingGraphState: GeneratedDSPContinuationState(), previousGraph: nil,
+                        incomingQualityState: state.quality,
+                        evaluator: AcceptingPrimaryTestEvaluator(),
+                        renderPassReservation: { _ in false }, cancellationRequested: { false })
+                    #expect(result.preparedPhrase == nil)
+                    if index == 0 {
+                        // A correct boundary passes input validation and reaches
+                        // the explicit denied reservation before any PCM render.
+                        #expect(result.failure?.stage == .initialRender)
+                        #expect(result.failure?.code == .renderBudgetUnavailable)
+                    } else {
+                        #expect(result.failure?.stage == .inputValidation)
+                        #expect(result.failure?.code == .invalidInput)
+                        #expect(result.failure?.details.contains("material-world") == true)
+                    }
+                }
+            }
+        }
+
     }
 
     @Test("Ten and twenty minutes occupy different score and effect worlds")

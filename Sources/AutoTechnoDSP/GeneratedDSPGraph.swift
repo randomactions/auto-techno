@@ -2002,7 +2002,8 @@ package enum AutonomousPhrasePreparer {
                 ? nil : "dramatic-debts",
             (!memory.longHorizon.isBound && plan.materialWorld == .neutral) ||
                 plan.materialWorld.isConsistent(
-                    with: memory.longHorizon.currentEpisode
+                    with: memory.longHorizon.currentEpisode,
+                    atPresentationBar: plan.presentationStartBar
                 ) ? nil : "material-world",
             candidateInputIsBounded(plan) ? nil : "candidate-bounds",
             candidateCharacterMatchesSession(

@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        bank: [foundation, primary, modal, remaining]
+        bank: [foundation, primary, modal, remaining, core-evidence]
     steps:
       - name: Check out source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -58,7 +58,17 @@ jobs:
       # restart the process at every prepared-product boundary so the complete
       # upper bank stays bounded without skipping or weakening any case. The
       # first group compiles the test binary; every later group reuses it.
+      # The original remaining job reached the six-hour cap inside the unchanged
+      # core/evidence group. Give that group its own build-only bootstrap so it
+      # retains its full selector/skip scope without duplicating upper slices.
+      - name: Build core and evidence test modules
+        if: matrix.bank == 'core-evidence'
+        run: >-
+          swift build --build-tests
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+
       - name: Build tests and run upper score slices
+        if: matrix.bank != 'core-evidence'
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
@@ -683,7 +693,7 @@ jobs:
           --filter '(FoundationRhythmicRelationTests/algorithmicFullPhrase((Absent|Monotone|Point|Pump|SubPulse)Bass|OutputFrame)Faults|SourceTerminalDeclickTests)'
 
       - name: Run core and evidence tests
-        if: matrix.bank == 'remaining'
+        if: matrix.bank == 'core-evidence'
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"

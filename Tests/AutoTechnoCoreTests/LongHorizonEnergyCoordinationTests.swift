@@ -514,7 +514,11 @@ struct LongHorizonEnergyCoordinationTests {
     #expect(activeOperators == Set(LongHorizonEpisodeOperator.allCases.map(\.rawValue)))
     #expect(protectedRareEventPhrases == 249)
     #expect(maximumPresenceSlew <= 0.160_001)
-    #expect(state.memory.longHorizon.fingerprint == "311f55d31923c807")
+    // Engine54 ordinary composition minimalization changes recorded capability
+    // use counts. The prior engine52 score-state fixture was311f55d31923c807.
+    // This is canonical score state, not a platform-native audio fingerprint;
+    // independent macOS/Windows rendering qualification remains separate.
+    #expect(state.memory.longHorizon.fingerprint == "4725bfe441405757")
     #expect(distantBarsPerMacro.values.allSatisfy { $0 <= 1 })
   }
 
