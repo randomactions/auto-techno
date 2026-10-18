@@ -1,5 +1,5 @@
 """Adversarial source/installation controls; synthetic data is never qualification."""
-from dataclasses import asdict
+from dataclasses import asdict, replace
 import json
 import re
 from pathlib import Path
@@ -485,7 +485,19 @@ class NativeArtifactByteTests(unittest.TestCase):
             p = self.pstudy / 'capture' / name
             p.write_bytes(b'{"synthetic":true}')
             self.presult['productSHA256'][str(p)] = q.primary.sha(p)
-        (self.root / 'pterminal.json').write_text('{"files":[]}')
+        primary_rows = []
+        for ordinal in range(46):
+            partition = 'development' if ordinal < 40 else 'holdout'
+            filename = f'{partition}-ordinal-{ordinal}.json'
+            path = self.pstudy / 'capture' / filename
+            path.write_bytes(b'{"synthetic":true}')
+            primary_rows.append(dict(partition=partition, ordinal=ordinal,
+                                     **self.archive('capture/' + filename, path)))
+        primary_terminal = self.root / 'pterminal.json'
+        primary_terminal.write_text(json.dumps({'files': primary_rows}))
+        primary_digest = q.primary.sha(primary_terminal)
+        self.pcontext = replace(self.pcontext, terminal_sha256=primary_digest)
+        self.presult['productSHA256'][str(primary_terminal)] = primary_digest
         self.lresult = dict(originalNativeProductsConsistent=True, originalByteContextAuthenticated=True,
             originalNativeExecutionBound=True, engine=q.long.RECOVERY.engine_version, originalFormat='v22-recovery')
         rows = []
@@ -670,6 +682,247 @@ class ReadinessTransitionTests(unittest.TestCase):
         current = b'func capture() { skipGate() }\n' + row['current'].encode()
         with self.assertRaisesRegex(ValueError, 'exceeds the exact'):
             q.readiness_transition(original, current, row['path'], compiled_engine=fixture_compiled_engine(row))
+
+
+class PrimaryInstallationScopeTests(unittest.TestCase):
+    """Real Git/byte controls, with explicitly synthetic artifacts, never native proof."""
+    def setUp(self):
+        fixture = SourceClosureTests('test_synthetic_literal_installation_source_closure')
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        self.fixture = fixture
+        long_path = q.LOADERS['long']
+        (fixture.target / long_path).write_bytes((fixture.old / long_path).read_bytes())
+        for kind in q.KINDS:
+            (fixture.target / fixture.names['long', kind]).unlink()
+        fixture.git('add', '-A'); fixture.commit()
+
+    def check(self):
+        f = self.fixture
+        return q.primary_source_installation(f.target, f.source, f.context,
+                                             {'primary': f.artifacts['primary']})
+
+    def test_primary_prerequisite_leaves_unqualified_long_unchanged(self):
+        result = self.check()
+        self.assertEqual(set(result['installedResources']), {'primary'})
+        self.assertEqual(len(result['installedResources']['primary']), 3)
+        self.assertNotIn('currentQualitySourceApplicabilityVerified', result)
+
+    def test_primary_artifacts_cannot_supply_the_full_two_study_installation(self):
+        f = self.fixture
+        with self.assertRaisesRegex(ValueError, 'both native artifact families'):
+            q.source_installation(f.target, f.source, (f.context,),
+                                  {'primary': f.artifacts['primary']})
+
+    def test_primary_scope_cannot_select_a_long_artifact_family(self):
+        f = self.fixture
+        with self.assertRaisesRegex(ValueError, 'only the verified primary'):
+            q.primary_source_installation(f.target, f.source, f.context, f.artifacts)
+
+    def test_unselected_long_loader_comment_or_binding_mutation_refuses(self):
+        f = self.fixture
+        path = q.LOADERS['long']
+        f.change(path, b'// Unselected Long change\n' + (f.target / path).read_bytes())
+        with self.assertRaisesRegex(ValueError, 'unselected loader must remain byte-exact'):
+            self.check()
+
+    def test_new_long_resource_cannot_hide_as_a_primary_prerequisite(self):
+        f = self.fixture
+        f.change(q.RESOURCES + 'long-horizon-professional-profile-v91.json', b'{"not-qualified":true}')
+        with self.assertRaisesRegex(ValueError, 'unqualified added resource'):
+            self.check()
+
+    def test_changed_primary_packaging_bytes_refuse(self):
+        f = self.fixture
+        f.change(f.names['primary', 'profile'], f.artifacts['primary']['bytes']['profile'] + b'\n\n')
+        with self.assertRaisesRegex(ValueError, 'beyond one packaging LF'):
+            self.check()
+
+    def test_historical_resource_cannot_be_replaced_in_primary_scope(self):
+        self.fixture.change(q.RESOURCES + 'historical.json', b'{"overwritten":true}')
+        with self.assertRaisesRegex(ValueError, 'historical resource bytes'):
+            self.check()
+
+    def test_primary_prerequisite_cannot_change_compiled_musical_source(self):
+        self.fixture.change('Sources/AutoTechnoCore/Example.swift', b'struct Altered {}\n')
+        with self.assertRaisesRegex(ValueError, 'compiled source/test changed'):
+            self.check()
+
+
+class PrimaryPrerequisiteOriginalByteTests(unittest.TestCase):
+    """Synthetic originals exercise archive mutation, never qualify real products."""
+    def setUp(self):
+        import gzip
+        self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name); self.study = self.root / 'study'
+        (self.study / 'capture').mkdir(parents=True)
+        self.context = q.primary.Context(self.root, self.study, self.root, self.root,
+            'cold.json', 'a'*64, 'b'*40, 'terminal.json', 'c'*64)
+        self.result = dict(originalNativeProductsConsistent=True, originalColdOriginBound=True,
+            profileFingerprint='1'*16, adversarialFingerprint='2'*16,
+            holdoutFingerprint='3'*16, productSHA256={})
+        for filename in ('offline-profile.json', 'continuous-adversarial-suite.json',
+                         'continuous-holdout-qualification.json'):
+            path = self.study / 'capture' / filename
+            path.write_bytes(b'{"synthetic":true}')
+            self.result['productSHA256'][str(path)] = q.primary.sha(path)
+        self.rows = []
+        for ordinal in range(46):
+            partition = 'development' if ordinal < 40 else 'holdout'
+            filename = f'{partition}-ordinal-{ordinal}.json'
+            path = self.study / 'capture' / filename; path.write_bytes(b'{"synthetic":true}')
+            archive = self.root / (filename + '.gz')
+            archive.write_bytes(gzip.compress(path.read_bytes(), mtime=0))
+            self.rows.append(dict(partition=partition, ordinal=ordinal, bytes=path.stat().st_size,
+                                  sha256=q.primary.sha(path), archive=archive.name))
+        self.write_terminal()
+
+    def write_terminal(self):
+        path = self.root / 'terminal.json'; path.write_text(json.dumps({'files': self.rows}))
+        self.result['productSHA256'][str(path)] = q.primary.sha(path)
+        self.context = replace(self.context, terminal_sha256=q.primary.sha(path))
+
+    def extract(self):
+        return q.primary_native_artifacts(self.context, self.result)
+
+    def test_primary_bytes_and_all46_archive_bindings_are_retained(self):
+        data, stable = self.extract()
+        self.assertEqual(set(data), {'primary'})
+        self.assertEqual(set(data['primary']['bytes']), set(q.KINDS))
+        self.assertTrue(all(q.primary.sha(path) == digest for path, digest in stable.items()))
+        self.assertIn(str(self.root / self.rows[-1]['archive']), stable)
+
+    def test_failed_original_verification_cannot_extract_installation_bytes(self):
+        self.result['originalNativeProductsConsistent'] = False
+        with self.assertRaisesRegex(ValueError, 'complete original primary native'):
+            self.extract()
+
+    def test_missing_trajectory_archive_cannot_supply_a_primary_prerequisite(self):
+        self.rows.pop(); self.write_terminal()
+        with self.assertRaisesRegex(ValueError, 'complete original primary trajectory'):
+            self.extract()
+
+    def test_duplicate_ordinal_or_changed_partition_refuses(self):
+        for mutation in ('duplicate', 'partition'):
+            with self.subTest(mutation=mutation):
+                old = dict(self.rows[-1])
+                self.rows[-1]['ordinal' if mutation == 'duplicate' else 'partition'] = (
+                    self.rows[0]['ordinal'] if mutation == 'duplicate' else 'development')
+                self.write_terminal()
+                with self.assertRaisesRegex(ValueError, 'complete original primary trajectory'):
+                    self.extract()
+                self.rows[-1] = old
+
+    def test_changed_primary_product_after_native_verification_refuses(self):
+        (self.study / 'capture/offline-profile.json').write_bytes(b'{"changed":true}')
+        with self.assertRaisesRegex(ValueError, 'primary native product changed'):
+            self.extract()
+
+    def test_changed_original_trajectory_after_verification_refuses(self):
+        (self.study / 'capture/development-ordinal-0.json').write_bytes(b'{"changed":true}')
+        with self.assertRaisesRegex(ValueError, 'original primary trajectory changed'):
+            self.extract()
+
+    def test_changed_archived_trajectory_after_verification_refuses(self):
+        import gzip
+        (self.root / self.rows[0]['archive']).write_bytes(gzip.compress(b'{"changed":true}', mtime=0))
+        with self.assertRaisesRegex(ValueError, 'original primary trajectory archive changed'):
+            self.extract()
+
+
+    def test_terminal_proof_cannot_change_after_original_verification(self):
+        (self.root / 'terminal.json').write_text(json.dumps({'files': self.rows, 'forged': True}))
+        with self.assertRaisesRegex(ValueError, 'primary terminal proof binding changed'):
+            self.extract()
+
+    def test_boolean_archive_size_cannot_alias_one_byte(self):
+        self.rows[0]['bytes'] = True
+        self.write_terminal()
+        with self.assertRaisesRegex(ValueError, 'original primary trajectory archive changed'):
+            self.extract()
+
+    def test_missing_original_archive_refuses(self):
+        (self.root / self.rows[0]['archive']).unlink()
+        with self.assertRaises(ValueError):
+            self.extract()
+
+
+    def test_capture_parent_alias_cannot_substitute_original_product_paths(self):
+        original = self.study / 'capture'
+        moved = self.root / 'aliased-capture'
+        original.rename(moved)
+        original.symlink_to(moved, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, 'evidence symlink or escaped path'):
+            self.extract()
+
+
+class PrimaryPrerequisiteAuthorityTests(unittest.TestCase):
+    def request(self, root):
+        ctx = q.primary.Context(root, root, root, root,
+            'cold.json', 'a'*64, 'b'*40, 'terminal.json', 'c'*64)
+        value = {key: str(val) for key, val in asdict(ctx).items()}
+        path = root / 'request.json'
+        path.write_text(json.dumps(dict(schema=q.PRIMARY_INSTALLATION_SCHEMA,
+                                        targetSource='b'*40, primary=value)))
+        return path
+
+    def test_generic_passed_result_and_two_study_request_refuse_primary_mode(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); path = self.request(root)
+            for value in ({'passed': True}, dict(json.loads(path.read_bytes()), long={})):
+                path.write_text(json.dumps(value))
+                with patch.object(q.primary, 'verify') as native, self.assertRaisesRegex(ValueError, 'closed primary-installation'):
+                    q.verify_primary_installation(root, path, q.primary.sha(path))
+                native.assert_not_called()
+
+    def test_primary_prerequisite_request_cannot_enter_final_verification(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); path = self.request(root)
+            with patch.object(q.primary, 'verify') as native, self.assertRaisesRegex(ValueError, 'closed applicability'):
+                q.verify(root, path, q.primary.sha(path))
+            native.assert_not_called()
+
+    def test_incomplete_original_primary_refuses_before_installation_check(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); path = self.request(root)
+            with patch.object(q, 'clean_head'), patch.object(q, 'verify_implementation'), \
+                 patch.object(q.primary.Context, 'inputs', return_value={}), \
+                 patch.object(q.primary, 'verify', side_effect=ValueError('incomplete original primary')), \
+                 patch.object(q, 'primary_source_installation') as install:
+                with self.assertRaisesRegex(ValueError, 'incomplete original primary'):
+                    q.verify_primary_installation(root, path, q.primary.sha(path))
+                install.assert_not_called()
+
+    def test_complete_orchestration_has_only_primary_prerequisite_authority(self):
+        # Call-order/scope control with mocked verification, never native evidence.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); path = self.request(root)
+            with patch.object(q, 'clean_head'), patch.object(q, 'verify_implementation'), \
+                 patch.object(q.primary.Context, 'inputs', return_value={}), \
+                 patch.object(q.primary, 'verify', return_value={'engine': 'synthetic'}) as native, \
+                 patch.object(q.long, 'verify') as long_native, \
+                 patch.object(q, 'primary_native_artifacts', return_value=({}, {})), \
+                 patch.object(q, 'primary_source_installation', return_value={'targetSource': 'b'*40}) as install:
+                result = q.verify_primary_installation(root, path, q.primary.sha(path))
+                native.assert_called_once(); long_native.assert_not_called()
+                self.assertEqual(install.call_count, 2)
+                self.assertTrue(result['primarySourceResourceInstallationVerified'])
+                for key in ('currentQualitySourceApplicabilityVerified', 'bothCompleteNativeStudiesVerified',
+                            'installedPositiveNativeExecutionVerified', 'installedArtifactsVerified',
+                            'freshCaptureConstructed', 'sealedCandidateProductsDecoded', 'longHorizonQualified',
+                            'completeResourceQualification', 'fullPlatformQualified', 'runtimeQualification', 'item39Complete'):
+                    self.assertIs(result[key], False)
+
+    def test_target_drift_between_original_and_final_checks_refuses(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); path = self.request(root)
+            with patch.object(q, 'clean_head'), patch.object(q, 'verify_implementation'), \
+                 patch.object(q.primary.Context, 'inputs', return_value={}), \
+                 patch.object(q.primary, 'verify', return_value={'engine': 'synthetic'}), \
+                 patch.object(q, 'primary_native_artifacts', return_value=({}, {})), \
+                 patch.object(q, 'primary_source_installation', side_effect=[{'targetSource': 'b'*40}, {'targetSource': 'c'*40}]):
+                with self.assertRaisesRegex(ValueError, 'target primary source/resource inventory changed'):
+                    q.verify_primary_installation(root, path, q.primary.sha(path))
 
 
 if __name__ == '__main__':

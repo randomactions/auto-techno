@@ -5,7 +5,10 @@ This read-only component invokes both complete original native-study verifiers.
 Its request selects original evidence; it cannot supply a passed result. Only
 the six literal artifact bindings in each existing loader and closed forward transitions in three existing
 non-capture check owners may differ from the compiled studies.
-No capture, installation, runtime or item completion occurs.
+A separate primary-installation prerequisite authenticates one complete original
+primary study before Long can be built. It never supplies the two-study result
+or native installed-positive execution. No capture, installation, runtime or item
+completion occurs.
 """
 from __future__ import annotations
 
@@ -22,6 +25,7 @@ import at0039_long_verification as long
 
 need = primary.need
 SCHEMA = 'autotechno-at0039-quality-applicability-request.v1'
+PRIMARY_INSTALLATION_SCHEMA = 'autotechno-at0039-primary-installation-request.v1'
 OWNERS = ('AutoTechnoCore', 'AutoTechnoDSP', 'AutoTechnoTransport')
 RESOURCES = 'Sources/AutoTechnoDSP/Resources/'
 LOADERS = {
@@ -244,6 +248,17 @@ def inventory(root, relative, *, swift_only=False):
 
 def source_installation(root, source, contexts, artifacts):
     """Source/resource closure only; callers must first verify native originals."""
+    need(set(artifacts) == set(LOADERS), 'both native artifact families required')
+    return _source_installation(root, source, contexts, artifacts, tuple(LOADERS))
+
+
+def primary_source_installation(root, source, context, artifacts):
+    """Primary prerequisite only; the unselected Long loader stays byte-exact."""
+    need(set(artifacts) == {'primary'}, 'only the verified primary artifact family required')
+    return _source_installation(root, source, (context,), artifacts, ('primary',))
+
+
+def _source_installation(root, source, contexts, artifacts, families):
     clean_head(root, source)
     target = {}
     read = lambda rel: target.setdefault(rel, tracked_bytes(root, source, rel))
@@ -256,7 +271,7 @@ def source_installation(root, source, contexts, artifacts):
     installed = {}
     selected = set()
     readiness = []
-    for family in LOADERS:
+    for family in families:
         body, names, seals = loader(read(LOADERS[family]), family)
         need(seals == artifacts[family]['seals'] and all(seals.values()),
              'installed seals must match complete native qualification: ' + family)
@@ -284,8 +299,12 @@ def source_installation(root, source, contexts, artifacts):
             if relative in LOADERS.values():
                 family = next(k for k, value in LOADERS.items() if value == relative)
                 original = primary.raw_file(primary.inside(context.source_root, relative))
-                need(loader(original, family)[0] == installed[family]['body'],
-                     'loader changed beyond literal installation bindings: ' + relative)
+                if family in installed:
+                    need(loader(original, family)[0] == installed[family]['body'],
+                         'loader changed beyond literal installation bindings: ' + relative)
+                else:
+                    need(digest(current) == checksum,
+                         'unselected loader must remain byte-exact: ' + relative)
             else:
                 if digest(current) != checksum:
                     original = primary.raw_file(primary.inside(context.source_root, relative))
@@ -348,18 +367,12 @@ def native_artifacts(pcontext, lcontext, presult, lresult):
                              presult['holdoutFingerprint'])))
     need(inputs['protocol']['primarySeals'] == list(seals.values()),
          'Long study must use the independently qualified installed primary seals')
-    data = {'primary': dict(seals=seals, bytes={}), 'long': dict(seals={}, bytes={})}
-    stable = dict(presult['productSHA256'])
+    data, stable = primary_native_artifacts(pcontext, presult)
+    data['long'] = dict(seals={}, bytes={})
     terminal = primary.load(primary.inside(lcontext.evidence_root, lcontext.terminal_proof))
     records = {r['path']: r for r in terminal['files']}
     long_paths = long.original_paths(lcontext, inputs)
-    for kind, pfile, lkey in zip(KINDS,
-            ('offline-profile.json', 'continuous-adversarial-suite.json',
-             'continuous-holdout-qualification.json'), ('profile', 'adversarial', 'holdoutVerdicts')):
-        path = pcontext.study / 'capture' / pfile
-        raw = primary.raw_file(path)
-        need(digest(raw) == presult['productSHA256'][str(path)], 'primary native product changed')
-        data['primary']['bytes'][kind] = raw
+    for kind, lkey in zip(KINDS, ('profile', 'adversarial', 'holdoutVerdicts')):
         filename = fmt.artifacts[lkey]
         path = lcontext.study / filename
         long.authenticate_original(lcontext, records['study/' + filename], path)
@@ -367,23 +380,100 @@ def native_artifacts(pcontext, lcontext, presult, lresult):
         data['long']['bytes'][kind] = raw
         data['long']['seals'][kind] = primary.strict(raw)['fingerprint']
     # Keep the complete native terminal inventory stable across source comparison.
-    for context, rows, prefix in ((pcontext,
-            primary.load(primary.inside(pcontext.evidence_root, pcontext.terminal_proof))['files'],
-            'capture/'), (lcontext, terminal['files'], None)):
-        for row in rows:
-            if prefix is not None:
-                name = f"{row['partition']}-ordinal-{row['ordinal']}.json"
-                path = context.study / prefix / name
-            else:
-                path = long_paths[row['path']]
-            need(primary.sha(path) == row['sha256'], 'original native product changed after verification')
-            stable[str(path)] = row['sha256']
-            archive = primary.inside(context.evidence_root, row['archive'])
-            stable[str(archive)] = primary.sha(archive)
+    for row in terminal['files']:
+        path = long_paths[row['path']]
+        need(primary.sha(path) == row['sha256'], 'original native product changed after verification')
+        stable[str(path)] = row['sha256']
+        archive = primary.inside(lcontext.evidence_root, row['archive'])
+        stable[str(archive)] = primary.sha(archive)
     for family in data.values():
         need(all(type(v) is str and re.fullmatch('[0-9a-f]{16}', v) is not None
                  for v in family['seals'].values()), 'native artifact seals required')
     return data, stable
+
+
+def primary_native_artifacts(context, result):
+    """Read original primary bytes only after its complete native verification."""
+    need(result['originalNativeProductsConsistent'] is True and
+         result['originalColdOriginBound'] is True,
+         'complete original primary native verification required')
+    seals = dict(zip(KINDS, (result['profileFingerprint'], result['adversarialFingerprint'],
+                            result['holdoutFingerprint'])))
+    need(all(type(value) is str and re.fullmatch('[0-9a-f]{16}', value)
+             for value in seals.values()), 'all three verified primary seals required')
+    stable = dict(result['productSHA256'])
+    data = {'primary': dict(seals=seals, bytes={})}
+    for kind, filename in zip(KINDS, ('offline-profile.json',
+            'continuous-adversarial-suite.json', 'continuous-holdout-qualification.json')):
+        path = primary.inside(context.study, 'capture/' + filename)
+        raw = primary.raw_file(path)
+        need(digest(raw) == stable[str(path)], 'primary native product changed')
+        data['primary']['bytes'][kind] = raw
+    terminal_path = primary.inside(context.evidence_root, context.terminal_proof)
+    need(primary.sha(terminal_path) == context.terminal_sha256 == stable[str(terminal_path)],
+         'verified primary terminal proof binding changed')
+    terminal = primary.load(terminal_path)
+    rows = terminal['files']
+    need(type(rows) is list and len(rows) == 46 and
+         all(type(row) is dict and type(row.get('ordinal')) is int and row['ordinal'] >= 0 and
+             row.get('partition') in ('development', 'holdout') for row in rows) and
+         len({row['ordinal'] for row in rows}) == 46 and
+         sum(row['partition'] == 'development' for row in rows) == 40 and
+         sum(row['partition'] == 'holdout' for row in rows) == 6,
+         'complete original primary trajectory archive inventory required')
+    for row in rows:
+        filename = f"{row['partition']}-ordinal-{row['ordinal']}.json"
+        path = primary.inside(context.study, 'capture/' + filename)
+        need(primary.sha(path) == row['sha256'], 'original primary trajectory changed')
+        archive = primary.inside(context.evidence_root, row['archive'])
+        original = primary.archived_bytes(archive)
+        need(type(row['bytes']) is int and len(original) == row['bytes'] and
+             digest(original) == row['sha256'], 'original primary trajectory archive changed')
+        stable[str(path)] = row['sha256']
+        stable[str(archive)] = primary.sha(archive)
+    need(all(type(checksum) is str and re.fullmatch('[0-9a-f]{64}', checksum)
+             and primary.sha(path) == checksum for path, checksum in stable.items()),
+         'complete original primary product bytes changed')
+    return data, stable
+
+
+def verify_primary_installation(root, request_path, request_sha256):
+    """Pre-Long primary bytes only; final verification still requires both studies."""
+    need(type(request_sha256) is str and re.fullmatch('[0-9a-f]{64}', request_sha256),
+         'independently pinned primary-installation request required')
+    raw = primary.raw_file(request_path)
+    need(digest(raw) == request_sha256, 'primary-installation request SHA256 mismatch')
+    request = primary.strict(raw)
+    need(type(request) is dict and set(request) == {'schema', 'targetSource', 'primary'} and
+         request['schema'] == PRIMARY_INSTALLATION_SCHEMA,
+         'closed primary-installation prerequisite request required')
+    source = request['targetSource']
+    clean_head(root, source)
+    verify_implementation(root, source)
+    context = context_from_request(request['primary'], primary.Context)
+    before = context.inputs()
+    native = primary.verify(context)
+    artifacts, products = primary_native_artifacts(context, native)
+    closure = primary_source_installation(root, source, context, artifacts)
+    need(context.inputs() == before and primary.raw_file(request_path) == raw and
+         all(primary.sha(path) == checksum for path, checksum in products.items()) and
+         all(primary.sha(path) == checksum for path, checksum in IMPLEMENTATION.items()),
+         'original primary/target/implementation/request changed during prerequisite audit')
+    need(primary_source_installation(root, source, context, artifacts) == closure,
+         'target primary source/resource inventory changed during final checks')
+    return dict(schema='autotechno-at0039-primary-installation-verification.v1', **closure,
+                requestSHA256=request_sha256, engine=native['engine'],
+                primaryOriginalSource=context.source,
+                primaryTerminalProofSHA256=context.terminal_sha256,
+                verificationImplementationSHA256=IMPLEMENTATION,
+                primarySourceResourceInstallationVerified=True,
+                currentQualitySourceApplicabilityVerified=False,
+                bothCompleteNativeStudiesVerified=False,
+                installedPositiveNativeExecutionVerified=False,
+                installedArtifactsVerified=False, freshCaptureConstructed=False,
+                sealedCandidateProductsDecoded=False, longHorizonQualified=False,
+                completeResourceQualification=False, fullPlatformQualified=False,
+                runtimeQualification=False, item39Complete=False)
 
 
 def verify(root, request_path, request_sha256):
@@ -426,11 +516,18 @@ def verify(root, request_path, request_sha256):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--target-root', type=Path, required=True)
-    parser.add_argument('--request', type=Path, required=True)
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument('--request', type=Path)
+    mode.add_argument('--primary-installation-request', type=Path,
+                      help='Pre-Long primary-byte prerequisite only; never final two-study authority')
     parser.add_argument('--request-sha256', required=True)
     args = parser.parse_args()
     try:
-        result = verify(args.target_root.resolve(), args.request, args.request_sha256)
+        if args.primary_installation_request is not None:
+            result = verify_primary_installation(args.target_root.resolve(),
+                args.primary_installation_request, args.request_sha256)
+        else:
+            result = verify(args.target_root.resolve(), args.request, args.request_sha256)
     except (ValueError, KeyError, TypeError, OSError, subprocess.SubprocessError) as exc:
         print('quality applicability unavailable: ' + str(exc), file=sys.stderr)
         return 1

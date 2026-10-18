@@ -3503,3 +3503,24 @@ Major Break, Energy Release and Identity Return retain their existing compositio
 semantics. Other gestures and all quality, historical recurrence, resource,
 continuation and admission gates remain unchanged. This is an engine54 authoring
 candidate; component/score pilot results do not confer current qualification.
+
+
+### Primary installation before a fresh Long study
+
+The read-only `scripts/at0039_quality_applicability.py` primary-installation
+prerequisite accepts a separately pinned `--primary-installation-request`. It
+invokes the complete original primary-study verifier before comparing installed
+primary artifact bytes and all three seals with the clean exact target source.
+All 46 original trajectory archives, native products, compiled-source/resource
+bindings and existing closed non-capture transitions remain required. Historical
+resource bytes remain unchanged. Only the three verified primary resources may
+be added, and the unselected Long loader must remain byte-exact.
+
+This prerequisite supplies primary source/resource installation evidence only.
+It does not execute installation, qualify Long, run the real installed-positive
+native controls, authorize a new capture or satisfy final source applicability.
+The separate `--request` mode still requires both complete original studies and
+their matching installed artifacts. Its request schema and completion boundaries
+are unchanged; a primary-only request cannot supply a final two-study result.
+The fresh Long launch still requires real primary positive admission and its own
+published immutable source, actual resource inventory and complete cold proof.
