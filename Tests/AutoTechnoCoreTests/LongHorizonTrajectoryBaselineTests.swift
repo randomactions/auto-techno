@@ -84,7 +84,7 @@ struct LongHorizonTrajectoryBaselineTests {
 
     private static let expectedV3 = LongHorizonPlanningBaselineReport(
         schemaVersion: "long-horizon-planning-baseline.v3",
-        engineVersion: "autotechno-canonical-engine.v51",
+        engineVersion: "autotechno-canonical-engine.v54",
         evidenceClassification: "descriptive-structural-baseline",
         qualificationStatus: "unavailable",
         qualificationReason: "no-calibrated-long-horizon-policy",

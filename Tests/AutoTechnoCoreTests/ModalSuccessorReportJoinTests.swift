@@ -1305,10 +1305,11 @@ struct ModalSuccessorReportJoinTests {
         // This one-bank fixture cannot qualify or activate a policy.
         #expect(bank.engineVersion == QualityQualificationContract.engineVersion)
         // Exact PCM-derived reports are pinned per supported native platform.
-        // The native engine52 Windows bank supplies its own observed digest;
-        // platform-specific observations do not substitute for one another.
+        // Engine54 Windows bank observed independently in run39159523720.
+        // The historical macOS pin still requires its own native observation.
+        // Platform-specific observations do not substitute for one another.
         #if os(Windows)
-        #expect(complete.sourceBankFingerprint == "46f0e549a8a8d394")
+        #expect(complete.sourceBankFingerprint == "225a87b87ed59c1e")
         #else
         #expect(complete.sourceBankFingerprint == "cec40a6205b3ea55")
         #endif
