@@ -204,6 +204,15 @@ def load_manifest(path: Path) -> Dict[str, Any]:
     return value
 
 
+def swift_failure_detail(result: subprocess.CompletedProcess[str]) -> str:
+    """Preserve both captured diagnostic streams without inventing their order."""
+    streams = []
+    for name, value in (("stdout", result.stdout), ("stderr", result.stderr)):
+        if value and value.strip():
+            streams.append(f"{name}:\n{value.rstrip()}")
+    return "\n".join(streams) or "no diagnostic output"
+
+
 def run_swift_command(root: Path, args: Sequence[str]) -> str:
     command = ["swift", "package", "--disable-sandbox", *args]
     try:
@@ -218,11 +227,9 @@ def run_swift_command(root: Path, args: Sequence[str]) -> str:
     except OSError as exc:
         raise CodebaseMapError(f"unable to run {' '.join(command)}: {exc}") from exc
     if result.returncode != 0:
-        detail = result.stderr.strip() or result.stdout.strip() or "no diagnostic output"
+        detail = swift_failure_detail(result)
         raise CodebaseMapError(
-            "Swift package inspection failed. Use a matching Xcode compiler and SDK "
-            "(for example, set DEVELOPER_DIR to the full Xcode developer directory), "
-            "then retry.\n"
+            f"Swift package inspection failed (exit {result.returncode}).\n"
             f"command: {' '.join(command)}\n{detail}"
         )
     return result.stdout
@@ -255,11 +262,9 @@ def ensure_test_modules_are_built(root: Path, build_path: Optional[Path]) -> Non
     except OSError as exc:
         raise CodebaseMapError(f"unable to run {' '.join(command)}: {exc}") from exc
     if result.returncode != 0:
-        detail = result.stderr.strip() or result.stdout.strip() or "no diagnostic output"
+        detail = swift_failure_detail(result)
         raise CodebaseMapError(
-            "Swift test-module preparation failed. Use a matching Xcode compiler and SDK "
-            "(for example, set DEVELOPER_DIR to the full Xcode developer directory), "
-            "then retry.\n"
+            f"Swift test-module preparation failed (exit {result.returncode}).\n"
             f"command: {' '.join(command)}\n{detail}"
         )
 
