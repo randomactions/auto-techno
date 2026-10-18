@@ -43,10 +43,17 @@ struct LongHorizonSemanticTrajectoryTests {
         #expect(first.observedBarCount == 7_802)
         #expect(first.observedPhraseCount == 725)
         #expect(first.trajectoryFingerprint == "ba7251e9e8c9e144")
-        // Only the engine wire label changes from v49 to v50; replacing that
-        // label in the current JSON reproduces the prior eb45de7fb11edf26 digest.
-        #expect(first.engineVersion == "autotechno-canonical-engine.v51")
+        #expect(first.engineVersion == "autotechno-canonical-engine.v52")
+        #if os(macOS)
+        // Observed engine52 bytes retain the exact trajectory and scalar facts.
+        // Changing only the wire label to v50 reproduces 7a37a6ec4a27cab0;
+        // v49 reproduces eb45de7fb11edf26. Keep every current byte pinned.
+        #expect(stableFingerprint(firstData) == "2b2d952f1e026312")
+        #else
+        // Retain the historical pin until this platform's native engine52
+        // observation exists; macOS output cannot qualify Windows.
         #expect(stableFingerprint(firstData) == "7a37a6ec4a27cab0")
+        #endif
         #expect(first.phraseKindPhraseCounts.allSatisfy { $0.count > 0 })
         #expect(first.performanceCharacterPhraseCounts.allSatisfy { $0.count > 0 })
         #expect(first.tensionDwell.highBarCount == 629)
