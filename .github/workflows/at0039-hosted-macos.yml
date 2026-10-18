@@ -42,11 +42,26 @@ jobs:
           xcodebuild -version
           swift --version
       - name: Build all native tests
-        run: swift build --build-tests --build-path "$RUNNER_TEMP/at0039-tests"
+        run: >-
+          python3 scripts/hosted_macos_verification.py --prepare-native-build
+          --build-path "$RUNNER_TEMP/at0039-tests"
+          --output "$RUNNER_TEMP/at0039-native-build"
+      - name: Preserve original native build output
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: at0039-native-build-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.bank }}
+          path: ${{ runner.temp }}/at0039-native-build/
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 6
+          overwrite: false
+          include-hidden-files: false
       - name: Execute complete native bank
         run: >-
           python3 scripts/hosted_macos_verification.py --bank ${{ matrix.bank }}
           --build-path "$RUNNER_TEMP/at0039-tests"
+          --build-provenance "$RUNNER_TEMP/at0039-native-build/build-provenance.json"
           --output "$RUNNER_TEMP/at0039-bank-${{ matrix.bank }}"
       - name: Run complete tooling tests
         if: matrix.bank == 0
@@ -94,6 +109,8 @@ jobs:
       - name: Generate and validate semantic codebase map
         id: generate-map
         run: |
+          python3 scripts/hosted_macos_verification.py --prepare-native-build \
+            --build-path "$RUNNER_TEMP/at0039-map" --output "$RUNNER_TEMP/at0039-map-build"
           python3 scripts/codebase_map.py generate --build-path "$RUNNER_TEMP/at0039-map"
           python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/at0039-map"
       - name: Verify installed primary and native stack regression fixtures
@@ -145,6 +162,17 @@ jobs:
           swift test --build-path "$RUNNER_TEMP/at0039-map" --skip-build --no-parallel \
             --disable-xctest --enable-swift-testing --filter "$filter"
           echo "END native-history component: $NATIVE_HISTORY_SLICE"
+      - name: Preserve original map build output
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: at0039-map-native-build-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.slice }}
+          path: ${{ runner.temp }}/at0039-map-build/
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 6
+          overwrite: false
+          include-hidden-files: false
       - name: Emit source-bound generated map
         if: always() && steps.generate-map.outcome == 'success'
         run: |

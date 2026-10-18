@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import hosted_macos_verification as hosted
 import result_status_vocabulary as results
 import test_tooling_verification as tooling_tests
+import test_native_build_provenance as build_tests
 
 SOURCE = 'a' * 40
 
@@ -35,8 +36,9 @@ def fixture(include_retired=False):
             result.update(skippedIdentifiers=skipped,explicitlySkippedTests=len(skipped),executedTests=result['reportedTests']-len(skipped))
         names = ['Verify macOS environment', 'Build all native tests', 'Execute complete native bank']
         if bank == 0: names += ['Run complete tooling tests', 'Build macOS Release app', 'Validate codebase map']
-        rows.append(dict(receipt=dict(schema='autotechno-hosted-macos-bank.v1', source=SOURCE,
-             environment='hosted-macos', bank=bank, banks=hosted.BANKS, discovery=discovery, plan=plan, completedSlices=completed),
+        rows.append(dict(receipt=dict(schema='autotechno-hosted-macos-bank.v2', source=SOURCE,
+             environment='hosted-macos', bank=bank, banks=hosted.BANKS, discovery=discovery, plan=plan, completedSlices=completed,
+             buildProvenanceSHA256=hosted.native_build.record_digest(build_tests.fixture(SOURCE))),
              job=dict(id=100+bank, run_id=50, run_attempt=1, head_sha=SOURCE, name=f'hosted-macos / Complete macOS bank {bank}',
                       status='completed', conclusion='success', steps=[dict(name=n,status='completed',conclusion='success') for n in names])))
     for row in rows:
@@ -48,7 +50,10 @@ def fixture(include_retired=False):
 
 def native_log(receipt, timestamped=False):
     """Synthetic original stdout paired with transport; never execution evidence."""
-    lines = []
+    stream = io.StringIO()
+    with contextlib.redirect_stdout(stream): hosted.native_build.emit(build_tests.fixture(receipt['source']))
+    digest = receipt['buildProvenanceSHA256']
+    lines = stream.getvalue().splitlines() + [f"BEGIN native build binding {receipt['bank']}:{digest}"]
     for result in receipt['completedSlices']:
         selected = result['selection']
         lines.append(f"BEGIN native slice {receipt['bank']}:{selected['library']}:{selected['suite']}")
@@ -58,6 +63,7 @@ def native_log(receipt, timestamped=False):
         count = result['reportedTests']
         lines.append(f'Executed {count} tests, with 0 failures' if selected['library'] == 'xctest'
                      else f'Test run with {count} tests passed')
+    lines.append(f"END native build binding {receipt['bank']}:{digest}")
     stream = io.StringIO()
     with contextlib.redirect_stdout(stream):
         hosted.emit(receipt)
@@ -83,6 +89,101 @@ def original_logs(bundle):
 
 
 class HostedMacOSVerificationTests(unittest.TestCase):
+    def test_build_trace_is_not_independent_git_or_item_authority_without_explicit_join(self):
+        bundle=fixture();logs=original_logs(bundle)
+        result=hosted.verify(bundle,SOURCE,logs)
+        self.assertTrue(result['originalVerboseBuildBindingsVerified'])
+        self.assertFalse(result['compiledBuildClosureIndependentlyAuthenticated'])
+        self.assertEqual(set(result['originalBuildBindings']),set(range(16)))
+        git=build_tests.fixture()['trackedInputs']
+        result=hosted.verify(bundle,SOURCE,logs,compiled_git=git)
+        self.assertTrue(result['compiledBuildClosureIndependentlyAuthenticated'])
+        self.assertFalse(result['automatedQualityQualification'])
+        self.assertFalse(result['runtimeQualification'])
+        self.assertFalse(result['item39Complete'])
+        bad=dict(git);bad['Package.swift']='0'*64
+        with self.assertRaises(ValueError):hosted.verify(bundle,SOURCE,logs,compiled_git=bad)
+
+    def test_successful_build_step_without_original_trace_refuses(self):
+        bundle=fixture();logs=original_logs(bundle);bank=0
+        logs[bank]=b'\n'.join(line for line in logs[bank].splitlines() if hosted.native_build.CHUNK_SCHEMA.encode() not in line)+b'\n'
+        bundle['banks'][bank]['originalLogSHA256']=hosted.sha(logs[bank])
+        with self.assertRaisesRegex(ValueError,'original native build chunks required'):hosted.verify(bundle,SOURCE,logs)
+
+    def test_native_build_binding_rejects_missing_duplicate_and_foreign_seals(self):
+        for kind in ['missing','duplicate','foreign','late']:
+            bundle=fixture();logs=original_logs(bundle);raw=logs[0]
+            begin=next(line for line in raw.splitlines(keepends=True) if line.startswith(b'BEGIN native build binding '))
+            if kind=='missing':raw=raw.replace(begin,b'')
+            elif kind=='duplicate':raw=raw.replace(begin,begin+begin)
+            elif kind=='foreign':raw=raw.replace(begin,begin.replace(b'0:',b'1:',1))
+            else:raw=raw.replace(begin,b'')+begin
+            logs[0]=raw;bundle['banks'][0]['originalLogSHA256']=hosted.sha(raw)
+            with self.subTest(kind=kind),self.assertRaises(ValueError):hosted.verify(bundle,SOURCE,logs)
+
+    def test_build_record_cannot_be_emitted_after_native_execution(self):
+        bundle=fixture();logs=original_logs(bundle);raw=logs[0]
+        lines=raw.splitlines(keepends=True);chunks=[line for line in lines if hosted.native_build.CHUNK_SCHEMA.encode() in line]
+        raw=b''.join(line for line in lines if hosted.native_build.CHUNK_SCHEMA.encode() not in line)+b''.join(chunks)
+        logs[0]=raw;bundle['banks'][0]['originalLogSHA256']=hosted.sha(raw)
+        with self.assertRaisesRegex(ValueError,'sealed before native execution'):hosted.verify(bundle,SOURCE,logs)
+
+    def test_legacy_v3_cannot_borrow_new_build_authority(self):
+        bundle=fixture();bundle['schema']='autotechno-hosted-macos-verification.v3'
+        with self.assertRaises(ValueError):hosted.verify(bundle,SOURCE,original_logs(bundle))
+
+    def test_original_build_guard_refuses_before_discovery_or_benchmarks(self):
+        record=build_tests.fixture();calls=[]
+        def output(argv,**kwargs):
+            calls.append(argv)
+            if argv[0]=='git':return SOURCE if 'rev-parse' in argv else ''
+            raise AssertionError('discovery/benchmark called after changed build')
+        with mock.patch.object(hosted.platform,'system',return_value='Darwin'), \
+             mock.patch.dict(hosted.os.environ,{'GITHUB_ACTIONS':'true','RUNNER_OS':'macOS','GITHUB_SHA':SOURCE}), \
+             mock.patch.object(hosted.subprocess,'check_output',side_effect=output), \
+             mock.patch.object(hosted,'bounded_regular',return_value=json.dumps(record).encode()), \
+             mock.patch.object(hosted.native_build,'git_source_files',return_value=record['trackedInputs']), \
+             mock.patch.object(hosted.native_build,'guard',side_effect=ValueError('changed original binary')), \
+             mock.patch.object(hosted,'run_logged_native') as native, \
+             mock.patch.object(hosted,'emit') as emit:
+            with self.assertRaisesRegex(ValueError,'changed original binary'):
+                hosted.run_bank(0,Path('/native-build'),Path('/never-created-output'),Path('/original-build.json'))
+            native.assert_not_called();emit.assert_not_called()
+        self.assertTrue(calls and all(argv[0]=='git' for argv in calls))
+
+    def test_post_native_build_mutation_cannot_emit_a_bank_receipt(self):
+        record=build_tests.fixture()
+        with tempfile.TemporaryDirectory() as directory:
+            def output(argv,**kwargs):
+                if argv[0]=='git':return SOURCE if 'rev-parse' in argv else ''
+                return 'AutoTechnoCoreTests.Fixture/test()'
+            def native(command,root,log):
+                log.write_bytes(b'Test run with 1 test passed\n')
+                return hosted.subprocess.CompletedProcess(command,0)
+            selection=dict(library='swift-testing',suite='Fixture',selector='literal',identifiers=['AutoTechnoCoreTests.Fixture/test()'])
+            with mock.patch.object(hosted.platform,'system',return_value='Darwin'), \
+                 mock.patch.dict(hosted.os.environ,{'GITHUB_ACTIONS':'true','RUNNER_OS':'macOS','GITHUB_SHA':SOURCE}), \
+                 mock.patch.object(hosted.subprocess,'check_output',side_effect=output), \
+                 mock.patch.object(hosted,'bounded_regular',return_value=json.dumps(record).encode()), \
+                 mock.patch.object(hosted.native_build,'git_source_files',return_value=record['trackedInputs']), \
+                 mock.patch.object(hosted.native_build,'guard',side_effect=[None,None,ValueError('post-native object drift')]), \
+                 mock.patch.object(hosted,'plan',return_value={'selected':[selection]}), \
+                 mock.patch.object(hosted,'run_logged_native',side_effect=native) as run, \
+                 mock.patch.object(hosted,'emit') as emit,contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaisesRegex(ValueError,'post-native object drift'):
+                    hosted.run_bank(0,Path('/native-build'),Path(directory)/'out',Path('/original-build.json'))
+                self.assertEqual(run.call_count,1);emit.assert_not_called()
+
+    def test_existing_full_workflow_owns_fresh_build_and_all_original_selectors(self):
+        workflow=(Path(__file__).resolve().parents[1]/'.github/workflows/at0039-hosted-macos.yml').read_text()
+        complete=workflow.split('  complete:\n',1)[1].split('  map:\n',1)[0]
+        self.assertIn('--prepare-native-build',complete)
+        self.assertIn('--build-provenance "$RUNNER_TEMP/at0039-native-build/build-provenance.json"',complete)
+        self.assertIn('bank: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]',complete)
+        self.assertIn('max-parallel: 4',complete)
+        self.assertNotIn('--diagnostic-filter',complete)
+        self.assertNotIn('--filter',complete)
+
     def test_complete_native_matrix_has_only_verification_scope(self):
         bundle = fixture(); result = hosted.verify(bundle, SOURCE, original_logs(bundle))
         self.assertEqual(result['discoveredTests'], 256)
@@ -611,6 +712,14 @@ class HostedMacOSVerificationTests(unittest.TestCase):
                 spawn.assert_called_once_with(command, cwd=Path(directory),
                     stdout=hosted.subprocess.PIPE, stderr=hosted.subprocess.STDOUT)
                 emit.assert_not_called()
+
+    def test_silent_build_transport_preserves_exact_original_failure_bytes(self):
+        payload=b'verbose original compile trace\n'
+        with tempfile.TemporaryDirectory() as directory:
+            log=Path(directory)/'original.log';console=io.StringIO()
+            with contextlib.redirect_stdout(console):
+                result=hosted.run_logged_native([sys.executable,'-c',"import os,sys;os.write(1,"+repr(payload)+");sys.exit(1)"],Path(directory),log,console=False)
+            self.assertEqual(result.returncode,1);self.assertEqual(log.read_bytes(),payload);self.assertEqual(console.getvalue(),'')
 
     def test_focused_windows_utf8_environment_preserves_unicode_and_raw_bytes(self):
         # Real Python console processes, not a native Swift test or qualification receipt.

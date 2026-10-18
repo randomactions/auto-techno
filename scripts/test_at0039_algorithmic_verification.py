@@ -205,6 +205,16 @@ class AlgorithmicVerificationTests(unittest.TestCase):
         self.assertNotEqual(result['originalLogBindings']['masking']['bank'],
                             result['originalLogBindings']['causalFilter']['bank'])
 
+    def test_compiled_build_authority_requires_the_independent_git_join(self):
+        bundle,logs=fixture()
+        self.assertFalse(audit.verify(bundle,native.SOURCE,logs)['compiledBuildClosureIndependentlyAuthenticated'])
+        original=native.build_tests.fixture()['trackedInputs']
+        checked=audit.verify(bundle,native.SOURCE,logs,compiled_git=original)
+        self.assertTrue(checked['compiledBuildClosureIndependentlyAuthenticated'])
+        self.assertFalse(checked['fullAlgorithmicAcceptanceVerified'])
+        bad=dict(original);bad['Package.swift']='0'*64
+        with self.assertRaises(ValueError):audit.verify(bundle,native.SOURCE,logs,compiled_git=bad)
+
     def test_platform_success_without_required_algorithmic_output_is_insufficient(self):
         bundle = native.fixture(); logs = native.original_logs(bundle)
         self.assertTrue(audit.hosted.verify(bundle, native.SOURCE, logs)['completeNativeSuitesAndReleaseBuild'])

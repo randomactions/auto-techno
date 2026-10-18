@@ -17,8 +17,9 @@ import sys
 import zlib
 from windows_test_plan import plan as native_plan
 import tooling_verification as tooling
+import native_build_provenance as native_build
 
-SCHEMA = 'autotechno-hosted-macos-verification.v3'
+SCHEMA = 'autotechno-hosted-macos-verification.v4'
 EXECUTION_SCHEMA = 'autotechno-at0039-hosted-execution.v1'
 BANKS = 16
 MAX_LOG_BYTES = 64 * 1024 * 1024
@@ -128,7 +129,7 @@ def execution_errors(execution, subject, revision, gate, status):
     return [] if valid else ['invalid AT-0039-only hosted full verification binding']
 
 
-def verify(bundle, source, logs=None):
+def verify(bundle, source, logs=None, *, compiled_git=None):
     require(isinstance(bundle, dict) and set(bundle) == {'schema', 'source', 'run', 'workflow', 'banks'}, 'bundle fields')
     require(bundle['schema'] == SCHEMA and bundle['source'] == source and
             re.fullmatch('[0-9a-f]{40}', str(source)), 'exact source')
@@ -145,15 +146,15 @@ def verify(bundle, source, logs=None):
     require(isinstance(logs, dict) and all(type(bank) is int for bank in logs) and
             set(logs) == set(range(BANKS)), 'all sixteen original job logs required')
     seen = set(); discovered = set(); jobs = set(); digests = set(); skipped = 0; executed = 0
-    tooling_result = None
+    tooling_result = None; build_bindings = {}
     for row in rows:
         require(isinstance(row, dict) and set(row) == {'job', 'receipt', 'originalLogSHA256'}, 'bank fields')
         job, receipt = row['job'], row['receipt']
         require(isinstance(job, dict) and isinstance(receipt, dict), 'bank objects')
-        require(set(receipt) == {'schema', 'source', 'environment', 'bank', 'banks', 'discovery', 'plan', 'completedSlices'}, 'receipt fields')
+        require(set(receipt) == {'schema', 'source', 'environment', 'bank', 'banks', 'discovery', 'plan', 'completedSlices', 'buildProvenanceSHA256'}, 'receipt fields')
         bank = receipt['bank']; require(type(bank) is int and 0 <= bank < BANKS and bank not in seen, 'unique bank')
         seen.add(bank)
-        require(receipt['schema'] == 'autotechno-hosted-macos-bank.v1' and receipt['source'] == source and
+        require(receipt['schema'] == 'autotechno-hosted-macos-bank.v2' and receipt['source'] == source and
                 receipt['environment'] == 'hosted-macos' and receipt['banks'] == BANKS, 'native bank source/scope')
         require(type(job.get('id')) is int and job['id'] > 0 and job['id'] not in jobs and
                 job.get('run_id') == run['id'] and type(job.get('run_attempt')) is int and
@@ -166,6 +167,9 @@ def verify(bundle, source, logs=None):
                 sha(raw) == row['originalLogSHA256'], 'original bank job log digest')
         original, measured = parse_bank(raw, source, bank)
         require(original == receipt, 'bank receipt equals its original native stdout')
+        build_record = native_build.decode(raw.decode('utf-8'), source)
+        build_bindings[bank] = native_build.validate(build_record, source,
+            build_record['trackedInputs'] if compiled_git is None else compiled_git)
         if bank == 0:
             tooling_result = tooling.verify(tooling.decode(raw.decode('utf-8'), source), source)
         for name in ['Verify macOS environment', 'Build all native tests', 'Execute complete native bank'] + (
@@ -203,6 +207,9 @@ def verify(bundle, source, logs=None):
                 executedTests=executed, explicitlySkippedTests=skipped, completeNativeSuitesAndReleaseBuild=True,
                 originalJobLogsVerified=True, suiteFileHashesIndependentlyVerified=False,
                 completeToolingTestsVerified=True,
+                originalVerboseBuildBindingsVerified=True,
+                compiledBuildClosureIndependentlyAuthenticated=compiled_git is not None,
+                originalBuildBindings=build_bindings,
                 originalToolingOutputVerified=True,
                 toolingExecutedTests=tooling_result['executedTests'],
                 localExecution=False, automatedQualityQualification=False, runtimeQualification=False, item39Complete=False)
@@ -273,9 +280,9 @@ def parse_bank(raw, source, bank):
     log = raw.decode('utf-8')
     receipt = decode_chunks(log, source, bank)
     require(isinstance(receipt, dict) and set(receipt) == {
-        'schema', 'source', 'environment', 'bank', 'banks', 'discovery', 'plan', 'completedSlices'},
+        'schema', 'source', 'environment', 'bank', 'banks', 'discovery', 'plan', 'completedSlices', 'buildProvenanceSHA256'},
         'receipt fields')
-    require(receipt['schema'] == 'autotechno-hosted-macos-bank.v1' and
+    require(receipt['schema'] == 'autotechno-hosted-macos-bank.v2' and
             receipt['source'] == source and receipt['environment'] == 'hosted-macos' and
             type(receipt['bank']) is int and receipt['bank'] == bank and
             type(receipt['banks']) is int and receipt['banks'] == BANKS, 'native bank source/scope')
@@ -304,6 +311,18 @@ def parse_bank(raw, source, bank):
                               r'BEGIN native slice ([^\r\n]+)\r?\n', log))
     require(len(markers) == len(completed) and all(m.start() < transport for m in markers),
             'complete ordered original native boundaries')
+    build_record = native_build.decode(log, source)
+    digest = native_build.record_digest(build_record)
+    require(receipt['buildProvenanceSHA256'] == digest, 'original bank/build provenance binding')
+    begin = list(re.finditer(r'(?m)^(?:\d{4}-\d\d-\d\dT\S+ )?BEGIN native build binding ' + str(bank) + ':' + digest + r'\r?\n', log))
+    end_binding = list(re.finditer(r'(?m)^(?:\d{4}-\d\d-\d\dT\S+ )?END native build binding ' + str(bank) + ':' + digest + r'\r?\n', log))
+    # An empty assigned bank is permitted only by the unchanged exhaustive plan;
+    # it still requires its complete original build and pre/post seals.
+    require(len(begin) == len(end_binding) == 1 and begin[0].end() <= end_binding[0].start() < transport and
+            all(begin[0].end() <= marker.start() < marker.end() <= end_binding[0].start() for marker in markers),
+            'original pre/post native build bindings')
+    chunks = [m.start() for m in re.finditer(re.escape(native_build.CHUNK_SCHEMA), log)]
+    require(chunks and max(chunks) < begin[0].start(), 'original build provenance sealed before native execution')
     counts = dict(executedTests=0, explicitlySkippedTests=0)
     for index, (selection, result, marker) in enumerate(zip(expected['selected'], completed, markers)):
         require(isinstance(result, dict) and set(result) == {
@@ -382,7 +401,7 @@ def require_native_success(result, raw, library, build_path, selector):
     raise ValueError('native slice failed')
 
 
-def run_logged_native(command, root, log):
+def run_logged_native(command, root, log, *, console=True):
     """Keep exact receipt bytes and expose progress before the child completes."""
     decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
     with log.open('wb') as stream, subprocess.Popen(command, cwd=root,
@@ -391,20 +410,29 @@ def run_logged_native(command, root, log):
         while chunk := process.stdout.read1(64 * 1024):
             stream.write(chunk)
             stream.flush()
-            sys.stdout.write(decoder.decode(chunk))
+            if console:
+                sys.stdout.write(decoder.decode(chunk))
+                sys.stdout.flush()
+        if console:
+            sys.stdout.write(decoder.decode(b'', final=True))
             sys.stdout.flush()
-        sys.stdout.write(decoder.decode(b'', final=True))
-        sys.stdout.flush()
         return subprocess.CompletedProcess(command, process.wait())
 
 
-def run_bank(bank, build_path, output):
+def run_bank(bank, build_path, output, build_provenance=None):
     require(platform.system() == 'Darwin' and os.environ.get('GITHUB_ACTIONS') == 'true' and
             os.environ.get('RUNNER_OS') == 'macOS', 'hosted native macOS required')
     root = Path(__file__).resolve().parents[1]
     def git(*args): return subprocess.check_output(['git', *args], cwd=root, text=True).strip()
     source = git('rev-parse', 'HEAD'); require(source == os.environ.get('GITHUB_SHA'), 'checkout source binding')
     require(not git('status', '--porcelain', '--untracked-files=normal'), 'clean immutable source')
+    require(build_provenance is not None, 'original pre-execution build provenance required')
+    record = native_build.strict(bounded_regular(build_provenance, native_build.MAX_METADATA))
+    require(record['source'] == source and Path(record['buildPath']) == build_path, 'same original native build source/path')
+    native_build.validate(record, source, native_build.git_source_files(str(root), source))
+    native_build.guard(record, root)
+    digest = native_build.record_digest(record)
+    print(f'BEGIN native build binding {bank}:{digest}', flush=True)
     output.mkdir(parents=True, exist_ok=False)
     libraries = {'xctest': ['--enable-xctest', '--disable-swift-testing'],
                  'swift-testing': ['--disable-xctest', '--enable-swift-testing']}
@@ -414,17 +442,22 @@ def run_bank(bank, build_path, output):
             'list', '--skip-build', *flags], cwd=root, text=True)
     selection = plan(discoveries, bank, BANKS); results = []
     for ordinal, selected in enumerate(selection['selected']):
+        native_build.guard(record, root)
         print(f'BEGIN native slice {bank}:{selected["library"]}:{selected["suite"]}', flush=True)
         log = output / f'{ordinal}.log'
         result = run_logged_native(['swift', 'test', '--build-path', str(build_path), '--skip-build',
             '--no-parallel', *libraries[selected['library']], '--filter', selected['selector']], root, log)
         raw = log.read_bytes()
         require_native_success(result, raw, selected['library'], build_path, selected['selector'])
+        native_build.guard(record, root)
         counts = summarize_log(raw.decode(), selected['library'], len(selected['identifiers']), selected['identifiers'])
         results.append(dict(selection=selected, **counts, exitCode=result.returncode, logSHA256=sha(raw)))
     require(git('rev-parse', 'HEAD') == source and not git('status', '--porcelain', '--untracked-files=normal'), 'source changed during tests')
-    emit(dict(schema='autotechno-hosted-macos-bank.v1', source=source, environment='hosted-macos',
-              bank=bank, banks=BANKS, discovery=discoveries, plan=selection, completedSlices=results))
+    native_build.guard(record, root)
+    print(f'END native build binding {bank}:{digest}', flush=True)
+    emit(dict(schema='autotechno-hosted-macos-bank.v2', source=source, environment='hosted-macos',
+              bank=bank, banks=BANKS, discovery=discoveries, plan=selection, completedSlices=results,
+              buildProvenanceSHA256=digest))
 
 
 def collect(run_id, source, output):
@@ -473,15 +506,32 @@ if __name__ == '__main__':
     parser.add_argument('--source')
     parser.add_argument('--output', type=Path)
     parser.add_argument('--diagnostic-filter')
+    parser.add_argument('--prepare-native-build', action='store_true')
+    parser.add_argument('--build-provenance', type=Path)
     args = parser.parse_args()
+    if args.prepare_native_build:
+        require(platform.system() == 'Darwin' and os.environ.get('GITHUB_ACTIONS') == 'true' and
+                os.environ.get('RUNNER_OS') == 'macOS', 'original hosted native build required')
+        require(args.bank is args.run is args.source is args.diagnostic_filter is args.build_provenance is None and
+                args.build_path is not None and args.output is not None, 'exclusive original native build arguments')
+        root = Path(__file__).resolve().parents[1]
+        require(native_build.inventory(root)['source'] == os.environ.get('GITHUB_SHA'), 'original build checkout source')
+        try:
+            record = native_build.prepare(root, args.build_path, args.output,
+                lambda command, cwd, log: run_logged_native(command, cwd, log, console=False))
+        except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as exc:
+            native_build.preserve_failure(args.output, os.environ['GITHUB_SHA'], exc)
+            raise
+        native_build.emit(record)
+        raise SystemExit(0)
     if args.diagnostic_filter is not None:
         require(args.build_path is not None and args.run is None and args.bank is None and
-                args.source is None and args.output is None, 'diagnostic-only arguments')
+                args.source is None and args.output is None and args.build_provenance is None, 'diagnostic-only arguments')
         raise SystemExit(diagnose_crash(args.build_path, args.diagnostic_filter))
     require(args.output is not None, 'verification output required')
     if args.run is not None:
-        require(args.source and args.bank is None and args.build_path is None, 'collection arguments')
+        require(args.source and args.bank is None and args.build_path is None and args.build_provenance is None, 'collection arguments')
         print(json.dumps(collect(args.run,args.source,args.output),sort_keys=True))
     else:
         require(args.bank is not None and args.build_path is not None and args.source is None, 'native bank arguments')
-        run_bank(args.bank,args.build_path,args.output)
+        run_bank(args.bank,args.build_path,args.output,args.build_provenance)

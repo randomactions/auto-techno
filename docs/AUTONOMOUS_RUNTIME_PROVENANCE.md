@@ -2825,13 +2825,37 @@ recomputed discovery partitions, matching executed identities/counts and separat
 explicit skips, plus successful tooling, Release app and semantic-map steps.
 Map-only jobs, partial jobs, mixed revisions and mere discovery cannot pass.
 
-The collected verification schema is v3. Each bank binds its original complete
-job-log SHA256, and the collector and bound-receipt validator both replay the
-native receipt transport, ordered slice summaries, executed identities and named
+The collected verification schema is v4, with bank receipt v2. Each bank binds
+its original complete job-log SHA256, and the collector and bound-receipt reader
+replay native transport, ordered slice summaries, executed identities and named
 skips from those original bytes. The run and every bank job must have the same
-positive integer run attempt. A receipt alone or a legacy v1/v2 receipt cannot
-supply the current original-log requirement. Historical receipts remain unchanged
-with their original verification scope; relabeling them as v3 is unavailable.
+positive integer run attempt. A receipt alone or a legacy v1/v2/v3 receipt cannot
+supply the current original-build and original-log requirements. Historical
+receipts remain unchanged with their original scope; relabeling is unavailable.
+
+The existing hosted owner prepares an absent external build directory through
+`scripts/native_build_provenance.py` and the normal `swift build -v --build-tests`
+command. It retains the actual verbose compiler/linker stdout, emitted dependency
+rules and linker file lists, complete committed source inventory and hashes of
+actual compiler tools, sources, generated support, objects, modules, SDK
+metadata, resolved dependencies, test image and runtime resources. Every linked
+object requires an actual emission in the same original trace. Clang's literal
+`-MT` target is checked against its command; the normal generated DSP resource
+accessor is the sole permitted extra source in a root module. The complete native
+bank owner checks byte and inventory stability before discovery, before and after
+each selected process, and before emitting its final receipt. Original build
+chunks and one pre/post bank binding must surround the native execution. No
+benchmark, source capture, probe, alternative compiler path or test selection is
+introduced by build preparation.
+
+Original build-record self-consistency is separate from an independent source
+join. The M1 command-line reader additionally reads every blob of the exact Git
+source and compares that independently derived inventory with every original
+bank's compile inputs and source/runtime resource bytes. Only this complete
+join can set compiled-build closure authentication. Complete native banks,
+claim semantics, current-source applicability, installed-positive execution,
+resource/ordinary-deadline proof and full item authority remain separate. Neither
+build metadata alone nor a generic success flag supplies them.
 
 Bank0 additionally runs the sole `scripts/tooling_verification.py` owner for
 complete standard-library unittest discovery and execution. It binds every

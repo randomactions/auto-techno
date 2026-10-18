@@ -251,8 +251,8 @@ def _invalid(value):
     raise ValueError('nonfinite benchmark JSON: ' + value)
 
 
-def verify(bundle, source, logs):
-    platform = hosted.verify(bundle, source, logs)
+def verify(bundle, source, logs, *, compiled_git=None):
+    platform = hosted.verify(bundle, source, logs, compiled_git=compiled_git)
     result, bindings = {}, {}
     # Partitioning assigns individual identities, so the two tests may be in
     # different banks or share a slice. Do not impose cross-bank order/equality.
@@ -279,7 +279,9 @@ def verify(bundle, source, logs):
                 scope=SCOPE, originalLogBindings=bindings,
                 nativeRun=platform['run'], reports=result,
                 unavailable=LIMITATIONS, completeNativePlatformVerified=True,
-                constructedLinearEvidenceVerified=True, fullAlgorithmicAcceptanceVerified=False,
+                constructedLinearEvidenceVerified=True,
+                compiledBuildClosureIndependentlyAuthenticated=platform['compiledBuildClosureIndependentlyAuthenticated'],
+                fullAlgorithmicAcceptanceVerified=False,
                 runtimeQualification=False, item39Complete=False)
 
 
@@ -307,9 +309,9 @@ def claim_cases():
     return rows
 
 
-def verify_claims(bundle,source,logs):
+def verify_claims(bundle,source,logs,*,compiled_git=None):
     """Join strict claim reads to complete original bank execution, never item completion."""
-    result=verify(bundle,source,logs)  # Preserves every existing sixteen-bank gate.
+    result=verify(bundle,source,logs,compiled_git=compiled_git)  # Preserves every existing sixteen-bank gate.
     results={}
     for owner,method,name,suite,schema,count,behavior in claim_cases():
         identity=f'AutoTechnoCoreTests.{owner}/{method}'
@@ -336,7 +338,7 @@ def verify_claims(bundle,source,logs):
         results[identity]=dict(reportSchema=schema, reports=checked, bank=bank, originalJobLogSHA256=hosted.sha(logs[bank]))
     return dict(schema='autotechno-at0039-native-claim-reports.v1',source=source,
                 linear=result, claimReports=results, originalNativeLogReportsVerified=True,
-                compiledBuildClosureIndependentlyAuthenticated=False,currentSourceApplicability=False,
+                compiledBuildClosureIndependentlyAuthenticated=result['compiledBuildClosureIndependentlyAuthenticated'],currentSourceApplicability=False,
                 fullAlgorithmicAcceptanceVerified=False,runtimeQualification=False,item39Complete=False)
 
 
@@ -369,6 +371,9 @@ def main():
         inputs = {}
         paths=['scripts/at0039_algorithmic_verification.py', 'scripts/at0039_claim_readers.py', 'scripts/hosted_macos_verification.py',
                          'scripts/tooling_verification.py', 'scripts/windows_test_plan.py',
+                         'scripts/native_build_provenance.py', 'scripts/baseline_producer_witness.py',
+                         'scripts/baseline_dependency_contract.py', 'scripts/baseline_capture_transaction.py',
+                         'scripts/baseline_lifecycle_policy.py', 'scripts/roadmap_contract_baseline.py',
                          'Tests/AutoTechnoCoreTests/SpectrumMaskingAnalyzerTests.swift',
                          'Sources/AutoTechnoDSP/SpectrumMaskingAnalyzer.swift']
         paths+=sorted({f'Tests/AutoTechnoCoreTests/{case[0]}.swift' for case in claim_cases()})
@@ -381,7 +386,8 @@ def main():
         require(hosted.sha(raw) == args.bundle_sha256, 'original bundle digest')
         directory = args.bundle.parent / (args.bundle.stem + '-logs')
         logs, archives = hosted.original_logs(directory)
-        result = verify_claims(hosted.strict_json(raw), args.source, logs)
+        result = verify_claims(hosted.strict_json(raw), args.source, logs,
+            compiled_git=hosted.native_build.git_source_files(str(root), args.source))
         require(hosted.bounded_regular(args.bundle, 32 * 1024 * 1024) == raw and
                 all(hosted.sha(hosted.bounded_regular(p, hosted.MAX_LOG_BYTES)) == d for p, d in archives.items()) and
                 all(hosted.sha(hosted.bounded_regular(p, 2 * 1024 * 1024)) == d for p, d in inputs.items()),
