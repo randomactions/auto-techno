@@ -36,7 +36,7 @@ def fixture(source=SOURCE):
     lst=out+'/Objects.LinkFileList';metadata[lst]=('\n'.join(objects)+'\n').encode();lines.append(f'{clang} -o {image} -filelist {lst}')
     content(frontend);content(clang);content(driver);content(sdk+'/SDKSettings.json',b'SDK settings')
     relative='Sources/AutoTechnoDSP/Resources/fixture.json';git_files[relative]=build.sha(b'resource');content(root+'/'+relative,b'resource');content(out+'/AutoTechno_AutoTechnoDSP.bundle/fixture.json',b'resource')
-    raw=('\n'.join(lines)+'\nBuild complete!\n').encode();edges=build.trace(raw,root,metadata)
+    raw=('\n'.join(lines)+'\nBuild complete!\n').encode();edges=build.trace(raw,root,metadata,out)
     for p,v in metadata.items():content(p,v)
     runtime=sorted(p for p in raw_files if p.startswith(out+'/'))
     records=[dict(path=p,resolvedPath=p,bytes=len(v),sha256=build.sha(v)) for p,v in sorted(raw_files.items())]
@@ -69,7 +69,7 @@ class NativeBuildProvenanceTests(unittest.TestCase):
 
     def test_source_and_object_trace_substitution_refuses_even_with_changed_metadata(self):
         r=fixture();raw=build.unpack(r['originalBuild']).replace(b'/checkout/Sources/AutoTechnoCore/Fixture.swift',b'/checkout/Sources/AutoTechnoCore/Other.swift');r['originalBuild']=build.pack(raw)
-        metadata={p:build.unpack(v) for p,v in r['metadata'].items()};r['trace']=build.trace(raw,r['root'],metadata)
+        metadata={p:build.unpack(v) for p,v in r['metadata'].items()};r['trace']=build.trace(raw,r['root'],metadata,r['buildPath'])
         with self.assertRaisesRegex(ValueError,'compiled committed source'):build.validate(r,SOURCE,r['trackedInputs'])
 
     def test_source_file_hash_cannot_be_changed_with_a_self_consistent_trace(self):
@@ -116,18 +116,18 @@ class NativeBuildProvenanceTests(unittest.TestCase):
         r=fixture();raw=build.unpack(r['originalBuild'])
         import re
         raw=re.sub(rb' -emit-dependencies-path [^ \n]+',b' -supplementary-output-file-map /temporary/outputs',raw)
-        r['originalBuild']=build.pack(raw);metadata={p:build.unpack(v) for p,v in r['metadata'].items()};r['trace']=build.trace(raw,r['root'],metadata)
+        r['originalBuild']=build.pack(raw);metadata={p:build.unpack(v) for p,v in r['metadata'].items()};r['trace']=build.trace(raw,r['root'],metadata,r['buildPath'])
         self.assertTrue(build.validate(r,SOURCE,r['trackedInputs'])['actualVerboseCompileTraceVerified'])
         # A requested supplementary map cannot replace missing actual Swift
         # dependency outputs, even while all C dependencies and objects remain.
         for path in list(metadata):
             if path.endswith('.d') and path!='/native-build/C.d':del metadata[path]
-        with self.assertRaisesRegex(ValueError,'requires original emitted dependencies'):build.trace(raw,r['root'],metadata)
+        with self.assertRaisesRegex(ValueError,'requires original emitted dependencies'):build.trace(raw,r['root'],metadata,r['buildPath'])
 
     def test_unmatched_emitted_dependency_file_refuses(self):
         r=fixture();metadata={p:build.unpack(v) for p,v in r['metadata'].items()}
         metadata['/native-build/stale.d']=b'/native-build/stale.o : /checkout/Package.swift\n'
-        with self.assertRaisesRegex(ValueError,'must belong to actual compile output'):build.trace(build.unpack(r['originalBuild']),r['root'],metadata)
+        with self.assertRaisesRegex(ValueError,'must belong to actual compile output'):build.trace(build.unpack(r['originalBuild']),r['root'],metadata,r['buildPath'])
 
     def test_original_metadata_and_pinned_file_bytes_cannot_disagree(self):
         r=fixture();next(row for row in r['files'] if row['path']=='/native-build/C.d')['sha256']='0'*64
@@ -136,7 +136,7 @@ class NativeBuildProvenanceTests(unittest.TestCase):
     def test_missing_or_arbitrary_generated_root_source_refuses(self):
         for replace in [b'/native-build/foreign.swift',b'/checkout/Sources/AutoTechnoDSP/untracked.swift']:
             r=fixture();raw=build.unpack(r['originalBuild']).replace(b'/native-build/AutoTechnoDSP.build/DerivedSources/resource_bundle_accessor.swift',replace)
-            r['originalBuild']=build.pack(raw);metadata={p:build.unpack(v) for p,v in r['metadata'].items()};r['trace']=build.trace(raw,r['root'],metadata)
+            r['originalBuild']=build.pack(raw);metadata={p:build.unpack(v) for p,v in r['metadata'].items()};r['trace']=build.trace(raw,r['root'],metadata,r['buildPath'])
             with self.subTest(path=replace),self.assertRaises(ValueError):build.validate(r,SOURCE,r['trackedInputs'])
 
     def test_foreign_source_implementation_partial_command_and_bool_exit_refuse(self):
@@ -222,6 +222,60 @@ class NativeBuildProvenanceTests(unittest.TestCase):
     def test_no_generic_success_or_extra_authority_fields(self):
         for r in [dict(passed=True),dict(fixture(),runtimeQualification=True)]:
             with self.assertRaises(ValueError):build.validate(r,SOURCE,fixture()['trackedInputs'])
+
+
+    def test_forwarded_clang_sdk_is_not_the_xcc_marker(self):
+        r=fixture();raw=build.unpack(r['originalBuild'])
+        raw=raw.replace(b' -sdk /SDK/MacOSX.sdk',b' -sdk /SDK/MacOSX.sdk -Xcc -isysroot -Xcc /SDK/MacOSX.sdk')
+        r['originalBuild']=build.pack(raw)
+        r['trace']=build.trace(raw,r['root'],{p:build.unpack(v) for p,v in r['metadata'].items()},r['buildPath'])
+        self.assertEqual(r['trace']['sdkPaths'],['/SDK/MacOSX.sdk'])
+        self.assertTrue(build.validate(r,SOURCE,r['trackedInputs'])['actualVerboseCompileTraceVerified'])
+        for args in [['/Toolchain/swift-frontend','-Xcc'],['/Toolchain/swift-frontend','-Xcc','-Xcc']]:
+            with self.assertRaisesRegex(ValueError,'complete actual Clang forwarding'):build.clang_arguments(args)
+
+    def test_manifest_link_cannot_supply_product_objects_or_image(self):
+        r=fixture();raw=build.unpack(r['originalBuild'])
+        raw=b'/Toolchain/clang /temporary/Package-1.o -o /temporary/package-manifest\n'+raw
+        metadata={p:build.unpack(v) for p,v in r['metadata'].items()}
+        self.assertEqual(build.trace(raw,r['root'],metadata,r['buildPath']),r['trace'])
+        raw=raw.replace(b'/native-build/AutoTechnoCore.o',b'/temporary/escaped.o',1)
+        with self.assertRaisesRegex(ValueError,'root-module outputs inside registered build'):
+            build.trace(raw,r['root'],metadata,r['buildPath'])
+
+    def test_actual_transient_link_bytes_are_bound_to_the_command(self):
+        r=fixture();old='/native-build/Objects.LinkFileList'
+        new='/private/var/folders/f/test/T/TemporaryDirectory.control/inputs-1.LinkFileList'
+        r['metadata'][new]=r['metadata'].pop(old);r['files']=[x for x in r['files'] if x['path']!=old]
+        r['runtimeFilePaths'].remove(old)
+        raw=build.unpack(r['originalBuild']).replace(old.encode(),new.encode());r['originalBuild']=build.pack(raw)
+        r['trace']=build.trace(raw,r['root'],{p:build.unpack(v) for p,v in r['metadata'].items()},r['buildPath'])
+        self.assertTrue(build.validate(r,SOURCE,r['trackedInputs'])['actualVerboseCompileTraceVerified'])
+        changed=copy.deepcopy(r);changed['metadata'][new]=build.pack(build.unpack(changed['metadata'][new])+b'/native-build/stale.o\n')
+        with self.assertRaises(ValueError):build.validate(changed,SOURCE,changed['trackedInputs'])
+        changed=copy.deepcopy(r);changed['metadata'][new.replace('inputs-1','inputs-2')]=changed['metadata'][new]
+        with self.assertRaisesRegex(ValueError,'exact actual transient'):build.validate(changed,SOURCE,changed['trackedInputs'])
+        changed=copy.deepcopy(r);del changed['metadata'][new]
+        with self.assertRaisesRegex(ValueError,'original actual linker file list'):build.validate(changed,SOURCE,changed['trackedInputs'])
+
+    def test_same_owner_copies_transient_input_before_it_disappears(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);builddir=root/'build';builddir.mkdir()
+            p=root/'T/TemporaryDirectory.control/inputs-1.LinkFileList';p.parent.mkdir(parents=True)
+            content=(str(builddir/'fresh.o')+'\n').encode();p.write_bytes(content)
+            command=f'/Toolchain/clang -filelist {p} -o {builddir}/image\n'.encode()
+            capture=build.TransientLinkCapture(builddir)
+            split=len(command)//2;capture.observe(command[:split]);capture.observe(command[split:]);p.unlink()
+            self.assertEqual(capture.finish(),{str(p):content})
+            missing=build.TransientLinkCapture(builddir);missing.observe(command)
+            with self.assertRaisesRegex(ValueError,'capture failed'):missing.finish()
+            p.write_bytes(b'first');capture=build.TransientLinkCapture(builddir);capture.observe(command)
+            p.write_bytes(b'changed');capture.observe(command)
+            with self.assertRaisesRegex(ValueError,'reused with different bytes'):capture.finish()
+
+    def test_foreign_temporary_metadata_name_is_not_admitted(self):
+        for name in ['/private/tmp/secret.LinkFileList','/private/var/folders/f/t/T/TemporaryDirectory.control/secret.txt']:
+            self.assertFalse(build.transient_link_path(name))
 
 
 if __name__=='__main__':unittest.main()

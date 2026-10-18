@@ -401,7 +401,7 @@ def require_native_success(result, raw, library, build_path, selector):
     raise ValueError('native slice failed')
 
 
-def run_logged_native(command, root, log, *, console=True):
+def run_logged_native(command, root, log, *, console=True, observer=None):
     """Keep exact receipt bytes and expose progress before the child completes."""
     decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
     with log.open('wb') as stream, subprocess.Popen(command, cwd=root,
@@ -410,6 +410,7 @@ def run_logged_native(command, root, log, *, console=True):
         while chunk := process.stdout.read1(64 * 1024):
             stream.write(chunk)
             stream.flush()
+            if observer is not None:observer(chunk)
             if console:
                 sys.stdout.write(decoder.decode(chunk))
                 sys.stdout.flush()
@@ -518,7 +519,7 @@ if __name__ == '__main__':
         require(native_build.inventory(root)['source'] == os.environ.get('GITHUB_SHA'), 'original build checkout source')
         try:
             record = native_build.prepare(root, args.build_path, args.output,
-                lambda command, cwd, log: run_logged_native(command, cwd, log, console=False))
+                lambda command, cwd, log, observer: run_logged_native(command, cwd, log, console=False, observer=observer))
         except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as exc:
             native_build.preserve_failure(args.output, os.environ['GITHUB_SHA'], exc)
             raise

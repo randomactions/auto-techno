@@ -18,7 +18,7 @@ import subprocess
 import zlib
 import baseline_producer_witness as witness
 
-SCHEMA = 'autotechno-native-build-provenance.v1'
+SCHEMA = 'autotechno-native-build-provenance.v2'
 CHUNK_SCHEMA = 'autotechno-native-build-provenance-chunk.v1'
 MAX_METADATA = 128 * 1024 * 1024
 MAX_FILES = 50000
@@ -95,15 +95,88 @@ def commands(raw):
     return result
 
 
-def trace(raw, root, metadata):
+
+def clang_arguments(args):
+    """Read actual forwarded Clang tokens without confusing -Xcc with a path."""
+    if Path(args[0]).name in {'clang','ld'}:return args[1:]
+    result=[]
+    for i,arg in enumerate(args):
+        if arg=='-Xcc':
+            need(i+1<len(args) and args[i+1]!='-Xcc','complete actual Clang forwarding')
+            result.append(args[i+1])
+    return result
+
+
+def build_commands(raw, build):
+    """Manifest evaluation is not a compiled input to the registered products."""
+    build=absolute(str(build));result=[]
+    for args in commands(raw):
+        outputs=values(args,'-o')+values(args,'-emit-module-path')
+        inside=[p for p in outputs if Path(p).is_absolute() and Path(p).is_relative_to(build)]
+        root=any(name in ROOT_MODULES for name in values(args,'-module-name'))
+        if root and outputs:need(len(inside)==len(outputs),'root-module outputs inside registered build')
+        if inside:
+            need(len(inside)==len(outputs),'one registered output scope per actual command')
+            result.append(args)
+    need(result,'actual commands emitting registered build outputs required')
+    return result
+
+
+def link_lists(args):
+    forwarded=[x for x in args if x!='-Xlinker']
+    return values(forwarded,'-filelist')+[x[1:] for x in forwarded if x.startswith('@/')]
+
+
+def transient_link_path(path):
+    p=absolute(path)
+    return bool(re.fullmatch(r'inputs-[0-9]+[.]LinkFileList',p.name) and
+                p.parent.name.startswith('TemporaryDirectory.') and p.parent.parent.name=='T')
+
+
+class TransientLinkCapture:
+    """Same build owner copies actual short-lived linker inputs as stdout arrives."""
+    def __init__(self,build):self.build=absolute(str(build));self.pending=b'';self.metadata={};self.errors=[]
+
+    def observe(self,chunk):
+        self.pending+=chunk
+        need(len(self.pending)<=MAX_METADATA,'bounded actual compiler output line')
+        while b'\n' in self.pending:
+            line,self.pending=self.pending.split(b'\n',1)
+            if not line.startswith((b'/',b'"/')):continue
+            try:
+                for args in build_commands(line+b'\n',self.build):
+                    if Path(args[0]).name not in {'clang','ld'} or '-c' in args:continue
+                    for path in link_lists(args):
+                        p=absolute(path)
+                        if p.is_relative_to(self.build):continue
+                        need(transient_link_path(path),'known actual temporary linker input')
+                        before=p.stat();raw=p.read_bytes();after=p.stat()
+                        need(0<len(raw)<=MAX_METADATA and
+                             (before.st_ino,before.st_size,before.st_mtime_ns)==(after.st_ino,after.st_size,after.st_mtime_ns),
+                             'stable original transient linker input')
+                        need(path not in self.metadata or self.metadata[path]==raw,'transient linker input reused with different bytes')
+                        self.metadata[path]=raw
+            except ValueError as exc:
+                # Lines outside the registered product build (including normal
+                # manifest compilation) do not declare a transient product input.
+                if str(exc)!='actual commands emitting registered build outputs required':self.errors.append(str(exc))
+            except OSError as exc:self.errors.append(str(exc))
+
+    def finish(self):
+        if self.pending:self.observe(b'\n')
+        need(not self.errors,'actual transient linker input capture failed: '+'; '.join(self.errors[:4]))
+        return self.metadata
+
+def trace(raw, root, metadata, build):
     """Reconstruct actual source/object/module/link edges from original commands."""
     root=absolute(str(root)); compiled={name:set() for name in ROOT_MODULES}
     objects=set(); modules=set(); tools=set(); linked=set(); dependencies=set(); c_sources=set(); sdks=set(); swift_objects=set(); parsed_dependencies=set(); dependency_targets=set()
-    parsed=commands(raw); link_commands=[]
+    parsed=build_commands(raw,build); link_commands=[]
     for args in parsed:
         tools.add(str(absolute(args[0]))); tool=Path(args[0]).name
-        sdks.update(str(absolute(x)) for x in values(args,'-sdk')+values(args,'-isysroot'))
-        for p in values(args,'-vfsoverlay')+values(args,'-ivfsoverlay')+values(args,'-module-map-file'):
+        clang=clang_arguments(args)
+        sdks.update(str(absolute(x)) for x in values(args,'-sdk')+values(clang,'-isysroot')+values(clang,'--sysroot'))
+        for p in values(args,'-vfsoverlay')+values(clang,'-ivfsoverlay')+values(clang,'-module-map-file'):
             dependencies.add(str(absolute(p)))
         for p in args:
             if p.startswith('-fmodule-map-file='):
@@ -148,8 +221,7 @@ def trace(raw, root, metadata):
         if tool in {'clang','ld'} and '-c' not in args and values(args,'-o'):
             outs=values(args,'-o'); need(len(outs)==1,'actual linker output identity')
             inputs=[x for x in args if x.endswith(('.o','.a')) and Path(x).is_absolute()]
-            link_args=[x for x in args if x!='-Xlinker']
-            lists=values(link_args,'-filelist')+[x[1:] for x in link_args if x.startswith('@/')]
+            lists=link_lists(args)
             for p in lists:
                 p=str(absolute(p));need(p in metadata,'original actual linker file list required')
                 for row in metadata[p].decode('utf-8').splitlines():
@@ -265,14 +337,22 @@ def prepare(root, build, output, run_logged):
     before=inventory(root);output.mkdir(parents=True)
     driver=str(Path(shutil.which('swift') or '').resolve());absolute(driver);need(Path(driver).is_file(),'actual normal Swift driver')
     argv=['swift','build','-v','--build-tests','--build-path',str(build)]
-    log=output/'original-build.log';result=run_logged(argv,root,log)
+    log=output/'original-build.log';capture=TransientLinkCapture(build)
+    result=run_logged(argv,root,log,observer=capture.observe)
     (output/'build-command-status.json').write_text(json.dumps(dict(command=argv,exitCode=result.returncode),sort_keys=True)+'\n')
     need(type(result.returncode) is int and result.returncode==0,'original normal native build failed; retain its output')
     need(inventory(root)==before,'source changed during original normal build')
     metadata={str(p):p.read_bytes() for p in build.rglob('*') if p.is_file() and
               (p.suffix=='.d' or p.name.endswith('.LinkFileList')) and not {'checkouts','repositories'}&set(p.relative_to(build).parts)}
     need(metadata and sum(map(len,metadata.values()))<=MAX_METADATA,'bounded complete original compiler dependency/link output')
-    edges=trace(log.read_bytes(),root,metadata)
+    need(not set(capture.metadata)&set(metadata),'separate original persistent and transient metadata')
+    metadata.update(capture.metadata)
+    need(sum(map(len,metadata.values()))<=MAX_METADATA,'aggregate original compiler metadata bound')
+    # Retain actual metadata and partial capture errors even when the proof refuses.
+    (output/'original-compiler-metadata.json').write_text(json.dumps({p:pack(raw) for p,raw in sorted(metadata.items())},sort_keys=True)+'\n')
+    (output/'transient-link-capture-status.json').write_text(json.dumps(dict(errors=capture.errors,capturedPaths=sorted(capture.metadata)),sort_keys=True)+'\n')
+    capture.finish()
+    edges=trace(log.read_bytes(),root,metadata,build)
     validate_sources(edges,root,build,before['files'])
     bin_path=Path(subprocess.check_output(['swift','build','--show-bin-path','--build-path',str(build)],cwd=root,text=True).strip())
     image=witness.registered_image(bin_path,build)
@@ -280,7 +360,7 @@ def prepare(root, build, output, run_logged):
     runtime=runtime_files(build)
     names=set(runtime)|{driver}|set(edges['objects'])|set(edges['modules'])|set(edges['tools'])|set(edges['dependencies'])
     names.update(p for row in edges['compiled'].values() for p in row)
-    names.update(edges['cSources']);names.update(metadata)
+    names.update(edges['cSources']);names.update(p for p in metadata if Path(p).is_relative_to(build))
     names.update(x for row in edges['links'] for x in row['inputs'])
     files=[file_record(p) for p in sorted(names)];need(len(files)<=MAX_FILES,'bounded exact complete build file inventory')
     record=dict(schema=SCHEMA,source=before['source'],implementationSHA256=sha(Path(__file__).read_bytes()),
@@ -307,9 +387,9 @@ def validate(record, source, git_files):
          {'Package.swift','Package.resolved'}<=set(git_files),'original build implementation and package resolution bound')
     need(type(record['metadata']) is dict and 0<len(record['metadata'])<=MAX_FILES,'original emitted compiler metadata')
     metadata={str(absolute(p)):unpack(value) for p,value in record['metadata'].items()}
-    need(all(Path(p).is_relative_to(build) and (p.endswith('.d') or p.endswith('.LinkFileList')) for p in metadata),'actual original compiler metadata inside registered build')
+    need(all((Path(p).is_relative_to(build) and (p.endswith('.d') or p.endswith('.LinkFileList'))) or transient_link_path(p) for p in metadata),'actual emitted metadata or known transient linker input')
     need(sum(map(len,metadata.values()))<=MAX_METADATA,'aggregate compiler metadata bound')
-    edges=trace(unpack(record['originalBuild']),root,metadata);need(edges==record['trace'],'reconstructed actual compiler/link/dependency trace')
+    edges=trace(unpack(record['originalBuild']),root,metadata,build);need(edges==record['trace'],'reconstructed actual compiler/link/dependency trace')
     validate_sources(edges,root,build,git_files)
     need(any(row['output']==str(image) for row in edges['links']),'original native test image link')
     files=record['files'];need(type(files) is list and 0<len(files)<=MAX_FILES,'actual original compiled files required')
@@ -322,7 +402,10 @@ def validate(record, source, git_files):
     need(names==sorted(set(names)),'unique ordered original compiled files')
     runtime=record['runtimeFilePaths'];need(type(runtime) is list and runtime==sorted(set(runtime)) and runtime and all(str(absolute(p))==p and Path(p).is_relative_to(build) for p in runtime),'complete original runtime file inventory')
     driver=str(absolute(record['swiftDriverPath']))
-    required=set(metadata)|set(runtime)|{driver}|set(edges['objects'])|set(edges['modules'])|set(edges['tools'])|set(edges['dependencies'])|{str(image)}
+    persistent_metadata={p for p in metadata if Path(p).is_relative_to(build)}
+    actual_transient={str(absolute(p)) for args in build_commands(unpack(record['originalBuild']),build) for p in link_lists(args) if not Path(p).is_relative_to(build)}
+    need(set(metadata)-persistent_metadata==actual_transient,'exact actual transient linker input inventory')
+    required=persistent_metadata|set(runtime)|{driver}|set(edges['objects'])|set(edges['modules'])|set(edges['tools'])|set(edges['dependencies'])|{str(image)}
     required.update(p for group in edges['compiled'].values() for p in group)
     required.update(edges['cSources'])
     required.update(x for link in edges['links'] for x in link['inputs'])
@@ -331,6 +414,7 @@ def validate(record, source, git_files):
     need(all(row['bytes']>0 for row in files if row['path'] in positive),'nonempty actual compiler/object/module/image bytes')
     lookup={row['path']:row for row in files}
     for name,raw in metadata.items():
+        if name not in persistent_metadata:continue
         need(lookup[name]['sha256']==sha(raw) and lookup[name]['bytes']==len(raw),'exact emitted dependency/link metadata equals actual pinned bytes')
     resources={n:d for n,d in git_files.items() if n.startswith('Sources/AutoTechnoDSP/Resources/')}
     need(resources,'original committed DSP resources required')

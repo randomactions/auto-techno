@@ -3548,3 +3548,24 @@ their matching installed artifacts. Its request schema and completion boundaries
 are unchanged; a primary-only request cannot supply a final two-study result.
 The fresh Long launch still requires real primary positive admission and its own
 published immutable source, actual resource inventory and complete cold proof.
+
+
+### Normal compiler forwarding and transient link inputs
+
+Build-provenance v2 interprets the normal Swift frontend's Clang forwarding
+tokens as Clang arguments; an -Xcc marker is never a filesystem path. The
+registered build path distinguishes product compilation from temporary Package
+manifest evaluation. Every root-module output must remain inside that build,
+and every linked product object still requires its own actual fresh emission.
+Manifest evaluation remains in the original untransformed build log, with no
+claim that its disposable executable is part of the product image.
+
+The same normal-build stdout owner copies a referenced temporary Clang linker
+file list while the original command is running. It preserves the actual bytes
+before Swift removes that file. The raw command, exact temporary path and packed
+bytes remain bound in the original proof; no list is reconstructed from a build
+plan. Missing, changed, reused or unreferenced temporary input refuses. Current
+runtime files retain their pre/post execution hash guards. Original dependency
+and link metadata, including partial capture errors, survive a later proof
+refusal. The normal SwiftPM command, compiler, SDK, source, native selectors and
+all qualification gates remain unchanged. This is build evidence only.
