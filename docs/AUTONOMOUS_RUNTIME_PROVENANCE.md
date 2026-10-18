@@ -3550,22 +3550,30 @@ The fresh Long launch still requires real primary positive admission and its own
 published immutable source, actual resource inventory and complete cold proof.
 
 
-### Normal compiler forwarding and transient link inputs
+### Normal compiler forwarding and retained link inputs
 
-Build-provenance v2 interprets the normal Swift frontend's Clang forwarding
+Build-provenance v3 interprets the normal Swift frontend's Clang forwarding
 tokens as Clang arguments; an -Xcc marker is never a filesystem path. The
 registered build path distinguishes product compilation from temporary Package
 manifest evaluation. Every root-module output must remain inside that build,
 and every linked product object still requires its own actual fresh emission.
-Manifest evaluation remains in the original untransformed build log, with no
-claim that its disposable executable is part of the product image.
+Manifest evaluation remains in the untransformed original build log. Dependency
+rules may name only outputs declared by their actual frontend command, including
+its emitted Objective-C header and ABI descriptor; arbitrary targets refuse.
 
-The same normal-build stdout owner copies a referenced temporary Clang linker
-file list while the original command is running. It preserves the actual bytes
-before Swift removes that file. The raw command, exact temporary path and packed
-bytes remain bound in the original proof; no list is reconstructed from a build
-plan. Missing, changed, reused or unreferenced temporary input refuses. Current
-runtime files retain their pre/post execution hash guards. Original dependency
-and link metadata, including partial capture errors, survive a later proof
-refusal. The normal SwiftPM command, compiler, SDK, source, native selectors and
-all qualification gates remain unchanged. This is build evidence only.
+The normal SwiftPM command forwards only the driver's supported -save-temps
+option in addition to the original verbose complete build arguments. This keeps
+the compiler's real intermediate linker lists available after compilation.
+The owner reads those exact files, retains their original packed bytes and
+pins their actual file hashes through the same pre/post native-execution guard.
+It never reconstructs a missing list from requested plans or stdout object
+ordering. Missing, changed, foreign or unreferenced inputs refuse. The attempted
+v2 stdout-time copy was insufficient because SwiftPM may expose buffered child
+output only after the child has removed its temporary directory; its actual
+failure remains preserved. No racy observer remains in the stdout owner.
+
+Actual emitted metadata and partial read errors survive a later proof refusal.
+The installed compiler, SDK, code-generation settings, source, native selectors
+and every qualification gate remain unchanged. This flag changes intermediate
+retention, not a cache, SDK, sandbox, assertion or resource/deadline allowance.
+This supplies build evidence only.

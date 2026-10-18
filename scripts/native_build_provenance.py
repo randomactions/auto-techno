@@ -18,7 +18,7 @@ import subprocess
 import zlib
 import baseline_producer_witness as witness
 
-SCHEMA = 'autotechno-native-build-provenance.v2'
+SCHEMA = 'autotechno-native-build-provenance.v3'
 CHUNK_SCHEMA = 'autotechno-native-build-provenance-chunk.v1'
 MAX_METADATA = 128 * 1024 * 1024
 MAX_FILES = 50000
@@ -133,39 +133,27 @@ def transient_link_path(path):
                 p.parent.name.startswith('TemporaryDirectory.') and p.parent.parent.name=='T')
 
 
-class TransientLinkCapture:
-    """Same build owner copies actual short-lived linker inputs as stdout arrives."""
-    def __init__(self,build):self.build=absolute(str(build));self.pending=b'';self.metadata={};self.errors=[]
-
-    def observe(self,chunk):
-        self.pending+=chunk
-        need(len(self.pending)<=MAX_METADATA,'bounded actual compiler output line')
-        while b'\n' in self.pending:
-            line,self.pending=self.pending.split(b'\n',1)
-            if not line.startswith((b'/',b'"/')):continue
-            try:
-                for args in build_commands(line+b'\n',self.build):
-                    if Path(args[0]).name not in {'clang','ld'} or '-c' in args:continue
-                    for path in link_lists(args):
-                        p=absolute(path)
-                        if p.is_relative_to(self.build):continue
-                        need(transient_link_path(path),'known actual temporary linker input')
-                        before=p.stat();raw=p.read_bytes();after=p.stat()
-                        need(0<len(raw)<=MAX_METADATA and
-                             (before.st_ino,before.st_size,before.st_mtime_ns)==(after.st_ino,after.st_size,after.st_mtime_ns),
-                             'stable original transient linker input')
-                        need(path not in self.metadata or self.metadata[path]==raw,'transient linker input reused with different bytes')
-                        self.metadata[path]=raw
-            except ValueError as exc:
-                # Lines outside the registered product build (including normal
-                # manifest compilation) do not declare a transient product input.
-                if str(exc)!='actual commands emitting registered build outputs required':self.errors.append(str(exc))
-            except OSError as exc:self.errors.append(str(exc))
-
-    def finish(self):
-        if self.pending:self.observe(b'\n')
-        need(not self.errors,'actual transient linker input capture failed: '+'; '.join(self.errors[:4]))
-        return self.metadata
+def collect_metadata(raw,build):
+    """Read actual emitted files after the standard driver retains intermediates."""
+    build=absolute(str(build));metadata={};errors=[]
+    paths={str(p) for p in build.rglob('*') if p.is_file() and
+           (p.suffix=='.d' or p.name.endswith('.LinkFileList')) and
+           not {'checkouts','repositories'}&set(p.relative_to(build).parts)}
+    for args in build_commands(raw,build):
+        if Path(args[0]).name in {'clang','ld'} and '-c' not in args:
+            for path in link_lists(args):
+                p=absolute(path)
+                need(p.is_relative_to(build) or transient_link_path(path),'known actual retained linker input')
+                paths.add(path)
+    for path in sorted(paths):
+        try:
+            p=absolute(path);before=p.stat();content=p.read_bytes();after=p.stat()
+            need(0<len(content)<=MAX_METADATA and
+                 (before.st_ino,before.st_size,before.st_mtime_ns)==(after.st_ino,after.st_size,after.st_mtime_ns),
+                 'stable actual emitted compiler metadata')
+            metadata[path]=content
+        except (OSError,ValueError) as exc:errors.append(str(exc))
+    return metadata,errors
 
 def trace(raw, root, metadata, build):
     """Reconstruct actual source/object/module/link edges from original commands."""
@@ -207,7 +195,7 @@ def trace(raw, root, metadata, build):
                 if p.endswith(('.swiftmodule','.pcm')): modules.add(str(absolute(p)))
             for p in values(args,'-emit-dependencies-path'):
                 p=str(absolute(p)); need(p in metadata,'original emitted dependency bytes required');parsed_dependencies.add(p)
-                emitted=set(values(args,'-o')+values(args,'-emit-module-path')+values(args,'-emit-module-doc-path')+values(args,'-emit-module-source-info-path'))
+                emitted=set(values(args,'-o')+values(args,'-emit-module-path')+values(args,'-emit-module-doc-path')+values(args,'-emit-module-source-info-path')+values(args,'-emit-objc-header-path')+values(args,'-emit-abi-descriptor-path'))
                 for target,deps in dependency_rule(metadata[p]):
                     need(set(target)&emitted, 'dependency rule belongs to actual frontend output')
                     dependencies.update(deps);dependency_targets.update(target)
@@ -336,22 +324,17 @@ def prepare(root, build, output, run_logged):
     need(not build.exists() and not output.exists() and not build.is_relative_to(root) and not output.is_relative_to(root),'absent normal build/output outside immutable source')
     before=inventory(root);output.mkdir(parents=True)
     driver=str(Path(shutil.which('swift') or '').resolve());absolute(driver);need(Path(driver).is_file(),'actual normal Swift driver')
-    argv=['swift','build','-v','--build-tests','--build-path',str(build)]
-    log=output/'original-build.log';capture=TransientLinkCapture(build)
-    result=run_logged(argv,root,log,observer=capture.observe)
+    argv=['swift','build','-v','--build-tests','-Xswiftc','-save-temps','--build-path',str(build)]
+    log=output/'original-build.log';result=run_logged(argv,root,log)
     (output/'build-command-status.json').write_text(json.dumps(dict(command=argv,exitCode=result.returncode),sort_keys=True)+'\n')
     need(type(result.returncode) is int and result.returncode==0,'original normal native build failed; retain its output')
     need(inventory(root)==before,'source changed during original normal build')
-    metadata={str(p):p.read_bytes() for p in build.rglob('*') if p.is_file() and
-              (p.suffix=='.d' or p.name.endswith('.LinkFileList')) and not {'checkouts','repositories'}&set(p.relative_to(build).parts)}
+    metadata,errors=collect_metadata(log.read_bytes(),build)
     need(metadata and sum(map(len,metadata.values()))<=MAX_METADATA,'bounded complete original compiler dependency/link output')
-    need(not set(capture.metadata)&set(metadata),'separate original persistent and transient metadata')
-    metadata.update(capture.metadata)
-    need(sum(map(len,metadata.values()))<=MAX_METADATA,'aggregate original compiler metadata bound')
-    # Retain actual metadata and partial capture errors even when the proof refuses.
+    # Original partial metadata survives any subsequent strict proof refusal.
     (output/'original-compiler-metadata.json').write_text(json.dumps({p:pack(raw) for p,raw in sorted(metadata.items())},sort_keys=True)+'\n')
-    (output/'transient-link-capture-status.json').write_text(json.dumps(dict(errors=capture.errors,capturedPaths=sorted(capture.metadata)),sort_keys=True)+'\n')
-    capture.finish()
+    (output/'retained-link-metadata-status.json').write_text(json.dumps(dict(errors=errors,paths=sorted(metadata)),sort_keys=True)+'\n')
+    need(not errors,'actual retained linker input capture failed: '+'; '.join(errors[:4]))
     edges=trace(log.read_bytes(),root,metadata,build)
     validate_sources(edges,root,build,before['files'])
     bin_path=Path(subprocess.check_output(['swift','build','--show-bin-path','--build-path',str(build)],cwd=root,text=True).strip())
@@ -360,7 +343,7 @@ def prepare(root, build, output, run_logged):
     runtime=runtime_files(build)
     names=set(runtime)|{driver}|set(edges['objects'])|set(edges['modules'])|set(edges['tools'])|set(edges['dependencies'])
     names.update(p for row in edges['compiled'].values() for p in row)
-    names.update(edges['cSources']);names.update(p for p in metadata if Path(p).is_relative_to(build))
+    names.update(edges['cSources']);names.update(metadata)
     names.update(x for row in edges['links'] for x in row['inputs'])
     files=[file_record(p) for p in sorted(names)];need(len(files)<=MAX_FILES,'bounded exact complete build file inventory')
     record=dict(schema=SCHEMA,source=before['source'],implementationSHA256=sha(Path(__file__).read_bytes()),
@@ -380,7 +363,7 @@ def validate(record, source, git_files):
          record['implementationSHA256']==sha(Path(__file__).read_bytes()),'known exact source/build provenance implementation')
     root=absolute(record['root']);build=absolute(record['buildPath']);image=absolute(record['compiledImage'])
     need(not build.is_relative_to(root) and image.is_relative_to(build),'original build/image outside immutable checkout')
-    need(record['command']==['swift','build','-v','--build-tests','--build-path',str(build)] and type(record['exitCode']) is int and record['exitCode']==0,'original normal complete build command')
+    need(record['command']==['swift','build','-v','--build-tests','-Xswiftc','-save-temps','--build-path',str(build)] and type(record['exitCode']) is int and record['exitCode']==0,'original normal complete build command')
     need(record['trackedInputs']==git_files and type(git_files) is dict and git_files and
          all(type(n) is str and type(d) is str and re.fullmatch('[0-9a-f]{64}',d) for n,d in git_files.items()),'complete original native source inventory matches exact Git source')
     need(git_files.get('scripts/native_build_provenance.py')==record['implementationSHA256'] and
@@ -405,7 +388,7 @@ def validate(record, source, git_files):
     persistent_metadata={p for p in metadata if Path(p).is_relative_to(build)}
     actual_transient={str(absolute(p)) for args in build_commands(unpack(record['originalBuild']),build) for p in link_lists(args) if not Path(p).is_relative_to(build)}
     need(set(metadata)-persistent_metadata==actual_transient,'exact actual transient linker input inventory')
-    required=persistent_metadata|set(runtime)|{driver}|set(edges['objects'])|set(edges['modules'])|set(edges['tools'])|set(edges['dependencies'])|{str(image)}
+    required=set(metadata)|set(runtime)|{driver}|set(edges['objects'])|set(edges['modules'])|set(edges['tools'])|set(edges['dependencies'])|{str(image)}
     required.update(p for group in edges['compiled'].values() for p in group)
     required.update(edges['cSources'])
     required.update(x for link in edges['links'] for x in link['inputs'])
@@ -414,7 +397,6 @@ def validate(record, source, git_files):
     need(all(row['bytes']>0 for row in files if row['path'] in positive),'nonempty actual compiler/object/module/image bytes')
     lookup={row['path']:row for row in files}
     for name,raw in metadata.items():
-        if name not in persistent_metadata:continue
         need(lookup[name]['sha256']==sha(raw) and lookup[name]['bytes']==len(raw),'exact emitted dependency/link metadata equals actual pinned bytes')
     resources={n:d for n,d in git_files.items() if n.startswith('Sources/AutoTechnoDSP/Resources/')}
     need(resources,'original committed DSP resources required')

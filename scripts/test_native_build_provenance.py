@@ -42,7 +42,7 @@ def fixture(source=SOURCE):
     records=[dict(path=p,resolvedPath=p,bytes=len(v),sha256=build.sha(v)) for p,v in sorted(raw_files.items())]
     return dict(schema=build.SCHEMA,source=source,implementationSHA256=build.sha(Path(build.__file__).read_bytes()),
         root=root,buildPath=out,swiftDriverPath=driver,runtimeFilePaths=runtime,
-        command=['swift','build','-v','--build-tests','--build-path',out],trackedInputs=git_files,
+        command=['swift','build','-v','--build-tests','-Xswiftc','-save-temps','--build-path',out],trackedInputs=git_files,
         originalBuild=build.pack(raw),metadata={p:build.pack(v) for p,v in metadata.items()},trace=edges,files=records,compiledImage=image,exitCode=0)
 
 
@@ -246,7 +246,10 @@ class NativeBuildProvenanceTests(unittest.TestCase):
     def test_actual_transient_link_bytes_are_bound_to_the_command(self):
         r=fixture();old='/native-build/Objects.LinkFileList'
         new='/private/var/folders/f/test/T/TemporaryDirectory.control/inputs-1.LinkFileList'
-        r['metadata'][new]=r['metadata'].pop(old);r['files']=[x for x in r['files'] if x['path']!=old]
+        r['metadata'][new]=r['metadata'].pop(old)
+        record=next(x for x in r['files'] if x['path']==old)
+        record['path']=record['resolvedPath']=new
+        r['files']=sorted(r['files'],key=lambda x:x['path'])
         r['runtimeFilePaths'].remove(old)
         raw=build.unpack(r['originalBuild']).replace(old.encode(),new.encode());r['originalBuild']=build.pack(raw)
         r['trace']=build.trace(raw,r['root'],{p:build.unpack(v) for p,v in r['metadata'].items()},r['buildPath'])
@@ -258,20 +261,32 @@ class NativeBuildProvenanceTests(unittest.TestCase):
         changed=copy.deepcopy(r);del changed['metadata'][new]
         with self.assertRaisesRegex(ValueError,'original actual linker file list'):build.validate(changed,SOURCE,changed['trackedInputs'])
 
-    def test_same_owner_copies_transient_input_before_it_disappears(self):
+    def test_retained_linker_input_is_read_and_missing_bytes_refuse(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);builddir=root/'build';builddir.mkdir()
             p=root/'T/TemporaryDirectory.control/inputs-1.LinkFileList';p.parent.mkdir(parents=True)
             content=(str(builddir/'fresh.o')+'\n').encode();p.write_bytes(content)
             command=f'/Toolchain/clang -filelist {p} -o {builddir}/image\n'.encode()
-            capture=build.TransientLinkCapture(builddir)
-            split=len(command)//2;capture.observe(command[:split]);capture.observe(command[split:]);p.unlink()
-            self.assertEqual(capture.finish(),{str(p):content})
-            missing=build.TransientLinkCapture(builddir);missing.observe(command)
-            with self.assertRaisesRegex(ValueError,'capture failed'):missing.finish()
-            p.write_bytes(b'first');capture=build.TransientLinkCapture(builddir);capture.observe(command)
-            p.write_bytes(b'changed');capture.observe(command)
-            with self.assertRaisesRegex(ValueError,'reused with different bytes'):capture.finish()
+            metadata,errors=build.collect_metadata(command,builddir)
+            self.assertFalse(errors);self.assertEqual(metadata,{str(p):content})
+            p.unlink();metadata,errors=build.collect_metadata(command,builddir)
+            self.assertEqual(metadata,{});self.assertTrue(errors)
+
+    def test_declared_objc_header_and_abi_dependency_targets_are_actual_outputs(self):
+        r=fixture();raw=build.unpack(r['originalBuild'])
+        raw=raw.replace(b' -emit-module-path /native-build/AutoTechnoCore.swiftmodule',
+            b' -emit-module-path /native-build/AutoTechnoCore.swiftmodule -emit-objc-header-path /native-build/Core-Swift.h -emit-abi-descriptor-path /native-build/Core.abi.json')
+        metadata={p:build.unpack(v) for p,v in r['metadata'].items()}
+        metadata['/native-build/AutoTechnoCore.d']+=b'/native-build/Core-Swift.h : /checkout/Sources/AutoTechnoCore/Fixture.swift\n/native-build/Core.abi.json : /checkout/Sources/AutoTechnoCore/Fixture.swift\n'
+        build.trace(raw,r['root'],metadata,r['buildPath'])
+        metadata['/native-build/AutoTechnoCore.d']+=b'/native-build/foreign.h : /checkout/Sources/AutoTechnoCore/Fixture.swift\n'
+        with self.assertRaisesRegex(ValueError,'belongs to actual frontend output'):
+            build.trace(raw,r['root'],metadata,r['buildPath'])
+
+    def test_build_command_without_intermediate_retention_is_not_current_provenance(self):
+        r=fixture();r['command'].remove('-Xswiftc');r['command'].remove('-save-temps')
+        with self.assertRaisesRegex(ValueError,'original normal complete build command'):
+            build.validate(r,SOURCE,r['trackedInputs'])
 
     def test_foreign_temporary_metadata_name_is_not_admitted(self):
         for name in ['/private/tmp/secret.LinkFileList','/private/var/folders/f/t/T/TemporaryDirectory.control/secret.txt']:
