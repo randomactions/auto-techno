@@ -502,5 +502,146 @@ class PhaseOneOriginalExecutionTests(unittest.TestCase):
                 self.execute(root, root.parent / "unregistered-output", source)
 
 
+class PhaseOneReceiptAuditTests(unittest.TestCase):
+    """Real software receipts only; these fixtures never qualify product content."""
+    trace_fixture = PhaseOneGateTests.trace_fixture
+    write_trace_report = PhaseOneGateTests.write_trace_report
+    fixture = PhaseOneOriginalExecutionTests.fixture
+    git = staticmethod(PhaseOneOriginalExecutionTests.git)
+    commit = PhaseOneOriginalExecutionTests.commit
+    execute = PhaseOneOriginalExecutionTests.execute
+    synthetic_aggregate = staticmethod(PhaseOneOriginalExecutionTests.synthetic_aggregate)
+
+    def receipt(self):
+        root, directory, source = self.fixture()
+        def aggregate(root, output, runner):
+            gate.run_checks(root, runner)
+            assessment = root / gate.ASSESSMENT_PATH
+            assessment.parent.mkdir(parents=True, exist_ok=True)
+            assessment.write_bytes(b'{"syntheticSoftwareFixture":true}\n')
+            print(f"phase-1 evidence gate is current: passed, {len(gate.lifecycle.NODES)} artifacts", file=output)
+            return 0
+        self.assertEqual(self.execute(root, directory, source, aggregate), 0)
+        return root, directory, source, gate.file_sha256(directory / "original-execution.json")
+
+    def test_receipt_integrity_audit_never_runs_subordinates_or_promotes(self):
+        root, directory, source, pin = self.receipt()
+        before = {p.name: p.read_bytes() for p in directory.iterdir()}
+        with mock.patch.object(gate, "run_checks", side_effect=AssertionError("no child check")), \
+             mock.patch.object(gate, "run_check", side_effect=AssertionError("no aggregate rerun")), \
+             mock.patch.object(gate, "run_recorded_check", side_effect=AssertionError("no execution restart")):
+            result = gate.audit_recorded_check(root, directory, source, pin)
+        self.assertEqual(result["originalCommandRecords"], 19)
+        self.assertIs(result["commandReceiptIntegrityVerified"], True)
+        self.assertEqual(result["subordinateCommandsExecutedByAudit"], 0)
+        self.assertEqual(result["nativeProbesExecutedByAudit"], 0)
+        for field in ("externalRetainedCaptureProofAuthenticated", "subordinateProductContentsQualified",
+                      "phaseOneQualification", "runtimeQualification", "automatedQualityQualification", "item39Complete"):
+            self.assertIs(result[field], False)
+        self.assertEqual(before, {p.name: p.read_bytes() for p in directory.iterdir()})
+
+    def test_resealed_status_flags_cannot_hide_missing_or_changed_commands(self):
+        root, directory, source, _ = self.receipt()
+        path = directory / "original-execution.json"; raw = path.read_bytes()
+        original = json.loads(raw)
+        changes = [
+            lambda r: r.update(source="0" * 40),
+            lambda r: r["trackedInputs"].pop(next(iter(r["trackedInputs"]))),
+            lambda r: r["evidenceInputs"].update({next(iter(r["evidenceInputs"])): None}),
+            lambda r: r["checks"][0]["command"].append("--skip-validation"),
+            lambda r: r["checks"].reverse(),
+            lambda r: r["checks"].pop(),
+            lambda r: r["checks"][0].update(exitCode=False),
+            lambda r: r["checks"][0].update(log="../foreign.log"),
+            lambda r: r["checks"][0].update(logBytes=True),
+            lambda r: r.update(exitCode=False),
+            lambda r: r.update(inputsUnchanged=1),
+            lambda r: r.update(item39Complete=True),
+            lambda r: r.update(failures=["preserved failure"]),
+            lambda r: r.update(derivedAssessmentAfterSHA256=None),
+            lambda r: r.update(finishedUTC=r["startedUTC"]),
+            lambda r: r.update(startedUTC="2026-10-18T00:00:00"),
+            lambda r: r.update(environmentSelectors={"AUTOTECHNO_SKIP_VALIDATION": "1"}),
+            lambda r: r.update(unknownAuthority=True),
+        ]
+        for mutation in changes:
+            value = copy.deepcopy(original); mutation(value)
+            with self.subTest(mutation=repr(mutation)):
+                # Python dictionary equality conflates false/0 and true/1.
+                self.assertNotEqual(json.dumps(value, sort_keys=True),
+                                    json.dumps(original, sort_keys=True))
+                path.write_text(json.dumps(value))
+                with self.assertRaises(gate.PhaseOneGateError):
+                    gate.audit_recorded_check(root, directory, source, gate.file_sha256(path))
+        path.write_bytes(raw)
+
+    def test_actual_log_mutation_missing_file_and_unregistered_namespace_refuse(self):
+        root, directory, source, pin = self.receipt()
+        path = directory / "01-phase-zero.log"; raw = path.read_bytes()
+        path.write_bytes(b"different original bytes\n")
+        with self.assertRaises(gate.PhaseOneGateError):
+            gate.audit_recorded_check(root, directory, source, pin)
+        path.unlink()
+        with self.assertRaises(gate.PhaseOneGateError):
+            gate.audit_recorded_check(root, directory, source, pin)
+        path.write_bytes(raw)
+        extra = directory / "unregistered-result.json"; extra.write_text('{"passed":true}')
+        with self.assertRaises(gate.PhaseOneGateError):
+            gate.audit_recorded_check(root, directory, source, pin)
+        extra.unlink(); path.unlink(); path.symlink_to(root / gate.ASSESSMENT_PATH)
+        with self.assertRaises(gate.PhaseOneGateError):
+            gate.audit_recorded_check(root, directory, source, pin)
+
+    def test_pin_and_strict_json_refuse_duplicate_nonfinite_or_malformed_claims(self):
+        root, directory, source, pin = self.receipt()
+        path = directory / "original-execution.json"; raw = path.read_bytes()
+        for wrong in ("0" * 64, True, "not-a-sha"):
+            with self.subTest(pin=wrong), self.assertRaises(gate.PhaseOneGateError):
+                gate.audit_recorded_check(root, directory, source, wrong)
+        for changed in (raw.replace(b'{', b'{"schema":"duplicate",', 1),
+                        raw.replace(b'"exitCode": 0', b'"exitCode": NaN', 1), b"{bad-json"):
+            path.write_bytes(changed)
+            with self.subTest(raw=changed[:40]), self.assertRaises(gate.PhaseOneGateError):
+                gate.audit_recorded_check(root, directory, source, gate.file_sha256(path))
+        path.write_bytes(raw)
+
+    def test_aggregate_claim_and_current_assessment_are_independently_bound(self):
+        root, directory, source, _ = self.receipt()
+        path = directory / "original-execution.json"; raw = path.read_bytes()
+        aggregate = directory / "original-aggregate.log"; original_aggregate = aggregate.read_bytes()
+        aggregate.write_bytes(b'{"status":"passed","all19":true}\n')
+        value = json.loads(raw); value["aggregateLogSHA256"] = gate.file_sha256(aggregate)
+        path.write_text(json.dumps(value))
+        with self.assertRaises(gate.PhaseOneGateError):
+            gate.audit_recorded_check(root, directory, source, gate.file_sha256(path))
+        aggregate.write_bytes(original_aggregate); path.write_bytes(raw)
+        (root / gate.ASSESSMENT_PATH).write_bytes(b"different current assessment")
+        with self.assertRaises(gate.PhaseOneGateError):
+            gate.audit_recorded_check(root, directory, source, gate.file_sha256(path))
+
+    def test_changed_source_direct_evidence_and_reduced_registry_refuse(self):
+        root, directory, source, pin = self.receipt()
+        with mock.patch.object(gate, "CHECKS", gate.CHECKS[:-1]), self.assertRaises(gate.PhaseOneGateError):
+            gate.audit_recorded_check(root, directory, source, pin)
+        path = root / gate.WHOLE_PCM_PATH; raw = path.read_bytes(); path.write_bytes(b"changed current product")
+        with self.assertRaises(gate.PhaseOneGateError):
+            gate.audit_recorded_check(root, directory, source, pin)
+        path.write_bytes(raw)
+        (root / "scripts" / gate.CHECKS[0][1][0]).write_text("changed tracked source")
+        with self.assertRaises(gate.PhaseOneGateError):
+            gate.audit_recorded_check(root, directory, source, pin)
+
+    def test_new_cli_requires_hash_source_and_existing_external_receipt(self):
+        for arguments in (["verify-execution"], ["verify-execution", "--source", "a" * 40],
+                          ["check", "--record-sha256", "b" * 64],
+                          ["check", "--execution-directory", "/unused", "--source", "a" * 40,
+                           "--record-sha256", "b" * 64]):
+            with self.assertRaises(SystemExit), mock.patch("sys.stderr", io.StringIO()):
+                gate.parse_args(arguments)
+        args = gate.parse_args(["verify-execution", "--source", "a" * 40,
+            "--execution-directory", "/original", "--record-sha256", "b" * 64])
+        self.assertEqual(args.command, "verify-execution")
+
+
 if __name__ == "__main__":
     unittest.main()

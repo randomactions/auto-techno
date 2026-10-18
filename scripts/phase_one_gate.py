@@ -858,6 +858,7 @@ def run_check(root: Path, output: TextIO, runner: Runner = subprocess.run) -> in
 
 
 EXECUTION_SCHEMA = "autotechno-phase-one-original-execution.v1"
+EXECUTION_SCOPE = 'Original canonical checker execution and direct source/report inputs only; raw capture closure and final item applicability require their separate authorities.'
 MAX_EXECUTION_LOG = 32 * 1024 * 1024
 
 
@@ -943,7 +944,7 @@ def run_recorded_check(root: Path, directory: Path, source: str, output: TextIO)
         "derivedAssessmentBeforeSHA256": assessment_before, "checks": [],
         "status": "in-progress", "all19SubordinateChecksRecorded": False,
         "all19SubordinateExitCodesZero": False, "phaseOneGateCheckPassed": False,
-        "scope": "Original canonical checker execution and direct source/report inputs only; raw capture closure and final item applicability require their separate authorities.",
+        "scope": EXECUTION_SCOPE,
         "runtimeQualification": False, "automatedQualityQualification": False, "item39Complete": False,
     }
     record_path = directory / "original-execution.json"
@@ -999,15 +1000,176 @@ def run_recorded_check(root: Path, directory: Path, source: str, output: TextIO)
     return code
 
 
+def audit_recorded_check(root: Path, directory: Path, source: str,
+                         expected_record_sha256: str) -> dict[str, Any]:
+    """Read a pinned original receipt without executing any subordinate command.
+
+    This authenticates receipt/source/log integrity, not the domain claims in
+    child output. The final item audit still needs independent product readers,
+    original capture/probe provenance, applicability and all remaining gates.
+    """
+    root = root.resolve(); directory = directory.absolute()
+    if (not isinstance(expected_record_sha256, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", expected_record_sha256)
+            or directory.is_symlink() or not directory.is_dir()
+            or directory.resolve().is_relative_to(root)):
+        raise PhaseOneGateError("pinned original receipt directory outside source required")
+    before = execution_source_cut(root, source)
+    if len(CHECKS) != 19 or len({row[0] for row in CHECKS}) != 19:
+        raise PhaseOneGateError("complete nineteen-check registry required")
+    inputs: dict[str, str] = {}
+    def read(name: str, limit: int) -> bytes:
+        path = directory / name
+        if (Path(name).name != name or path.is_symlink() or not path.is_file()
+                or path.resolve().parent != directory.resolve()
+                or not 0 < path.stat().st_size <= limit):
+            raise PhaseOneGateError("invalid original receipt file: " + name)
+        raw = path.read_bytes()
+        if not 0 < len(raw) <= limit:
+            raise PhaseOneGateError("original receipt file changed size: " + name)
+        inputs[name] = hashlib.sha256(raw).hexdigest()
+        return raw
+    def need(value: bool, message: str) -> None:
+        if not value:
+            raise PhaseOneGateError("original execution receipt: " + message)
+    def pairs(values: list[tuple[str, Any]]) -> dict[str, Any]:
+        result = {}
+        for key, value in values:
+            need(key not in result, "duplicate JSON key")
+            result[key] = value
+        return result
+    def nonfinite(value: str) -> None:
+        raise PhaseOneGateError("nonfinite receipt JSON: " + value)
+    raw = read("original-execution.json", 4 * 1024 * 1024)
+    need(inputs["original-execution.json"] == expected_record_sha256, "pinned receipt hash differs")
+    try:
+        record = json.loads(raw, object_pairs_hook=pairs, parse_constant=nonfinite)
+    except (ValueError, UnicodeError) as exc:
+        raise PhaseOneGateError("invalid original receipt JSON") from exc
+    expected_keys = {
+        "schema", "source", "startedUTC", "finishedUTC", "implementationSHA256",
+        "python", "pythonExecutable", "pythonExecutableSHA256", "environmentSelectors",
+        "trackedInputs", "evidenceInputs", "derivedAssessmentBeforeSHA256",
+        "derivedAssessmentAfterSHA256", "checks", "status", "exitCode", "failures",
+        "all19SubordinateChecksRecorded", "all19SubordinateExitCodesZero",
+        "phaseOneGateCheckPassed", "inputsUnchanged", "aggregateLogSHA256", "scope",
+        "runtimeQualification", "automatedQualityQualification", "item39Complete",
+    }
+    need(type(record) is dict and set(record) == expected_keys, "closed complete receipt schema")
+    need(record["schema"] == EXECUTION_SCHEMA and record["source"] == source,
+         "exact schema and source")
+    need(record["status"] == "passed" and type(record["exitCode"]) is int
+         and record["exitCode"] == 0 and type(record["failures"]) is list
+         and not record["failures"], "original aggregate did not report success")
+    for key in ("all19SubordinateChecksRecorded", "all19SubordinateExitCodesZero",
+                "phaseOneGateCheckPassed", "inputsUnchanged"):
+        need(record[key] is True, "missing exact completed-record flag: " + key)
+    for key in ("runtimeQualification", "automatedQualityQualification", "item39Complete"):
+        need(record[key] is False, "receipt cannot promote qualification: " + key)
+    need(record["scope"] == EXECUTION_SCOPE, "original scope differs")
+    need(record["trackedInputs"] == before and record["implementationSHA256"]
+         == before.get("scripts/phase_one_gate.py"), "current exact tracked source binding")
+    evidence = execution_evidence_cut(root)
+    need(record["evidenceInputs"] == evidence and all(
+        isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value)
+        for value in evidence.values()), "all direct original evidence bytes must exist unchanged")
+    need(record["python"] == sys.version
+         and record["pythonExecutable"] == str(Path(sys.executable).resolve())
+         and record["pythonExecutableSHA256"] == file_sha256(Path(sys.executable)),
+         "exact original Python runtime")
+    selectors = record["environmentSelectors"]
+    need(type(selectors) is dict and not set(selectors) - {"AUTOTECHNO_BASELINE_CAPTURE_PROOF"}
+         and all(type(value) is str and 0 < len(value) <= 4096
+                 for value in selectors.values()), "unregistered original environment selector")
+    def timestamp(value: Any) -> datetime.datetime:
+        need(type(value) is str and len(value) <= 64, "bounded original UTC timestamp")
+        try:
+            result = datetime.datetime.fromisoformat(value)
+        except ValueError as exc:
+            raise PhaseOneGateError("invalid original receipt timestamp") from exc
+        need(result.tzinfo is not None and result.utcoffset() == datetime.timedelta(0),
+             "UTC receipt timestamp required")
+        return result
+    started = timestamp(record["startedUTC"]); finished = timestamp(record["finishedUTC"])
+    need(started <= finished, "original execution chronology")
+    checks = record["checks"]
+    need(type(checks) is list and len(checks) == 19, "all nineteen original command rows required")
+    previous = started
+    for index, ((identifier, arguments), row) in enumerate(zip(CHECKS, checks)):
+        name = f"{index+1:02d}-{identifier}.log"
+        need(type(row) is dict and set(row) == {
+            "id", "command", "log", "startedUTC", "finishedUTC", "exitCode", "logBytes", "logSHA256"
+        }, "closed original command row")
+        need(row["id"] == identifier and row["command"] == check_command(root, identifier, arguments)
+             and row["log"] == name, "original command/order/output path differs")
+        need(type(row["exitCode"]) is int and row["exitCode"] == 0,
+             "original subordinate did not exit zero")
+        begin = timestamp(row["startedUTC"]); end = timestamp(row["finishedUTC"])
+        need(previous <= begin <= end <= finished, "sequential original child chronology")
+        previous = end
+        output = read(name, MAX_EXECUTION_LOG)
+        need(type(row["logBytes"]) is int and row["logBytes"] == len(output)
+             and row["logSHA256"] == inputs[name], "original subordinate bytes differ")
+        try:
+            output.decode("utf-8")
+        except UnicodeError as exc:
+            raise PhaseOneGateError("original subordinate output is not UTF-8") from exc
+    aggregate = read("original-aggregate.log", MAX_EXECUTION_LOG)
+    need(record["aggregateLogSHA256"] == inputs["original-aggregate.log"], "original aggregate bytes differ")
+    need(aggregate == (
+        f"phase-1 evidence gate is current: passed, {len(lifecycle.NODES)} artifacts\n"
+    ).encode(), "one exact canonical aggregate receipt, not arbitrary passed JSON")
+    for suffix, field in [("before", "derivedAssessmentBeforeSHA256"),
+                          ("after", "derivedAssessmentAfterSHA256")]:
+        name = suffix + "-lifecycle-assessment.json"
+        digest = record[field]
+        if digest is None:
+            need(suffix == "before" and not (directory / name).exists(),
+                 "missing after assessment or unexpected before assessment")
+        else:
+            assessment = read(name, 4 * 1024 * 1024)
+            need(digest == inputs[name], "original derived assessment bytes differ")
+            if suffix == "after":
+                current = root / ASSESSMENT_PATH
+                need(not current.is_symlink() and current.is_file()
+                     and current.resolve().is_relative_to(root)
+                     and current.stat().st_size == len(assessment)
+                     and assessment == current.read_bytes(),
+                     "current derived assessment differs from original after bytes")
+    need({path.name for path in directory.iterdir()} == set(inputs),
+         "unregistered file/directory in original execution namespace")
+    need(execution_source_cut(root, source) == before
+         and execution_evidence_cut(root) == evidence
+         and file_sha256(Path(sys.executable)) == record["pythonExecutableSHA256"]
+         and all(file_sha256(directory / name) == digest for name, digest in inputs.items()),
+         "original source/evidence/receipt changed during audit")
+    return {
+        "schema": "autotechno-phase-one-original-receipt-audit.v1", "source": source,
+        "executionRecordSHA256": expected_record_sha256, "originalFiles": inputs,
+        "originalCommandRecords": 19, "commandReceiptIntegrityVerified": True,
+        "originalGateReportedPassed": True, "directSourceAndEvidenceBytesUnchanged": True,
+        "subordinateCommandsExecutedByAudit": 0, "nativeProbesExecutedByAudit": 0,
+        "externalRetainedCaptureProofAuthenticated": False,
+        "subordinateProductContentsQualified": False, "phaseOneQualification": False,
+        "runtimeQualification": False, "automatedQualityQualification": False,
+        "item39Complete": False,
+    }
+
+
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("generate", "check", "validate"))
+    parser.add_argument("command", choices=("generate", "check", "validate", "verify-execution"))
     parser.add_argument("--execution-directory", type=Path, help="Preserve original check execution outside the immutable source checkout")
     parser.add_argument("--source", help="Exact clean Git commit required with --execution-directory")
+    parser.add_argument("--record-sha256", help="Independently pinned original-execution.json SHA256 for a read-only receipt audit")
     args = parser.parse_args(argv)
-    if (args.execution_directory is not None or args.source is not None) and (
-            args.command != "check" or args.execution_directory is None or args.source is None):
-        parser.error("recording requires check, --execution-directory and --source together")
+    if args.command == "verify-execution":
+        if args.execution_directory is None or args.source is None or args.record_sha256 is None:
+            parser.error("verify-execution requires --execution-directory, --source and --record-sha256")
+    elif args.record_sha256 is not None or (
+            (args.execution_directory is not None or args.source is not None) and (
+                args.command != "check" or args.execution_directory is None or args.source is None)):
+        parser.error("recording requires check, --execution-directory and --source; receipt hash is audit-only")
     return args
 
 
@@ -1015,6 +1177,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parse_args(argv)
     root = repository_root()
     try:
+        if args.command == "verify-execution":
+            result = audit_recorded_check(root, args.execution_directory, args.source, args.record_sha256)
+            print(json.dumps(result, sort_keys=True))
+            return 0
         if args.command == "generate":
             return run_generate(root, sys.stdout)
         if args.command == "check":
