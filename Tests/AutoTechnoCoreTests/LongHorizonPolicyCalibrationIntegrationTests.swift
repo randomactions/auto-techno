@@ -373,7 +373,7 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
         )
       }
     }
-    let policy = try LongHorizonProfessionalPolicy(
+    let policy = try Self.qualifiedPolicy(
       profile: profile,
       adversarial: adversarial,
       holdout: holdout)
@@ -389,6 +389,75 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     Self.progress("profile=\(profile.fingerprint)")
     Self.progress("adversarial=\(adversarial.fingerprint)")
     Self.progress("holdout=\(holdout.fingerprint)")
+  }
+
+  /// Keep qualification failure distinct from mismatched artifact identity.
+  /// The policy constructor and every original positive gate still apply.
+  private static func qualifiedPolicy(
+    profile: LongHorizonProfessionalProfile,
+    adversarial: LongHorizonAdversarialSuiteReport,
+    holdout: LongHorizonHoldoutQualification
+  ) throws -> LongHorizonProfessionalPolicy {
+    guard adversarial.passed else {
+      throw LongHorizonProfessionalPolicyError.adversarialFailure
+    }
+    guard holdout.qualified else {
+      throw LongHorizonProfessionalPolicyError.holdoutFailure
+    }
+    return try LongHorizonProfessionalPolicy(
+      profile: profile, adversarial: adversarial, holdout: holdout)
+  }
+
+  @Test("A rejected native-rate holdout remains a holdout failure before policy construction")
+  func rejectedNativeHoldoutKeepsItsCause() throws {
+    let artifacts = try qualifiedArtifacts()
+    let bound = try #require(artifacts.profile.semanticBound(.maximumCapabilityRunBars))
+    for badRate in [44_100.0, 48_000.0] {
+      let original = artifacts.holdoutCorpus.observations[0]
+      let routes = original.routes.map { source in
+        LongHorizonRuntimePolicyObservation(
+          engineVersion: source.engineVersion,
+          primaryPolicyVersion: source.primaryPolicyVersion,
+          rootSeed: source.rootSeed,
+          semanticFingerprint: source.semanticFingerprint,
+          observedPhraseCount: source.observedPhraseCount,
+          observedBarCount: source.observedBarCount,
+          semanticValues: source.semanticValues.map { value in
+            source.sampleRate == badRate && value.metric == .maximumCapabilityRunBars
+              ? LongHorizonPolicyNamedValue(metric: value.metric, value: bound.upper + 1)
+              : value
+          },
+          sampleRate: source.sampleRate,
+          signalFingerprint: source.signalFingerprint,
+          signalObservationCount: source.signalObservationCount,
+          signalOmittedPhraseCount: source.signalOmittedPhraseCount,
+          operatorDeltas: source.operatorDeltas,
+          effects: source.effects)
+      }
+      let damaged = try LongHorizonPolicyObservation(routeObservations: routes)
+      let corpus = try LongHorizonPolicyCalibrationCorpus(observations: [
+        damaged, artifacts.holdoutCorpus.observations[1],
+      ])
+      let holdout = try LongHorizonHoldoutQualification(
+        profile: artifacts.profile, adversarial: artifacts.adversarial,
+        developmentCorpus: artifacts.development, holdoutCorpus: corpus)
+      #expect(!holdout.qualified)
+      let verdict = try #require(holdout.journeys.first {
+        $0.rootSeed == original.rootSeed
+      }).verdict
+      #expect(verdict.failedDimensions == [.capabilityFatigue])
+      #expect(verdict.failedSemanticMetrics == [.maximumCapabilityRunBars])
+      #expect(verdict.routeVerdicts.first { $0.sampleRate == badRate }?.verdict.accepted == false)
+      #expect(verdict.routeVerdicts.first { $0.sampleRate != badRate }?.verdict.accepted == true)
+      #expect(throws: LongHorizonProfessionalPolicyError.holdoutFailure) {
+        try Self.qualifiedPolicy(profile: artifacts.profile,
+          adversarial: artifacts.adversarial, holdout: holdout)
+      }
+    }
+    // A complete positive chain remains admitted by the same constructor.
+    let policy = try Self.qualifiedPolicy(profile: artifacts.profile,
+      adversarial: artifacts.adversarial, holdout: artifacts.holdout)
+    #expect(policy.profile.fingerprint == artifacts.profile.fingerprint)
   }
 
   private func calibrationCorpora() async throws -> (
