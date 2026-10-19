@@ -1,8 +1,8 @@
 # Sound Quality Contract
 
-Current source candidate uses canonical engine v56 under quality-contract schema50.
+Current source candidate uses canonical engine v57 under quality-contract schema50.
 Retained v36 primary seals and products bind their original engine-v52 study;
-retained v35 resources bind engine v51. Neither activates engine v56. Matching
+retained v35 resources bind engine v51. Neither activates engine v57. Matching
 fresh primary and Long qualification is required before current admission.
 The primary v32 policy and continuous v23/profile v33 contract remain unchanged. Matching Long Horizon v22 seals require all seven development and two
 disjoint holdout roots to qualify independently at both native rates, with all18

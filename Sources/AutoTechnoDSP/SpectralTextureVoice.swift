@@ -253,7 +253,8 @@ enum SpectralTextureVoice {
         level: Double,
         state: inout SpectralTextureState
     ) {
-        guard let dcBlocker = VoiceDCBlocking(referencePole: 0.994, sampleRate: sampleRate),
+        guard let physicalDCBlocker = VoiceDCBlocking(referencePole: 0.994, sampleRate: sampleRate),
+              let authoredDCBlocker = VoiceDCBlocking(authoredPole: 0.994),
               output.count == measurement.count,
               output.count == architectureMeasurement.count,
               indefinitePitchMeasurement.isEmpty ||
@@ -291,6 +292,10 @@ enum SpectralTextureVoice {
             let attackFrames = max(1, Int((attackSeconds * sampleRate).rounded()))
             let indefinitePitch = note.instrument.musicalPitchIdentity ==
                 .indefinitePitch
+            // The resolved source identity already separates authored broadband
+            // noise from pitched material. Preserve the noise realization at
+            // every rate; pitched material uses physical-time coefficients.
+            let dcBlocker = indefinitePitch ? authoredDCBlocker : physicalDCBlocker
             let noiseHomeColor = InstrumentPalette.homeColor(for: note.instrument.patch)
             let targetFrequency = indefinitePitch ? 0 : max(45, note.endFrequency)
             let requestedStart = indefinitePitch ? 0 : max(45, note.frequency)

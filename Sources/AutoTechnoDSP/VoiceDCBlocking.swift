@@ -7,12 +7,20 @@ struct VoiceDCBlocking: Equatable, Sendable {
     let pole: Double
     let differenceGain: Double
 
+    /// Authored broadband sources retain their existing per-sample realization.
+    /// This uses the same recurrence and caller-owned continuation as the
+    /// physical-time realization; it introduces no additional filter or state.
+    init?(authoredPole: Double) {
+        guard authoredPole.isFinite, authoredPole > 0, authoredPole < 1 else { return nil }
+        pole = authoredPole
+        differenceGain = 1
+    }
+
     init?(referencePole: Double, sampleRate: Double) {
-        guard referencePole.isFinite, referencePole > 0, referencePole < 1,
+        guard let authored = Self(authoredPole: referencePole),
               sampleRate.isFinite, sampleRate > 0 else { return nil }
         if sampleRate == 48_000 {
-            pole = referencePole
-            differenceGain = 1
+            self = authored
             return
         }
         let resolvedPole = exp(log(referencePole) * (48_000 / sampleRate))

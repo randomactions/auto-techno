@@ -43,7 +43,7 @@ struct LongHorizonSemanticTrajectoryTests {
         #expect(first.observedBarCount == 7_802)
         #expect(first.observedPhraseCount == 725)
         #expect(first.trajectoryFingerprint == "ed436c478a3e9b37")
-        #expect(first.engineVersion == "autotechno-canonical-engine.v56")
+        #expect(first.engineVersion == "autotechno-canonical-engine.v57")
         #if os(macOS)
         // Observed engine54 macOS bytes bind ordinary composition minimalization.
         // Scalar, storage, replay and unavailable-qualification checks stay exact.

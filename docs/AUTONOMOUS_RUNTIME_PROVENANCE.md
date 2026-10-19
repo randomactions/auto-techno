@@ -3646,3 +3646,18 @@ all generation/capacity/numeric predicates and unavailable qualification status.
 Matching compiled engine56 is mandatory; older, future, unbound, multi-hop,
 arbitrary-template and weakened-predicate inputs refuse. This does not qualify
 PCM, wallclock entertainment, installed admission, primary/Long or item completion.
+
+## Engine57 authored-noise DC continuity repair
+
+The engine56 cold suite refused two unchanged authored dust-cloud fingerprints.
+Engine57 preserves the existing indefinite-pitch spectral source's authored
+per-sample DC realization at every rate. The existing resolved pitch identity
+selects coefficients once per note; pitched spectral sources retain physical-time
+coefficients. Both coefficient constructions use one VoiceDCBlocking recurrence
+and the same caller-owned dcInput/dcOutput fields. No patch-name, seed, rate-case,
+profile or test-only exception is added. Source generation, envelopes, routing,
+state, buffers, render count, bounds and callback work remain unchanged.
+All original authored-noise golden fingerprints and all physical-time, transfer,
+per-frequency, exact48kHz, continuation and complete-study gates remain required.
+This candidate has not passed native validation or qualification. Original failed
+engine56 cold/study products retain their exact source and scope.

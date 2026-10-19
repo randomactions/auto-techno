@@ -314,7 +314,7 @@ struct LongHorizonSignalTrajectoryTests {
     // Signal phrase v2 and report v3 bind the finite relative-level domain.
     // Engine v54 binds ordinary composition minimalization in typed plan identities.
     // This synthetic rehearsal remains unavailable as calibration evidence.
-    #expect(QualityQualificationContract.engineVersion == "autotechno-canonical-engine.v56")
+    #expect(QualityQualificationContract.engineVersion == "autotechno-canonical-engine.v57")
     #expect(report.trajectoryFingerprint == "6697de8de20cbdf6")
     #expect(encoded.count < 500_000)
     print(
