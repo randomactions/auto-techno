@@ -3661,3 +3661,13 @@ All original authored-noise golden fingerprints and all physical-time, transfer,
 per-frequency, exact48kHz, continuation and complete-study gates remain required.
 This candidate has not passed native validation or qualification. Original failed
 engine56 cold/study products retain their exact source and scope.
+
+### Exact engine57 non-capture identity assertion
+
+The closed catalogue v8 retains all eight historical entries byte-for-byte and
+adds only the SHA256-pinned engine56-to-engine57 synthetic rehearsal transition.
+Actual unchanged native execution retains fingerprint6697de8de20cbdf6 and every
+generation, capacity, numeric and unavailable-evidence predicate. Matching actual
+compiled engine57 is mandatory; unbound, older, future, multi-hop, arbitrary and
+weakened inputs refuse. This grants no PCM study, installed-positive, runtime,
+primary, Long, wallclock soak or item qualification.
