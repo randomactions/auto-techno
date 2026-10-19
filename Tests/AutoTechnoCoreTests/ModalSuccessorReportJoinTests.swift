@@ -1300,18 +1300,18 @@ struct ModalSuccessorReportJoinTests {
         ], options: [.sortedKeys]))
         FileHandle.standardOutput.write(Data([0x0A]))
         // Full report identity includes engine and render continuation identity.
-        // Engine52 macOS bank observed in original CI39058367995/job117471021956.
+        // Engine55 macOS bank observed from this canonical mechanical control.
         // Every membership, missing-population and fitting check stays required.
         // This one-bank fixture cannot qualify or activate a policy.
         #expect(bank.engineVersion == QualityQualificationContract.engineVersion)
         // Exact PCM-derived reports are pinned per supported native platform.
         // Engine54 Windows bank observed independently in run39159523720.
-        // The historical macOS pin still requires its own native observation.
+        // An engine55 Windows observation is still required before final qualification.
         // Platform-specific observations do not substitute for one another.
         #if os(Windows)
         #expect(complete.sourceBankFingerprint == "225a87b87ed59c1e")
         #else
-        #expect(complete.sourceBankFingerprint == "cec40a6205b3ea55")
+        #expect(complete.sourceBankFingerprint == "1744a5bb898e44a4")
         #endif
         #expect(unsupportedTrainingMetrics == [.upperPercussionTailRenderedTailToAttackDBMean])
         #expect(throws: ProfessionalQualityCalibrationError.invalidMetricSet) {
