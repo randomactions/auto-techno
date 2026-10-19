@@ -3635,3 +3635,14 @@ contracts remain unchanged. No new persistent state, buffer, render pass, altern
 engine or callback operation is introduced. Unsupported/nonfinite coefficients
 refuse before voice state mutation. Whole-study/resource/runtime/item qualification
 is separate from this candidate and its component controls.
+
+### Exact engine56 non-capture identity assertion
+
+The closed non-capture transition catalogue v7 retains all seven historical entries
+and adds one exact engine55-to-engine56 synthetic rehearsal assertion transition.
+The original full method is SHA256 pinned and its only code change is the engine
+assertion. Actual unchanged native execution retains fingerprint6697de8de20cbdf6,
+all generation/capacity/numeric predicates and unavailable qualification status.
+Matching compiled engine56 is mandatory; older, future, unbound, multi-hop,
+arbitrary-template and weakened-predicate inputs refuse. This does not qualify
+PCM, wallclock entertainment, installed admission, primary/Long or item completion.

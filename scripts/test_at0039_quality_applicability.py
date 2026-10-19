@@ -24,7 +24,9 @@ def rehearsal_row(version=52):
 def fixture_compiled_engine(row):
     if row['path'] != q.ENGINE52_REHEARSAL_OWNER:
         return None
-    return ('autotechno-canonical-engine.v55' if
+    return ('autotechno-canonical-engine.v56' if
+            '"autotechno-canonical-engine.v56"' in row['current'] else
+            'autotechno-canonical-engine.v55' if
             '\"autotechno-canonical-engine.v55\"' in row['current'] else
             'autotechno-canonical-engine.v54' if
             '"autotechno-canonical-engine.v54"' in row['current'] else
@@ -567,6 +569,44 @@ class NativeArtifactByteTests(unittest.TestCase):
 
 
 class ReadinessTransitionTests(unittest.TestCase):
+    def test_engine56_transition_retains_native_identity_and_all_exact_predicates(self):
+        row = rehearsal_row(56)
+        self.assertEqual(q.digest(row['original'].encode()), q.ENGINE56_REHEARSAL_ORIGINAL_SHA256)
+        self.assertEqual(row['original'], rehearsal_row(55)['current'])
+        self.assertEqual(row['current'], row['original'].replace(
+            '"autotechno-canonical-engine.v55"', '"autotechno-canonical-engine.v56"'))
+        self.assertIn('"6697de8de20cbdf6"', row['current'])
+        q.validate_rehearsal_identity_template(row)
+        result = q.readiness_transition(row['original'].encode(), row['current'].encode(),
+            row['path'], compiled_engine='autotechno-canonical-engine.v56')
+        self.assertFalse(result['actualInstalledPositiveNativeVerified'])
+        for old, new in [('15_600', '0'), ('500_000', '500_001'),
+                         ('"unavailable"', '"available"'),
+                         ('6697de8de20cbdf6', '0000000000000000'),
+                         ('report.omittedBarCount == 0', 'report.omittedBarCount >= 0')]:
+            changed = dict(row, current=row['current'].replace(old, new))
+            with self.subTest(old=old), self.assertRaises(ValueError):
+                q.validate_rehearsal_identity_template(changed)
+        for version in [None, 51, 52, 54, 55, 57]:
+            engine = None if version is None else 'autotechno-canonical-engine.v' + str(version)
+            with self.subTest(engine=engine), self.assertRaisesRegex(ValueError, 'compiled engine56'):
+                q.readiness_transition(row['original'].encode(), row['current'].encode(),
+                    row['path'], compiled_engine=engine)
+        for version in [52, 54, 55]:
+            older = rehearsal_row(version)
+            with self.subTest(version=version), self.assertRaises(ValueError):
+                q.readiness_transition(older['original'].encode(), row['current'].encode(),
+                    row['path'], compiled_engine='autotechno-canonical-engine.v56')
+
+    def test_engine56_catalogue_preserves_all_seven_historical_templates_exactly(self):
+        import hashlib
+        packed = json.dumps(q.READINESS['transitions'][:7], sort_keys=True,
+                            separators=(',', ':')).encode()
+        self.assertEqual(hashlib.sha256(packed).hexdigest(),
+            'fedc63ba1bae79b44b81031f0d2ed752d6b8c18c704b5fedf8e487e567d885e1')
+        self.assertEqual(q.READINESS['schema'],
+            'autotechno-at0039-noncapture-readiness-transitions.v7')
+
     def test_engine55_transition_changes_only_version_after_unchanged_native_identity(self):
         row=rehearsal_row(55)
         self.assertEqual(q.digest(row['original'].encode()),q.ENGINE55_REHEARSAL_ORIGINAL_SHA256)
@@ -632,7 +672,7 @@ class ReadinessTransitionTests(unittest.TestCase):
             q.readiness_transition(legacy['original'].encode(), row['current'].encode(),
                                    row['path'], compiled_engine='autotechno-canonical-engine.v54')
 
-    def test_only_seven_exact_forward_transitions_in_three_owners_are_admitted(self):
+    def test_only_eight_exact_forward_transitions_in_three_owners_are_admitted(self):
         for row in q.READINESS['transitions']:
             # Every surrounding byte stays exact, not just a file hash or label.
             original = b'prefix\n' + row['original'].encode() + b'\nsuffix'
@@ -654,7 +694,7 @@ class ReadinessTransitionTests(unittest.TestCase):
                                       'Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationIntegrationTests.swift')
 
     def test_published_target_has_exact_current_templates_and_no_other_file_delta(self):
-        self.assertEqual(len(q.READINESS['transitions']), 7)
+        self.assertEqual(len(q.READINESS['transitions']), 8)
         self.assertEqual(len({row['path'] for row in q.READINESS['transitions']}), 3)
         for relative in q.READINESS_OWNERS:
             raw = (ROOT / relative).read_text()
