@@ -22,7 +22,7 @@ package enum QualityQualificationContract {
     /// Version 54 binds ordinary score-owned composition minimalization.
     /// Version 53's rejected private handoff candidate remains historical.
     /// Earlier primary seals remain historical and grant no current admission.
-    package static let engineVersion = "autotechno-canonical-engine.v54"
+    package static let engineVersion = "autotechno-canonical-engine.v55"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1

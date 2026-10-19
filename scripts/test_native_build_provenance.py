@@ -293,4 +293,29 @@ class NativeBuildProvenanceTests(unittest.TestCase):
             self.assertFalse(build.transient_link_path(name))
 
 
+    def test_swift_driver_forwarding_binds_the_real_frontend_plugin(self):
+        r=fixture();plugin='/native-build/Macro-tool'
+        raw=build.unpack(r['originalBuild'])
+        raw=raw.replace(b' -module-name AutoTechnoCore ',
+            b' -load-plugin-executable /native-build/Macro-tool#FixtureMacros -module-name AutoTechnoCore ')
+        raw+=(f'/Toolchain/swiftc -Xfrontend -load-plugin-executable -Xfrontend {plugin}#FixtureMacros -o '+r['compiledImage']+'\n').encode()
+        metadata={p:build.unpack(v) for p,v in r['metadata'].items()}
+        edges=build.trace(raw,r['root'],metadata,r['buildPath'])
+        self.assertIn(plugin,edges['dependencies'])
+        self.assertNotIn('-Xfrontend',edges['dependencies'])
+        r['originalBuild']=build.pack(raw);r['trace']=edges
+        for name,content in [(plugin,b'synthetic plugin'),('/Toolchain/swiftc',b'synthetic compiler')]:
+            r['files'].append(dict(path=name,resolvedPath=name,bytes=len(content),sha256=build.sha(content)))
+        r['files']=sorted(r['files'],key=lambda row:row['path'])
+        r['runtimeFilePaths']=sorted(r['runtimeFilePaths']+[plugin])
+        self.assertTrue(build.validate(r,SOURCE,r['trackedInputs'])['actualVerboseCompileTraceVerified'])
+        r['files']=[row for row in r['files'] if row['path']!=plugin]
+        with self.assertRaisesRegex(ValueError,'inputs and outputs bound'):
+            build.validate(r,SOURCE,r['trackedInputs'])
+        for args in [['/Toolchain/swiftc','-Xfrontend'],['/Toolchain/swiftc','-Xfrontend','-Xfrontend']]:
+            with self.assertRaisesRegex(ValueError,'complete actual Swift frontend forwarding'):
+                build.frontend_arguments(args)
+
+
+
 if __name__=='__main__':unittest.main()

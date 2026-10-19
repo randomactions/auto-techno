@@ -5,6 +5,47 @@ import Testing
 
 @Suite("Unified phrase composition")
 struct PhraseCompositionTests {
+    @Test("Granular source cells preserve exact unsigned quantiles and endpoints")
+    func granularSourceCellsHaveExactEndpoints() {
+        for maximum in [0, 1, 2, 7, 5_512, 5_999, Int.max] {
+            let cells = UInt64(maximum) + 1
+            #expect(AudioSliceRenderer.grainSourceStart(
+                entropy: 0, maximumSourceStart: maximum) == 0)
+            #expect(AudioSliceRenderer.grainSourceStart(
+                entropy: .max, maximumSourceStart: maximum) == maximum)
+            #expect(AudioSliceRenderer.grainSourceStart(
+                entropy: 0x8000_0000_0000_0000,
+                maximumSourceStart: maximum) == Int(cells / 2))
+            #expect(AudioSliceRenderer.grainSourceStart(
+                entropy: 0x4000_0000_0000_0000,
+                maximumSourceStart: maximum) == Int(cells / 4))
+        }
+        #expect(AudioSliceRenderer.grainSourceStart(
+            entropy: .max, maximumSourceStart: -1) == 0)
+    }
+
+    @Test("Granular source position remains in one normalized cell across rates")
+    func granularSourceCellsPreserveRateGeometry() {
+        let availableCells = [3_183, 3_465]
+        let entropies: [UInt64] = [
+            0, 1, 0x1234_5678_9ABC_DEF0, 0x4000_0000_0000_0000,
+            0x8000_0000_0000_0000, 0xCAFE_BABE_0123_4567, .max
+        ]
+        for entropy in entropies {
+            let normalized = availableCells.map { cells in
+                Double(AudioSliceRenderer.grainSourceStart(
+                    entropy: entropy, maximumSourceStart: cells - 1)) /
+                    Double(cells)
+            }
+            // Each integer result differs from the same continuous quantile
+            // by less than its own one-cell width. This bound is algebraic.
+            let quantizationBound = availableCells.reduce(0.0) {
+                $0 + 1 / Double($1)
+            }
+            #expect(abs(normalized[0] - normalized[1]) < quantizationBound)
+        }
+    }
+
     @Test("Band-limited slicing rejects rate-induced alias energy")
     func bandLimitedSliceRejectsAliasEnergy() {
         let sampleRate = 48_000.0

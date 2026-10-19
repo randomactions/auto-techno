@@ -112,7 +112,9 @@ canonical kick voice. Ambient Drift then applies deterministic
 When no valid earlier recipe exists, the same planner falls back to the current
 bar's kick or percussion window. Only an accepted phrase advances this memory.
 The score owns source identity, texture, and seed; detached DSP owns
-rate-scaled geometry and causal evidence. No recording, alternative sampler,
+rate-scaled geometry and causal evidence. Granular recall maps that seed to a
+normalized source position before resolving the route-specific frame cell, so a
+sample-rate change does not select an unrelated part of the remembered source. No recording, alternative sampler,
 preset choice, or callback work is introduced.
 
 Long-horizon effect evidence follows the same product boundary. A future phrase

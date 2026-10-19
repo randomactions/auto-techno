@@ -50,6 +50,18 @@ package enum AudioSliceRenderer {
     package static let granularLengthInSteps = 0.375
     package static let maximumGrainsPerTrigger = 48
 
+    /// Select the same normalized source cell on every sample grid. A
+    /// frame-count modulus reinterprets the seed when the route rate changes.
+    /// The high product is floor(entropy * cellCount / 2^64), without floating
+    /// point rounding, overflow, additional draws, state, or render passes.
+    package static func grainSourceStart(
+        entropy: UInt64, maximumSourceStart: Int
+    ) -> Int {
+        guard maximumSourceStart > 0 else { return 0 }
+        let cells = UInt64(maximumSourceStart) + 1
+        return Int(entropy.multipliedFullWidth(by: cells).high)
+    }
+
     package static func textureSeedFingerprint(_ seed: UInt64) -> String {
         var sink = StreamingFNV1a()
         sink.domain("audio-slice-texture-seed.typed.v1")
@@ -102,7 +114,7 @@ package enum AudioSliceRenderer {
         var grainHopFrames = 0
         var grainPositionSink = StreamingFNV1a()
         if plan.texture == .granularMemory {
-            grainPositionSink.domain("audio-slice-grain-positions.typed.v1")
+            grainPositionSink.domain("audio-slice-grain-positions.typed.v2")
             grainPositionSink.uint64(plan.textureSeed)
         }
 
@@ -165,8 +177,10 @@ package enum AudioSliceRenderer {
                         domain: UInt64(triggerIndex + 1),
                         index: triggerGrainCount
                     )
-                    let grainSourceStart = maximumSourceStart == 0 ? 0 :
-                        Int(entropy % UInt64(maximumSourceStart + 1))
+                    let grainSourceStart = Self.grainSourceStart(
+                        entropy: entropy,
+                        maximumSourceStart: maximumSourceStart
+                    )
                     grainPositionSink.int(triggerIndex)
                     grainPositionSink.int(triggerGrainCount)
                     grainPositionSink.int(grainSourceStart)

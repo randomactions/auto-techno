@@ -18,7 +18,7 @@ import subprocess
 import zlib
 import baseline_producer_witness as witness
 
-SCHEMA = 'autotechno-native-build-provenance.v3'
+SCHEMA = 'autotechno-native-build-provenance.v4'
 CHUNK_SCHEMA = 'autotechno-native-build-provenance-chunk.v1'
 MAX_METADATA = 128 * 1024 * 1024
 MAX_FILES = 50000
@@ -107,6 +107,19 @@ def clang_arguments(args):
     return result
 
 
+def frontend_arguments(args):
+    """Interpret Swift driver forwarding without treating -Xfrontend as a path."""
+    if Path(args[0]).name=='swift-frontend':return args[1:]
+    if Path(args[0]).name!='swiftc':return []
+    result=[]
+    for i,arg in enumerate(args):
+        if arg=='-Xfrontend':
+            need(i+1<len(args) and args[i+1]!='-Xfrontend',
+                 'complete actual Swift frontend forwarding')
+            result.append(args[i+1])
+    return result
+
+
 def build_commands(raw, build):
     """Manifest evaluation is not a compiled input to the registered products."""
     build=absolute(str(build));result=[]
@@ -162,14 +175,14 @@ def trace(raw, root, metadata, build):
     parsed=build_commands(raw,build); link_commands=[]
     for args in parsed:
         tools.add(str(absolute(args[0]))); tool=Path(args[0]).name
-        clang=clang_arguments(args)
+        clang=clang_arguments(args);frontend=frontend_arguments(args)
         sdks.update(str(absolute(x)) for x in values(args,'-sdk')+values(clang,'-isysroot')+values(clang,'--sysroot'))
-        for p in values(args,'-vfsoverlay')+values(clang,'-ivfsoverlay')+values(clang,'-module-map-file'):
+        for p in values(frontend,'-vfsoverlay')+values(clang,'-ivfsoverlay')+values(clang,'-module-map-file'):
             dependencies.add(str(absolute(p)))
         for p in args:
             if p.startswith('-fmodule-map-file='):
                 dependencies.add(str(absolute(p.split('=',1)[1])))
-        for plugin in values(args,'-load-plugin-executable'):
+        for plugin in values(frontend,'-load-plugin-executable'):
             dependencies.add(str(absolute(plugin.split('#',1)[0])))
         if tool=='swift-frontend' and '-c' in args:
             names=values(args,'-module-name'); need(len(names)==1,'one actual compile module')

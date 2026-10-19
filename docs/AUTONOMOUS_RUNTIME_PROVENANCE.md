@@ -3552,8 +3552,10 @@ published immutable source, actual resource inventory and complete cold proof.
 
 ### Normal compiler forwarding and retained link inputs
 
-Build-provenance v3 interprets the normal Swift frontend's Clang forwarding
-tokens as Clang arguments; an -Xcc marker is never a filesystem path. The
+Build-provenance v4 interprets the normal Swift frontend's Clang forwarding
+tokens as Clang arguments; an -Xcc marker is never a filesystem path. Swift driver -Xfrontend arguments are likewise projected into their
+actual frontend tokens before binding a configured macro executable; the
+forwarding marker never substitutes for the executable path or its file hash. The
 registered build path distinguishes product compilation from temporary Package
 manifest evaluation. Every root-module output must remain inside that build,
 and every linked product object still requires its own actual fresh emission.
@@ -3577,3 +3579,46 @@ The installed compiler, SDK, code-generation settings, source, native selectors
 and every qualification gate remain unchanged. This flag changes intermediate
 retention, not a cache, SDK, sandbox, assertion or resource/deadline allowance.
 This supplies build evidence only.
+
+
+## Normalized granular source cells
+
+Engine55 extends only the existing AudioSliceRenderer source-cell selection.
+For entropy e and N available frame cells, the selected cell is exactly
+floor(e*N/2^64), using UInt64 full-width multiplication. A zero or negative
+available span returns the existing zero start. The same entropy selects the
+same continuous source quantile at each rate; only the final one-cell rounding
+depends on the frame grid. The grain-position evidence domain advances to v2.
+
+No seed draw, source recipe, trigger, direction, gain, interpolation, fade,
+grain/hop geometry, loop bound, fallback, continuation, buffer, render pass or
+callback operation is added. Planning retains its existing canonical owner,
+while this detached DSP mapping realizes that same intention on a route's
+sample grid. The former frame-count modulus is removed rather than retained as
+an alternative renderer or profile.
+
+PhraseCompositionTests owns the algebraic endpoint and cross-grid quantization
+regressions alongside existing cut/granular PCM, seed, geometry and fallback
+controls. This local capability does not alter the quality evaluator, any
+calibrated metric, required split or acceptance threshold. The versioned engine
+and evidence identity distinguish changed granular PCM from historical outcomes.
+Fresh complete primary/Long studies, matching installation and real positive
+admission, resource/deadline/lifecycle/platform/output qualification and full
+final-source applicability remain required.
+
+
+### Exact engine55 non-capture identity assertion
+
+The closed non-capture transition catalogue v6 retains all six historical
+entries and adds one exact engine55 rehearsal entry. Its pinned original method
+is the current engine54 method; only the engine assertion advances to55. Native
+execution of the unchanged canonical synthetic rehearsal retains fingerprint
+6697de8de20cbdf6. No numeric/state/generation/size/unavailable predicate or
+fingerprint is changed.
+
+This entry requires the actual compiled engine55 source and exact method
+templates. Older/future engines, multi-hop edits, altered fingerprints, weakened
+bounds and capture-method changes still refuse. It supplies no installed
+positive, study, resource, runtime or item authority. Fresh engine55 studies
+compile their current assertions directly; historical source contexts keep
+their original scope.

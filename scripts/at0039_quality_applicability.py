@@ -54,6 +54,7 @@ READINESS_OWNERS = {
 }
 ENGINE52_REHEARSAL_OWNER = 'Tests/AutoTechnoCoreTests/LongHorizonSignalTrajectoryTests.swift'
 ENGINE54_REHEARSAL_ORIGINAL_SHA256 = '94090a7179958a2308effc6466948d0d71104dd5af74bc44a54e089d0e7a8d95'
+ENGINE55_REHEARSAL_ORIGINAL_SHA256 = '0c42c45d1d21673dc9700bec8215bdcae7f307f6757b2ac1ad42470b93593d66'
 def validate_rehearsal_identity_template(row):
     """No rehearsal generation or evidence predicate may change with its pins."""
     need(row['path'] == ENGINE52_REHEARSAL_OWNER and
@@ -61,7 +62,11 @@ def validate_rehearsal_identity_template(row):
     code = lambda text: ''.join(line for line in text.splitlines(keepends=True)
                                if not line.lstrip().startswith('//'))
     expected = code(row['original'])
-    if hashlib.sha256(row['original'].encode()).hexdigest() == ENGINE54_REHEARSAL_ORIGINAL_SHA256:
+    if hashlib.sha256(row['original'].encode()).hexdigest() == ENGINE55_REHEARSAL_ORIGINAL_SHA256:
+        # Native engine55 rehearsal retains the exact6697 fingerprint.
+        # Only its current-engine assertion advances; all numeric/state checks remain.
+        pins = [('"autotechno-canonical-engine.v54"', '"autotechno-canonical-engine.v55"')]
+    elif hashlib.sha256(row['original'].encode()).hexdigest() == ENGINE54_REHEARSAL_ORIGINAL_SHA256:
         # The engine54 capture compiled the existing non-capture test before
         # its two stale identity pins were updated from actual native output.
         # Every generation, storage, replay and unavailable-evidence check stays.
@@ -75,7 +80,7 @@ def validate_rehearsal_identity_template(row):
              'one original versioned rehearsal identity pin')
         expected = expected.replace(old, new)
     need(code(row['current']) == expected,
-         'rehearsal transition may change only its two versioned identity pins and comments')
+         'rehearsal transition may change only its declared versioned identity pins and comments')
 
 
 PRIMARY_ROUTE_OWNER = 'Tests/AutoTechnoCoreTests/PrimaryEvaluatorReadinessTests.swift'
@@ -102,8 +107,8 @@ def validate_primary_route_template(row):
 READINESS_PATH = Path(__file__).with_name('at0039_readiness_transitions.json')
 READINESS = primary.load(READINESS_PATH)
 need(set(READINESS) == {'schema', 'transitions'} and
-     READINESS['schema'] == 'autotechno-at0039-noncapture-readiness-transitions.v5' and
-     type(READINESS['transitions']) is list and len(READINESS['transitions']) == 6,
+     READINESS['schema'] == 'autotechno-at0039-noncapture-readiness-transitions.v6' and
+     type(READINESS['transitions']) is list and len(READINESS['transitions']) == 7,
      'closed built-in readiness transition catalogue')
 need({row['path'] for row in READINESS['transitions']} == set(READINESS_OWNERS),
      'only the three declared non-capture check owners')
@@ -213,7 +218,7 @@ def readiness_transition(original, current, relative, *, compiled_engine=None):
 
     These Testing checks are not called by the canonical capture entrypoints.
     Each synthetic rehearsal transition additionally requires its exact compiled
-    engine52 or engine54 source; an older study cannot receive later identity pins. No
+    engine52, engine54 or engine55 source; an older study cannot receive later identity pins. No
     client-provided mapping, arbitrary test edit or rollback is accepted. Actual installed-positive native execution remains a separate gate.
     """
     rows = [row for row in READINESS['transitions'] if row['path'] == relative and
@@ -222,7 +227,8 @@ def readiness_transition(original, current, relative, *, compiled_engine=None):
     need(len(rows) == 1, 'compiled source/test changed: ' + relative)
     row = rows[0]
     if relative == ENGINE52_REHEARSAL_OWNER:
-        version = '54' if digest(row['original'].encode()) == ENGINE54_REHEARSAL_ORIGINAL_SHA256 else '52'
+        version = ('55' if digest(row['original'].encode()) == ENGINE55_REHEARSAL_ORIGINAL_SHA256 else
+                   '54' if digest(row['original'].encode()) == ENGINE54_REHEARSAL_ORIGINAL_SHA256 else '52')
         need(compiled_engine == 'autotechno-canonical-engine.v' + version,
              'synthetic rehearsal identity transition requires compiled engine' + version)
     old, new = row['original'].encode(), row['current'].encode()

@@ -2064,3 +2064,20 @@ three exact new primary products. All historical engine51 study formats retain
 their original 15-resource requirement. Exact resource names, source and bundle
 hashes, compiler accessor and source-to-runtime joins remain mandatory; a count
 alone cannot establish runtime identity.
+
+
+## Granular source position across route rates
+
+The current engine-v55 candidate keeps the score-owned granular recall seed,
+source recipe, trigger, direction, gain and interpolation contract. Its existing
+AudioSliceRenderer selects a normalized source cell with exact full-width integer
+multiplication. It replaces a modulus whose frame-count divisor changed the
+physical source position when the route rate changed.
+
+Algebraic endpoint/quantization controls and canonical slice/component PCM
+comparisons evaluate this local defect. Ordinary cut slices retain their exact
+PCM. Those controls supply no perceptual ranking, installed admission or whole
+primary/Long qualification. Every independent development/holdout/rate dimension,
+calibration algorithm and hard bound remains required. Historical studies retain
+their original engine, source, results and scope; engine55 requires fresh complete
+qualification and final-source applicability.
