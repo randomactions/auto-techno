@@ -296,7 +296,8 @@ enum ResonantMonoVoice {
           modulation: ResonantMonoModulationEventRenderEvidence?,
           minimumAppliedCutoffHz: Double,
           maximumAppliedCutoffHz: Double) {
-        guard sampleRate > 0, start >= 0, start < output.count,
+        guard let dcBlocker = VoiceDCBlocking(referencePole: 0.995, sampleRate: sampleRate),
+              start >= 0, start < output.count,
               roleMeasurement.count == output.count,
               architectureMeasurement.count == output.count,
               pulseEchoSend.count == output.count,
@@ -453,7 +454,8 @@ enum ResonantMonoVoice {
                 state: &state.nonlinearCore,
                 evidence: &nonlinearCoreEvidence
             )
-            let dcBlocked = shaped - state.dcInput + 0.995 * state.dcOutput
+            let dcBlocked = dcBlocker.process(shaped, previousInput: state.dcInput,
+                                             previousOutput: state.dcOutput)
             state.dcInput = shaped
             state.dcOutput = dcBlocked
             let terminalGain = terminalReleaseGain(

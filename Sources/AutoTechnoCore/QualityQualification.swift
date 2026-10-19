@@ -19,10 +19,12 @@ package enum QualityQualificationContract {
     /// lineage and the retained cross-phrase consequences.
     package static let schemaVersion = 50
     package static let reasonCodeVersion = 1
+    /// Version 56 binds physical-time, reference-gain-normalized voice DC blocking.
+    /// Version 55 binds normalized granular source-cell selection.
     /// Version 54 binds ordinary score-owned composition minimalization.
     /// Version 53's rejected private handoff candidate remains historical.
     /// Earlier primary seals remain historical and grant no current admission.
-    package static let engineVersion = "autotechno-canonical-engine.v55"
+    package static let engineVersion = "autotechno-canonical-engine.v56"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1

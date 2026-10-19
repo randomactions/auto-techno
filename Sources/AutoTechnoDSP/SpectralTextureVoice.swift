@@ -253,7 +253,7 @@ enum SpectralTextureVoice {
         level: Double,
         state: inout SpectralTextureState
     ) {
-        guard sampleRate > 0,
+        guard let dcBlocker = VoiceDCBlocking(referencePole: 0.994, sampleRate: sampleRate),
               output.count == measurement.count,
               output.count == architectureMeasurement.count,
               indefinitePitchMeasurement.isEmpty ||
@@ -514,7 +514,8 @@ enum SpectralTextureVoice {
                     : note.instrument.effects.contains(.drive)
                     ? saturate(colored * (1.08 + automation.motion * 0.82))
                     : colored
-                let dcBlocked = driven - state.dcInput + 0.994 * state.dcOutput
+                let dcBlocked = dcBlocker.process(driven, previousInput: state.dcInput,
+                                                 previousOutput: state.dcOutput)
                 state.dcInput = driven
                 state.dcOutput = dcBlocked
                 let unscaled = Float(

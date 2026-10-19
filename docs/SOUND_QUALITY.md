@@ -1,8 +1,8 @@
 # Sound Quality Contract
 
-Current source candidate uses canonical engine v54 under quality-contract schema50.
+Current source candidate uses canonical engine v56 under quality-contract schema50.
 Retained v36 primary seals and products bind their original engine-v52 study;
-retained v35 resources bind engine v51. Neither activates engine v54. Matching
+retained v35 resources bind engine v51. Neither activates engine v56. Matching
 fresh primary and Long qualification is required before current admission.
 The primary v32 policy and continuous v23/profile v33 contract remain unchanged. Matching Long Horizon v22 seals require all seven development and two
 disjoint holdout roots to qualify independently at both native rates, with all18
@@ -239,7 +239,7 @@ signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
 candidate uses quality-contract schema 50, candidate-vector schema 43,
 candidate-transaction schema 14, and canonical engine identity
-`autotechno-canonical-engine.v55`. Its explicit modal, tuned-inharmonic,
+`autotechno-canonical-engine.v56`. Its explicit modal, tuned-inharmonic,
 deliberate-dissonance, and indefinite-pitch rules are defined in
 [`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md). It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
@@ -2081,3 +2081,20 @@ primary/Long qualification. Every independent development/holdout/rate dimension
 calibration algorithm and hard bound remains required. Historical studies retain
 their original engine, source, results and scope; engine55 requires fresh complete
 qualification and final-source applicability.
+
+
+## Physical-time voice DC blocking candidate
+
+Engine56 reuses each voice's existing two DC continuation fields through one
+`VoiceDCBlocking` coefficient and recurrence owner. The existing authored48kHz
+response is exact. Other rates use the same physical pole decay with Nyquist-gain
+normalization derived from that reference; no parameter is fitted from a study.
+The three instrument architectures retain their source, score, effects, envelopes,
+voice state, buffers and render count. Coefficients are immutable detached locals;
+no callback work or user control is added. Invalid coefficient inputs refuse.
+
+Independent physical-time and transfer-function controls, all-patch before/after
+PCM and continuation, fresh complete primary and Long studies, matching resources
+and real admission, memory/deadline/lifecycle/platform/output and final-source
+qualification remain required. This is an unqualified implementation candidate;
+historical failed studies and their unchanged gates remain intact.

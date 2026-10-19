@@ -3622,3 +3622,16 @@ bounds and capture-method changes still refuse. It supplies no installed
 positive, study, resource, runtime or item authority. Fresh engine55 studies
 compile their current assertions directly; historical source contexts keep
 their original scope.
+
+
+## Physical-time voice DC realization
+
+Engine56 shares the existing detached DC stage through `VoiceDCBlocking`. Each
+voice retains its own `dcInput` and `dcOutput` continuation fields. The coefficient
+pair derives physical decay and reference Nyquist gain from the same authored48kHz
+literal. Exact48kHz arithmetic, source generation, seed consumption, note geometry,
+effect topology, envelopes, tap/evidence ownership and bounded render/fallback
+contracts remain unchanged. No new persistent state, buffer, render pass, alternate
+engine or callback operation is introduced. Unsupported/nonfinite coefficients
+refuse before voice state mutation. Whole-study/resource/runtime/item qualification
+is separate from this candidate and its component controls.

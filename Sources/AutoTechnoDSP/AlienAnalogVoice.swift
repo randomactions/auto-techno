@@ -455,7 +455,8 @@ enum AlienAnalogVoice {
                        sampleRate: Double, level: Double,
                        world: SynthWorldDNA, bar: SynthPerformanceBar,
                        role: SynthRole, state: inout AlienVoiceState) {
-        guard !output.isEmpty, sampleRate > 0 else { return }
+        guard !output.isEmpty,
+              let dcBlocker = VoiceDCBlocking(referencePole: 0.995, sampleRate: sampleRate) else { return }
         guard pulseEchoSend.count == output.count else { return }
         guard spatialReverbSend.count == output.count else { return }
         guard measurement.count == output.count else { return }
@@ -906,7 +907,8 @@ enum AlienAnalogVoice {
             state.echoIndex = (state.echoIndex + 1) % state.echo.count
 
             let withMemory = coloredVoice + filteredEcho * (0.14 + mutation * 0.28)
-            let dcBlocked = withMemory - state.dcInput + 0.995 * state.dcOutput
+            let dcBlocked = dcBlocker.process(withMemory, previousInput: state.dcInput,
+                                             previousOutput: state.dcOutput)
             state.dcInput = withMemory
             state.dcOutput = dcBlocked
             state.tailLevel = max(abs(dcBlocked), state.tailLevel * 0.9995)
