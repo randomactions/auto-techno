@@ -1,8 +1,8 @@
 # Sound Quality Contract
 
-Current source candidate uses canonical engine v57 under quality-contract schema50.
+Current source candidate uses canonical engine v58 under quality-contract schema50.
 Retained v36 primary seals and products bind their original engine-v52 study;
-retained v35 resources bind engine v51. Neither activates engine v57. Matching
+retained v35 resources bind engine v51. Neither activates engine v58. Matching
 fresh primary and Long qualification is required before current admission.
 The primary v32 policy and continuous v23/profile v33 contract remain unchanged. Matching Long Horizon v22 seals require all seven development and two
 disjoint holdout roots to qualify independently at both native rates, with all18
@@ -239,7 +239,7 @@ signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
 candidate uses quality-contract schema 50, candidate-vector schema 43,
 candidate-transaction schema 14, and canonical engine identity
-`autotechno-canonical-engine.v57`. Its explicit modal, tuned-inharmonic,
+`autotechno-canonical-engine.v58`. Its explicit modal, tuned-inharmonic,
 deliberate-dissonance, and indefinite-pitch rules are defined in
 [`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md). It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,

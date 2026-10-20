@@ -3671,3 +3671,25 @@ generation, capacity, numeric and unavailable-evidence predicate. Matching actua
 compiled engine57 is mandatory; unbound, older, future, multi-hop, arbitrary and
 weakened inputs refuse. This grants no PCM study, installed-positive, runtime,
 primary, Long, wallclock soak or item qualification.
+
+## Engine58 final-mix physical-time candidate
+
+The canonical VoiceRenderer.renderBar retains its existing seven bar-local mix
+scalars, initialization and recurrence order. MixControlResponse supplies immutable
+coefficients once before the final frame loop: the authored 48 kHz literals stay
+exact, while other rates preserve each corresponding continuous-time decay.
+No persistent state, buffer, render pass, feedback path or user parameter is added.
+The existing resolved score and caller-owned delay, chorus and spatial continuation
+remain authoritative. The candidate applies only at a normal prepared render
+boundary; it does not import or amend previously rendered study products.
+
+This tests a measurable hypothesis about rate-dependent final-mix response, using
+independent step, release and per-frequency transfer oracles and unchanged authored
+source fingerprints. Native canonical PCM/effect/complete-state controls, all
+existing cold gates and complete fresh qualification remain required. No fallback
+or acceptance predicate changes: absent qualified matching evidence, runtime
+admission remains closed. The upstream masking observations are computed before
+these controls and cannot be repaired by this change. The original engine57
+relationship failures and all earlier failed studies remain immutable evidence.
+This candidate is unvalidated; physical-time algebra alone supplies no musical,
+primary-study, Long-study, memory, deadline or runtime qualification.

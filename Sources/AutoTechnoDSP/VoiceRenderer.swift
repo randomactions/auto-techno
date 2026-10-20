@@ -1722,24 +1722,25 @@ package enum VoiceRenderer {
                 ],
                 sampleRate: sampleRate
             ) : []
+        let mixControlResponse = MixControlResponse(sampleRate: sampleRate)
         for index in 0..<frames {
             let input = output[index]
             let rawSynthInput = synthBus[index]
             let kickLevel = abs(Double(kickDetectorBus[index]))
-            kickEnvelope = max(kickEnvelope * 0.992, kickLevel)
+            kickEnvelope = max(kickEnvelope * mixControlResponse.kickRelease, kickLevel)
             kickEnvelopePeak = max(kickEnvelopePeak, kickEnvelope)
             // Frequency-dependent sidechain: the centered kick/bass bus owns
             // the low end; the upper texture bus is filtered before spatial
             // effects and receives a stronger musical duck.
-            synthLow += (Double(rawSynthInput) - synthLow) * 0.012
-            synthMidLow += (Double(rawSynthInput) - synthMidLow) * 0.055
+            synthLow += (Double(rawSynthInput) - synthLow) * mixControlResponse.upperLow
+            synthMidLow += (Double(rawSynthInput) - synthMidLow) * mixControlResponse.upperMid
             let lowMid = synthMidLow - synthLow
             let upper = Double(rawSynthInput) - synthMidLow
             // Dynamic low-mid EQ keeps pads, leads, and delay returns from
             // building a constant cloud around the kick. The detector is
             // intentionally slow and bounded: it changes density, never the
             // identity of the note or the mono-compatible low end.
-            midEnvelope += (abs(lowMid) - midEnvelope) * 0.014
+            midEnvelope += (abs(lowMid) - midEnvelope) * mixControlResponse.midDetector
             let kickMidMask = min(0.16, kickEnvelope * 0.22)
             let dynamicMidCut = min(
                 0.42,
@@ -1749,9 +1750,9 @@ package enum VoiceRenderer {
             // gently closes the top when metallic texture accumulates energy.
             // This preserves transient definition without making the master
             // limiter responsible for harshness.
-            synthTone += (Double(rawSynthInput) - synthTone) * 0.11
+            synthTone += (Double(rawSynthInput) - synthTone) * mixControlResponse.upperTone
             let highBand = upper - synthTone * 0.18
-            highEnvelope += (abs(highBand) - highEnvelope) * 0.018
+            highEnvelope += (abs(highBand) - highEnvelope) * mixControlResponse.highDetector
             let dynamicDamping = min(
                 0.38,
                 highEnvelope * (0.65 + scene.darkness * 0.45)
@@ -1878,7 +1879,7 @@ package enum VoiceRenderer {
                 state.spatialSendLowPassState.isFinite
             state.delayWriteIndex = (state.delayWriteIndex + 1) % delayFrames
             state.earlyReflectionWriteIndex = (state.earlyReflectionWriteIndex + 1) % earlyReflectionFrames
-            low += (Double(input) - low) * 0.045
+            low += (Double(input) - low) * mixControlResponse.centerLow
             let duck = Float(1.0 - min(0.20, kickEnvelope * 0.25))
             let upperDuck = Float(1.0 - min(0.38, kickEnvelope * 0.55))
             let dryCenter = input * duck + Float(low) * 0.18
