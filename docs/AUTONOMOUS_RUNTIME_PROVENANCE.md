@@ -3693,3 +3693,13 @@ these controls and cannot be repaired by this change. The original engine57
 relationship failures and all earlier failed studies remain immutable evidence.
 This candidate is unvalidated; physical-time algebra alone supplies no musical,
 primary-study, Long-study, memory, deadline or runtime qualification.
+
+### Exact engine58 non-capture identity assertion
+
+The closed catalogue v9 preserves all nine historical entries byte-for-byte and
+adds only the SHA256-pinned engine57-to-engine58 synthetic rehearsal transition.
+Actual unchanged native execution retains fingerprint6697de8de20cbdf6 and every
+generation, capacity, numeric and unavailable-evidence predicate. Matching actual
+compiled engine58 is mandatory. Unbound, older, future, multi-hop, arbitrary and
+weakened inputs refuse. This supplies no PCM study, installed-positive, runtime,
+primary, Long, wall-clock soak or item qualification.

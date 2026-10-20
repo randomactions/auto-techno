@@ -57,6 +57,7 @@ ENGINE54_REHEARSAL_ORIGINAL_SHA256 = '94090a7179958a2308effc6466948d0d71104dd5af
 ENGINE55_REHEARSAL_ORIGINAL_SHA256 = '0c42c45d1d21673dc9700bec8215bdcae7f307f6757b2ac1ad42470b93593d66'
 ENGINE56_REHEARSAL_ORIGINAL_SHA256 = 'd2fc78961cb3b2fde9e389a187ed6c88182cda59c47daad18a53dd62c52c6b67'
 ENGINE57_REHEARSAL_ORIGINAL_SHA256 = '21df6b0dbdcec499ee35d2f0ffd4417976896749d7808e9dedee378492c26092'
+ENGINE58_REHEARSAL_ORIGINAL_SHA256 = '39278e29a4d616147a4bc4038cbcbd6f00742813a632d0976f733f4a4a85f25f'
 def validate_rehearsal_identity_template(row):
     """No rehearsal generation or evidence predicate may change with its pins."""
     need(row['path'] == ENGINE52_REHEARSAL_OWNER and
@@ -64,7 +65,10 @@ def validate_rehearsal_identity_template(row):
     code = lambda text: ''.join(line for line in text.splitlines(keepends=True)
                                if not line.lstrip().startswith('//'))
     expected = code(row['original'])
-    if hashlib.sha256(row['original'].encode()).hexdigest() == ENGINE57_REHEARSAL_ORIGINAL_SHA256:
+    if hashlib.sha256(row['original'].encode()).hexdigest() == ENGINE58_REHEARSAL_ORIGINAL_SHA256:
+        # Original engine58 rehearsal retains all predicates and exact identity.
+        pins = [('"autotechno-canonical-engine.v57"', '"autotechno-canonical-engine.v58"')]
+    elif hashlib.sha256(row['original'].encode()).hexdigest() == ENGINE57_REHEARSAL_ORIGINAL_SHA256:
         # Actual engine57 rehearsal retains all predicates and exact6697 identity.
         pins = [('"autotechno-canonical-engine.v56"', '"autotechno-canonical-engine.v57"')]
     elif hashlib.sha256(row['original'].encode()).hexdigest() == ENGINE56_REHEARSAL_ORIGINAL_SHA256:
@@ -115,8 +119,8 @@ def validate_primary_route_template(row):
 READINESS_PATH = Path(__file__).with_name('at0039_readiness_transitions.json')
 READINESS = primary.load(READINESS_PATH)
 need(set(READINESS) == {'schema', 'transitions'} and
-     READINESS['schema'] == 'autotechno-at0039-noncapture-readiness-transitions.v8' and
-     type(READINESS['transitions']) is list and len(READINESS['transitions']) == 9,
+     READINESS['schema'] == 'autotechno-at0039-noncapture-readiness-transitions.v9' and
+     type(READINESS['transitions']) is list and len(READINESS['transitions']) == 10,
      'closed built-in readiness transition catalogue')
 need({row['path'] for row in READINESS['transitions']} == set(READINESS_OWNERS),
      'only the three declared non-capture check owners')
@@ -226,7 +230,7 @@ def readiness_transition(original, current, relative, *, compiled_engine=None):
 
     These Testing checks are not called by the canonical capture entrypoints.
     Each synthetic rehearsal transition additionally requires its exact compiled
-    engine52, engine54, engine55, engine56 or engine57 source; an older study cannot receive later identity pins. No
+    engine52, engine54, engine55, engine56, engine57 or engine58 source; an older study cannot receive later identity pins. No
     client-provided mapping, arbitrary test edit or rollback is accepted. Actual installed-positive native execution remains a separate gate.
     """
     rows = [row for row in READINESS['transitions'] if row['path'] == relative and
@@ -235,7 +239,8 @@ def readiness_transition(original, current, relative, *, compiled_engine=None):
     need(len(rows) == 1, 'compiled source/test changed: ' + relative)
     row = rows[0]
     if relative == ENGINE52_REHEARSAL_OWNER:
-        version = ('57' if digest(row['original'].encode()) == ENGINE57_REHEARSAL_ORIGINAL_SHA256 else
+        version = ('58' if digest(row['original'].encode()) == ENGINE58_REHEARSAL_ORIGINAL_SHA256 else
+                   '57' if digest(row['original'].encode()) == ENGINE57_REHEARSAL_ORIGINAL_SHA256 else
                    '56' if digest(row['original'].encode()) == ENGINE56_REHEARSAL_ORIGINAL_SHA256 else
                    '55' if digest(row['original'].encode()) == ENGINE55_REHEARSAL_ORIGINAL_SHA256 else
                    '54' if digest(row['original'].encode()) == ENGINE54_REHEARSAL_ORIGINAL_SHA256 else '52')
