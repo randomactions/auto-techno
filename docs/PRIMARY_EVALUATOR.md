@@ -1,15 +1,14 @@
 # Single Primary Evaluator
 
-Current engine v48 binds material-world/effect-target lineage, pitch identity,
-and transition-tail continuity under quality schema 49, candidate-vector schema
-43, and transaction schema 14. The qualified primary evaluator and profile v30
-use adversarial suite v23 and disjoint holdout v20. The three bundled resources
-are fingerprint-bound and load only as that exact set. Profile schema 22 retains
-explicit source comparison support for conditional trajectory measurements.
-Matching long-horizon-v16 development, adversarial, and disjoint-holdout
-artifacts now qualify under the same exact primary policy. Phase-1 lifecycle regeneration,
-AT-0039 frozen-cohort calibration, app/route QA, and physical-output soak remain
-separate pending gates.
+Current engine v52 binds score, render, continuation and bounded future recovery
+under quality schema50, candidate-vector schema43 and transaction schema14.
+The sole primary v32 policy requires continuous v23/profile v33 evidence.
+Current primary and Long Horizon seals are absent. Retained v35 primary resources
+have engine-v51 historical scope and cannot qualify engine v52. Fresh complete
+primary and independent Long studies, matching installed artifacts, final-source
+applicability, resource/deadline, lifecycle, platform and physical-output gates
+remain required. Component controls and historical resources supply no current
+quality or runtime admission.
 
 ## Runtime contract
 
@@ -23,7 +22,9 @@ If that terminal verdict is a retryable calibrated quality rejection, the DSP
 evaluator reduces the failed fixed-domain metrics into a Core-owned recovery
 intent. Symbolic overactivity decreases density through the existing final
 `minimalize` realization; insufficient spectral spread or movement increases
-existing timbral motion; insufficient kick crest reduction strengthens the
+existing timbral motion. Absolute spectral-rolloff failure instead directs the
+existing upper-instrument color, independently of movement; insufficient kick
+crest reduction strengthens the
 existing kick body without selecting the high-crest transient articulation.
 The first successor retry waits for one coherent accepted-PCM repeat. Remaining
 ordinals within the finite wave run serially in detached preparation. Wave exhaustion

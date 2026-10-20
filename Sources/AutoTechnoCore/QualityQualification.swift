@@ -17,9 +17,14 @@ package enum QualityQualificationContract {
     /// additionally binds source-local terminal release evidence while keeping
     /// intentional attack samples exact, alongside material-world/effect-target
     /// lineage and the retained cross-phrase consequences.
-    package static let schemaVersion = 49
+    package static let schemaVersion = 50
     package static let reasonCodeVersion = 1
-    package static let engineVersion = "autotechno-canonical-engine.v48"
+    /// Version 56 binds physical-time, reference-gain-normalized voice DC blocking.
+    /// Version 55 binds normalized granular source-cell selection.
+    /// Version 54 binds ordinary score-owned composition minimalization.
+    /// Version 53's rejected private handoff candidate remains historical.
+    /// Earlier primary seals remain historical and grant no current admission.
+    package static let engineVersion = "autotechno-canonical-engine.v58"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1
@@ -127,27 +132,30 @@ package enum AutonomousQualityRecoveryDirection: String, Codable, Equatable, Has
 /// owners rather than authorizing a quality bypass or a second planner.
 package struct AutonomousQualityRecoveryIntent: Codable, Equatable, Hashable,
         Sendable {
-    package static let schemaVersion = 1
+    package static let schemaVersion = 2
     package static let neutral = Self()
 
     package let schemaVersion: Int
     package let symbolicDensity: AutonomousQualityRecoveryDirection
     package let spectralMovement: AutonomousQualityRecoveryDirection
+    package let upperColor: AutonomousQualityRecoveryDirection
     package let kickCrestReduction: AutonomousQualityRecoveryDirection
 
     package init(
         symbolicDensity: AutonomousQualityRecoveryDirection = .hold,
         spectralMovement: AutonomousQualityRecoveryDirection = .hold,
+        upperColor: AutonomousQualityRecoveryDirection = .hold,
         kickCrestReduction: AutonomousQualityRecoveryDirection = .hold
     ) {
         schemaVersion = Self.schemaVersion
         self.symbolicDensity = symbolicDensity
         self.spectralMovement = spectralMovement
+        self.upperColor = upperColor
         self.kickCrestReduction = kickCrestReduction
     }
 
     package var isNeutral: Bool {
-        symbolicDensity == .hold && spectralMovement == .hold &&
+        symbolicDensity == .hold && spectralMovement == .hold && upperColor == .hold &&
             kickCrestReduction == .hold
     }
 
@@ -155,8 +163,27 @@ package struct AutonomousQualityRecoveryIntent: Codable, Equatable, Hashable,
         Self(
             symbolicDensity: symbolicDensity.merging(other.symbolicDensity),
             spectralMovement: spectralMovement.merging(other.spectralMovement),
+            upperColor: upperColor.merging(other.upperColor),
             kickCrestReduction:
                 kickCrestReduction.merging(other.kickCrestReduction)
+        )
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case schemaVersion, symbolicDensity, spectralMovement, upperColor, kickCrestReduction
+    }
+
+    package init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        guard try values.decode(Int.self, forKey: .schemaVersion) == Self.schemaVersion else {
+            throw DecodingError.dataCorruptedError(forKey: .schemaVersion, in: values,
+                debugDescription: "Unsupported recovery-intent schema")
+        }
+        self.init(
+            symbolicDensity: try values.decode(AutonomousQualityRecoveryDirection.self, forKey: .symbolicDensity),
+            spectralMovement: try values.decode(AutonomousQualityRecoveryDirection.self, forKey: .spectralMovement),
+            upperColor: try values.decode(AutonomousQualityRecoveryDirection.self, forKey: .upperColor),
+            kickCrestReduction: try values.decode(AutonomousQualityRecoveryDirection.self, forKey: .kickCrestReduction)
         )
     }
 }
@@ -334,6 +361,48 @@ package struct AutonomousQualityRetryContinuation: Codable, Equatable, Sendable 
             presentedRepeatBars: presentedRepeatBars,
             intent: recoveryIntent
         )
+    }
+}
+
+/// One host-independent transition after a measured rejection. Accepted
+/// musical state and PCM remain outside this ephemeral recovery continuation.
+package struct AutonomousQualityRecoveryStep: Equatable, Sendable {
+    package let continuation: AutonomousQualityRetryContinuation
+    package let scheduling: AutonomousQualityRecoverySchedulingDecision
+    package let waveExhausted: Bool
+}
+
+extension AutonomousQualityRetryContinuation {
+    /// Reuses the existing finite ordinal/wave and calibrated-reason policy for
+    /// both hosts. Startup has no accepted PCM boundary, so it yields to the next
+    /// detached task and opens the next finite wave immediately. A successor
+    /// waits for its first coherent repeat and yields at an exhausted wave.
+    package func recoveringAfterRejection(
+        decision: QualityDecision,
+        targetPhraseIndex: Int,
+        initialPreparation: Bool,
+        coherentRepeatCount: Int
+    ) -> AutonomousQualityRecoveryStep {
+        guard targetPhraseIndex >= 0, decision.isRetryableCandidateRejection else {
+            return AutonomousQualityRecoveryStep(continuation: self,
+                scheduling: .failClosed, waveExhausted: isExhausted(for: targetPhraseIndex))
+        }
+        let recorded = recordingCalibratedRejection(decision: decision,
+            targetPhraseIndex: targetPhraseIndex)
+        let exhausted = recorded.isExhausted(for: targetPhraseIndex)
+        if initialPreparation {
+            let next = exhausted ? recorded.beginningNextWave(
+                targetPhraseIndex: targetPhraseIndex) : recorded
+            return AutonomousQualityRecoveryStep(continuation: next,
+                scheduling: next.context(for: targetPhraseIndex) != context(for: targetPhraseIndex)
+                    ? .continueSerially : .failClosed,
+                waveExhausted: exhausted)
+        }
+        return AutonomousQualityRecoveryStep(continuation: recorded,
+            scheduling: AutonomousQualityRecoverySchedulingPolicy.decide(
+                retryable: true, waveExhausted: exhausted,
+                coherentRepeatCount: coherentRepeatCount),
+            waveExhausted: exhausted)
     }
 }
 

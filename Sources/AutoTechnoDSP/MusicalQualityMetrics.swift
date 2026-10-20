@@ -36,17 +36,20 @@ package struct MusicalQualityMetrics: Equatable, Sendable {
         left: [Float],
         right: [Float],
         sampleRate: Double,
+        storageObservation: PreparationStorageObservation? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) {
         guard let loudness = BS1770LoudnessMeasurement(
             left: left,
             right: right,
             sampleRate: sampleRate,
+            storageObservation: storageObservation,
             cancellationRequested: cancellationRequested
         ), let perceptual = StreamingPerceptualEvidenceAnalyzer.analyze(
             left: left,
             right: right,
             sampleRate: sampleRate,
+            storageObservation: storageObservation,
             cancellationRequested: cancellationRequested
         ) else { return nil }
         self.init(
@@ -61,15 +64,18 @@ package struct MusicalQualityMetrics: Equatable, Sendable {
     package init?(
         blocks: [RenderBlock],
         sampleRate: Double,
+        storageObservation: PreparationStorageObservation? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) {
         guard let loudness = BS1770LoudnessMeasurement(
             blocks: blocks,
             sampleRate: sampleRate,
+            storageObservation: storageObservation,
             cancellationRequested: cancellationRequested
         ), let perceptual = StreamingPerceptualEvidenceAnalyzer.analyze(
             blocks: blocks,
             sampleRate: sampleRate,
+            storageObservation: storageObservation,
             cancellationRequested: cancellationRequested
         ) else { return nil }
         self.init(

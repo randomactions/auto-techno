@@ -253,7 +253,8 @@ enum SpectralTextureVoice {
         level: Double,
         state: inout SpectralTextureState
     ) {
-        guard sampleRate > 0,
+        guard let physicalDCBlocker = VoiceDCBlocking(referencePole: 0.994, sampleRate: sampleRate),
+              let authoredDCBlocker = VoiceDCBlocking(authoredPole: 0.994),
               output.count == measurement.count,
               output.count == architectureMeasurement.count,
               indefinitePitchMeasurement.isEmpty ||
@@ -291,6 +292,11 @@ enum SpectralTextureVoice {
             let attackFrames = max(1, Int((attackSeconds * sampleRate).rounded()))
             let indefinitePitch = note.instrument.musicalPitchIdentity ==
                 .indefinitePitch
+            // The resolved source identity already separates authored broadband
+            // noise from pitched material. Preserve the noise realization at
+            // every rate; pitched material uses physical-time coefficients.
+            let dcBlocker = indefinitePitch ? authoredDCBlocker : physicalDCBlocker
+            let noiseHomeColor = InstrumentPalette.homeColor(for: note.instrument.patch)
             let targetFrequency = indefinitePitch ? 0 : max(45, note.endFrequency)
             let requestedStart = indefinitePitch ? 0 : max(45, note.frequency)
             if !indefinitePitch { state.frequency = requestedStart }
@@ -383,8 +389,18 @@ enum SpectralTextureVoice {
                     let high = source - state.low
                     state.band += (high - state.band) *
                         min(0.64, coefficient * 0.74)
-                    colored = high * (0.62 - automation.motion * 0.16) +
+                    let ordinaryColor = high * (0.62 - automation.motion * 0.16) +
                         state.band * (0.38 + automation.motion * 0.16)
+                    if automation.color < noiseHomeColor {
+                        // Extend the same color below its authored home. Reuse
+                        // the existing low component; no filter, state, source,
+                        // pass or post-mix processing is added. At/above home
+                        // the preceding arithmetic and PCM remain exact.
+                        let upperWeight = automation.color / noiseHomeColor
+                        colored = ordinaryColor * upperWeight + state.low * (1 - upperWeight)
+                    } else {
+                        colored = ordinaryColor
+                    }
                 } else if let harmonicTailTreatment {
                     let sourceFrequency =
                         harmonicTailTreatment.startFoldedSourceFrequency +
@@ -503,7 +519,8 @@ enum SpectralTextureVoice {
                     : note.instrument.effects.contains(.drive)
                     ? saturate(colored * (1.08 + automation.motion * 0.82))
                     : colored
-                let dcBlocked = driven - state.dcInput + 0.994 * state.dcOutput
+                let dcBlocked = dcBlocker.process(driven, previousInput: state.dcInput,
+                                                 previousOutput: state.dcOutput)
                 state.dcInput = driven
                 state.dcOutput = dcBlocked
                 let unscaled = Float(

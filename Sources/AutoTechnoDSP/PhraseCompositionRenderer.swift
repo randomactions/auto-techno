@@ -50,6 +50,18 @@ package enum AudioSliceRenderer {
     package static let granularLengthInSteps = 0.375
     package static let maximumGrainsPerTrigger = 48
 
+    /// Select the same normalized source cell on every sample grid. A
+    /// frame-count modulus reinterprets the seed when the route rate changes.
+    /// The high product is floor(entropy * cellCount / 2^64), without floating
+    /// point rounding, overflow, additional draws, state, or render passes.
+    package static func grainSourceStart(
+        entropy: UInt64, maximumSourceStart: Int
+    ) -> Int {
+        guard maximumSourceStart > 0 else { return 0 }
+        let cells = UInt64(maximumSourceStart) + 1
+        return Int(entropy.multipliedFullWidth(by: cells).high)
+    }
+
     package static func textureSeedFingerprint(_ seed: UInt64) -> String {
         var sink = StreamingFNV1a()
         sink.domain("audio-slice-texture-seed.typed.v1")
@@ -62,7 +74,8 @@ package enum AudioSliceRenderer {
         output: inout [Float],
         plan: AudioSlicePlan?,
         stepFrames: Double,
-        sampleRate: Double
+        sampleRate: Double,
+        storageObservation: PreparationStorageObservation? = nil
     ) -> AudioSliceRenderEvidence {
         guard let plan,
               !source.isEmpty,
@@ -85,6 +98,14 @@ package enum AudioSliceRenderer {
         guard sourceCount >= 2 else { return .neutral }
         let sourceEnd = sourceStart + sourceCount
         let sourceWindow = Array(source[sourceStart..<sourceEnd])
+        // The real copy and mutable destination coexist here; no synthetic
+        // scratch or retained destination alias is added by the caller.
+        storageObservation?.observe("helper-working") { inventory in
+            inventory.register(source, owner: "slice.source")
+            inventory.register(output, owner: "slice.output")
+            inventory.register(sourceWindow, owner: "slice.sourceWindow")
+            withExtendedLifetime((source, output, sourceWindow)) {}
+        }
         let fadeFrames = max(1, Int((sampleRate * edgeFadeSeconds).rounded()))
         var renderedFrames = 0
         var finite = sourceWindow.allSatisfy(\.isFinite)
@@ -93,7 +114,7 @@ package enum AudioSliceRenderer {
         var grainHopFrames = 0
         var grainPositionSink = StreamingFNV1a()
         if plan.texture == .granularMemory {
-            grainPositionSink.domain("audio-slice-grain-positions.typed.v1")
+            grainPositionSink.domain("audio-slice-grain-positions.typed.v2")
             grainPositionSink.uint64(plan.textureSeed)
         }
 
@@ -156,8 +177,10 @@ package enum AudioSliceRenderer {
                         domain: UInt64(triggerIndex + 1),
                         index: triggerGrainCount
                     )
-                    let grainSourceStart = maximumSourceStart == 0 ? 0 :
-                        Int(entropy % UInt64(maximumSourceStart + 1))
+                    let grainSourceStart = Self.grainSourceStart(
+                        entropy: entropy,
+                        maximumSourceStart: maximumSourceStart
+                    )
                     grainPositionSink.int(triggerIndex)
                     grainPositionSink.int(triggerGrainCount)
                     grainPositionSink.int(grainSourceStart)

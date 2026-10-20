@@ -6,6 +6,10 @@ Every phrase now binds the current episode's world ID, fingerprint, parent,
 generation, handoff, six axes, and progress into the typed plan fingerprint.
 The detached generated graph binds the same world plus requested and realized
 effect vectors; a mismatch against incoming continuation fails preparation.
+World progress must equal the canonical episode progress at the plan's exact
+presentation start bar, including coherent repeats. A stale or future progress
+value fails detached input validation before a render reservation; Core rejects
+the same mismatch without partially advancing musical or quality continuation.
 
 No material decision or analysis enters the real-time callback. Core resolves
 future score boundaries, detached DSP preparation advances at most one graph
@@ -64,9 +68,9 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   primary-evaluation transaction under quality-contract schema 49, candidate-
+   primary-evaluation transaction under quality-contract schema 50, candidate-
    vector schema 43, candidate-transaction schema 14, and canonical engine
-   identity `autotechno-canonical-engine.v48`. Each
+   identity `autotechno-canonical-engine.v54`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
@@ -495,7 +499,7 @@ mistaken for a completed feedback system.
    the captured source. Core rotates through only
    the qualified families and exact accepted PCM remains the fallback when none
    qualify. The selected primary plan, blocks, candidate
-   evidence, render/graph continuation, quality decision, and engine-v48
+   evidence, render/graph continuation, quality decision, and engine-v49
    artifacts remain unchanged. App and Windows transports merely choose the
    immutable family at a phrase boundary, and a ready successor always advances. The
    macOS scheduler does not register sidecar occurrences as canonical live-
@@ -582,7 +586,8 @@ development profile.
 ## Implemented tonal-envelope expansion slice
 
 `SynthPerformancePlan` owns one durable `sustainedWash` relation on the final
-eligible Tonal Motion anchor at a canonical energy-release marker. Eligibility
+eligible Tonal Motion anchor after composition, timing, and held polymetric
+relocation at a canonical energy-release marker. Eligibility
 requires a nonconservative release plan, the existing displaced-kick recovery
 signature at macro bar 15, a retriggered motif onset no later than step 12, and
 the existing Tonal Motion architecture. The relation changes no onset, pitch,
@@ -774,8 +779,16 @@ ignore rule, tracked private research artifact, or mutable GitHub Action selecto
 
 The current macOS executable has no third-party runtime package. Swift Testing
 and Swift Syntax are exact test-only pins. Apple and Windows system frameworks
-remain platform-provided. Every active GitHub Action is pinned to an exact
-reviewed revision. The Windows source-validation path builds and tests in place,
+remain platform-provided. Every external GitHub Action is pinned to an exact
+reviewed revision. A same-repository reusable workflow uses one explicit
+`repository-workflow:` binding owned and source-anchored by the project. Both
+GitHub local reference forms bind the caller's commit; the checker requires a
+flat tracked YAML target, rejects reference suffixes, traversal, missing files
+and symbolic links, and scans external pins inside both YAML extensions. Local
+ownership never waives an external-action pin. Historical v33 and current v34
+primary resources are declared separately with exact unchanged byte hashes;
+manifest presence supplies no activation or quality authority.
+The Windows source-validation path builds and tests in place,
 but does not install Inno Setup, copy Swift/Foundation/Dispatch or MSVC runtime
 DLLs, create an installer or archive, or upload a distribution. The dormant
 project-owned installer template is isolated from every active script and
@@ -1363,7 +1376,7 @@ artifacts. Raw PCM remains outside the artifacts and runtime observation.
 
 ## Implemented bounded long-horizon future adaptation
 
-`AutoTechnoDSP` owns `autotechno-long-horizon-runtime-observation.v2` and a
+`AutoTechnoDSP` owns `autotechno-long-horizon-runtime-observation.v3` and a
 fixed-capacity `LongHorizonFutureAdaptationState`. Detached preparation reduces
 only an accepted prepared phrase into semantic, operator/signal, and effect
 evidence. The runtime state validates exact root, phrase/bar continuity, route
@@ -1403,7 +1416,7 @@ fingerprints are `836ac66b68470cd4`, `5950762cf2dc2635`, and
 `0e00df369ce54e50`. The primary profile, adversarial suite, and holdout are
 independently pinned as `06cb04bfbef71c28`, `16820b6274dd26d4`, and
 `2037dec24ac1e45c`. All six artifacts in that prior assessment replayed byte for byte.
-The current v30 primary set has separately qualified matching long-horizon-v16
+The historical v30 primary set had separately qualified matching long-horizon-v16
 artifacts, pinned as `5110688cc8620d7a`, `fded455207d0919c`, and
 `768388d21859dfdc`. The physical
 percussion promotion stays inside the existing score/voice/evidence owners;
@@ -1534,7 +1547,7 @@ re-enter the product architecture.
 
 ## Explicit continuous modal observation provenance
 
-Detached continuous observation v23/profile v32 extends the existing report,
+Detached continuous observation v23/profile v33 extends the existing report,
 observation, trajectory/corpus and fitting owners. Construction derives the two
 modal ratios from the canonical original report and its optional validated
 actual prepared-successor receipt through the existing ledger/support owner.
@@ -1550,6 +1563,2143 @@ receipt coverage cannot manufacture another independent source. Corpus and
 relationship validation retain complete native-rate/checkpoint coverage,
 version consistency, duplicate rejection and required-unavailable measurements.
 A reduced one-bank analysis uses the same corpus fitter and remains below the
-minimum diverse source count. The existing evaluator and activation authority are retained. Installed v21/v30/v16 remains the runtime contract; bar-local
-v22/v31 and continuous v23/v32 remain unqualified and unactivated. No renderer,
+minimum diverse source count. The existing evaluator and activation authority are retained. Historical v21/v30/v16 artifacts retain their original contract and are ineligible
+under current evidence. The sole primary v32 requires continuous v23/v33 prepared
+validation; fresh native current primary offline qualification is complete,
+while paired artifact installation and full runtime activation remain pending. No renderer,
 Core continuation, callback operation, future decision or PCM algorithm changes.
+
+## Prepared-product continuous observation seam
+
+The detached continuous observation owner can also bind one immutable prepared
+phrase and its actual immediate prepared successor, without creating fixture
+reports. The shared successor validator checks the same render/DSP, quality,
+graph, live-master, route and physical-window continuation as the report path.
+Prepared identity includes the selected plan, transaction, commit and incoming/
+outgoing quality states; report identity retains its separate checkpoint/fixture
+binding. Receipts cannot cross these source identities. The existing Core
+primary checkpoint mapping chooses the runtime population, including the broad
+continuation population for an ordinary lock phrase.
+
+Both paths use the same modal ledger, applicability and observation extraction.
+Absent successors leave unfinished source windows required-unavailable; new
+successor score events never contribute to the source phrase's means. The
+three-rate actual-product regression covers equality of measurements, distinct
+source identity, exact replay, self/wrong-rate successor rejection and rejection
+of cross-bound receipts. No persistent state, PCM, renderer, callback, schedule,
+commit outcome or policy activation changes. Continuous native offline
+qualification is separate from runtime eligibility; delayed future-boundary
+integration and matching installed primary/long-horizon qualification remain
+required before promotion.
+
+The reduced one-bank construction test preserves its original score selection
+as a negative control: it has no foreground-clearance population for the
+upper-percussion tail-to-attack metric and must refuse fitting with
+`invalidMetricSet`. Its full-report digest is engine-version dependent. The
+historical engine-v48 digest `11743474e0cedea5` is retained as provenance; the
+engine-v49 construction emitted `05d18c479efe25a3` in native run38143331435,
+job114481483602 at sourcee640dac6e441ee887998d0b752202dd6929f44b8.
+That run completed33 tests with the old digest comparison as its sole issue;
+all other construction assertions, including missing-population refusal, passed.
+The fixture now pins engine v49 and its observed digest together. This updates
+mechanical source identity after the versioned timing-policy change, not any
+quality bound, frozen qualification corpus or installed authority. Native
+validation of the refreshed assertion remains required. A positive construction counterpart selects
+the first eligible score-declared foreground-clearance phrase before any PCM,
+using the same public seed and a 128-phrase bound. It replaces only that actual
+checkpoint's native-rate source pair in the counterpart bank; the original
+bank, phrase-21 modal suffix and frozen 40/6 qualification study are preserved.
+Both banks retain typed original and actual successor provenance. The positive
+bank has one trajectory, so it cannot provide diverse calibration or activate
+the installed primary evaluator. Foreign-rate wire controls preserve the actual
+score-support metadata rather than reconstructing it as absent. Installed
+evidence-v29 artifacts remain ineligible under corrected evidence-v30 source;
+this observation seam does not waive that boundary.
+
+
+### Actual-prepared continuous reconstruction
+
+The existing `ProfessionalQualityObservation.decodeValidated` and
+`ProfessionalQualityModalSuccessorEvidence.decodeValidated` now also reconstruct
+saved evidence against actual immutable `PreparedAutonomousPhrase` products.
+They rerun the same source/successor construction and require exact canonical
+bytes within their existing encoded-size bounds. Journey-report identities,
+changed measurements, substituted products, omitted required successor coverage,
+and noncanonical encodings cannot reconstruct an actual-prepared observation.
+A source-only observation may reconstruct only with its original unavailable
+suffix support; reconstruction never supplies missing physical frames.
+
+This stateless detached evidence seam preserves the original canonical owner,
+ledger, observation versions, quality state and fallback. It avoids unchecked
+numeric decoding or an independent runtime evidence extractor. It adds no Core
+parameter, PCM change, callback work, transport admission, installed policy,
+persistent state or future-decision authority. Causal runtime integration and
+matching qualified primary/long-horizon artifacts remain required separately.
+
+
+## Private detached prepared-validation foundation
+
+`AutonomousPhrasePreparer` remains the only immutable prepared-product
+constructor. The sole `AutonomousCandidateEvaluating` seam may now require a
+prepared validation phase. Its initial accepting verdict is prospective in that
+case: the private source product carries `preparedValidationRequired` and has
+no validation proof, so it is commit-ineligible. Only a read-only
+`AutonomousCandidatePreparedPreview` escapes to the detached evaluator; it
+exposes the existing score and prospective quality/render/graph/live continuation
+needed to render evidence, but cannot return or schedule its private source PCM.
+The finalizer calls that evaluator once and checks cancellation before and after.
+
+The preview constructs one typed `AutonomousCandidatePreparedValidation` from
+actual continuous prepared-product observation. There is no arbitrary-fingerprint
+or decoded proof constructor. Missing physical windows preserve unavailable
+support and prevent assessor invocation. Actual successor receipt validation,
+source-event ownership and applicability reuse the existing ledger and extractor.
+When the source-only projection has physically missing or partial attack/body or
+tail/body support, admission additionally requires the actual successor to be
+commit-eligible. The proof retains that exact immutable qualified successor and
+caches its admission result off the callback. Complete measurements from an
+unaccepted successor preserve unavailable qualification and never invoke the
+assessor. A source with complete local windows requires no retained successor;
+undefined body energy remains unavailable rather than creating a suffix need.
+The final source rechecks both cached measurement and continuation admission.
+A missing or foreign proof yields unavailable qualification; a foreign proof is
+not attached to the source. Rejection never advances accepted state.
+
+The final source reuses its selected render, transaction and qualified hold
+sidecars. A successful final admission must have the exact prospective source
+identity used by the physical evidence, including final quality and live state.
+Changing acceptance metadata after measuring cannot rebind that proof. The
+required-validation marker is part of prepared identity; it is omitted from
+legacy prepared identities, preserving their exact bytes. The proof itself is
+excluded from its source identity to avoid recursion, and the private constructor
+caches the identity and support checks before bounded commit admission. The
+existing transaction fingerprint still precedes outgoing quality; no successor
+receipt is placed inside that transaction. Existing source correction/render
+budgets and the callback remain unchanged.
+
+This implements an unactivated admission foundation, not a production successor
+probe or calibrated policy. The historical primary v30 requested no prepared validation; the current sole
+primary v32 requires it and the route-local wrapper delegates the same seam. Test-only controls
+use the canonical Core director and renderer to prepare one qualified successor
+under the exact prospective continuation. That successor uses the same sealed
+validation seam and must complete its own windows locally; it cannot recursively
+manufacture a suffix. Controls exercise accepted and adjusted source admission,
+retained-successor reconstruction and repeatability, unaccepted-successor refusal,
+unavailable windows, missing/foreign proof, acceptance rebinding and cancellation
+at the fixed rates. Replaying the accepted source's first bar cannot complete its
+last-bar observation ledger: it carries a different incoming state and lacks the
+original pending event identities. No historical record is relabeled. These are
+mechanical controls, not quality labels or artifact qualification.
+
+Production activation still requires one bounded successor producer under the
+existing detached transport owner, matching long-horizon and future live/route
+context, proof that measured source windows retain their consequence when that
+successor is committed or replaced, a protected transport handoff that consumes
+the retained continuation before choosing repeat fallback, a qualified bounded
+lookahead memory/time envelope, matching primary and long-horizon artifacts, and full source/PCM/lifecycle gates.
+No alternative evaluator, renderer, Core parameter, UI control or persistent
+adaptation state is installed by this foundation.
+
+
+## Source-bound prospective long-horizon projection
+
+The private prepared-validation preview can now project the source's existing
+signal and effect-dose evidence through `LongHorizonFutureAdaptationState` before
+planning a qualified successor. This uses the same private signal extractor and
+semantic/effect/signal reducer as accepted observation. No second adaptation loop,
+new musical parameter, renderer, PCM pass or persistent accumulator is added.
+The preview must be an otherwise fully bound prospective acceptance missing only
+its required prepared-validation proof. It exposes immutable signal facts without
+exposing its source PCM. Missing evidence, wrong source position/root, unsupported
+rate and mismatched profile retain the prior adaptation state.
+
+`LongHorizonProspectiveAdaptation` is a transient seal, constructed only by that
+reducer. It binds the exact prospective prepared-source identity, canonical incoming
+session fingerprint, incoming adaptation fingerprint and full long-horizon policy
+identity. Its projected state and bounded decision are available for private future
+planning. `admittedUpdate` releases an update only when the final source is
+commit-eligible and all four bindings match; rejection, unavailable qualification,
+source rebinding, a foreign route, foreign session/adaptation or policy cannot
+promote tentative state. Neither the seal nor the projection is a primary quality
+verdict or a reason to advance the actual session early.
+
+Mechanical controls at 8k, 44.1k and 48k compare projected and accepted signal
+facts, adaptation fingerprints and decisions, and verify the successor plan against
+the canonical accepted-state advance including that decision. They use synthetic
+long-horizon policy fixtures solely to exercise reducer mechanics, not a new
+calibration population. Incoming state remains unchanged and unsuccessful sources
+cannot admit their projections. The existing minimum evidence, future-boundary,
+recovery/reframe eligibility, decision interval and conservative fallback remain.
+
+The production detached successor producer and protected transport consumption
+remain unactivated. They must retain this exact incoming context, match the admitted
+projection against ordinary accepted reduction, carry future live/route boundaries,
+and qualify a bounded lookahead resource envelope before matching primary and
+long-horizon artifact qualification and full source/PCM/lifecycle publication gates.
+
+
+## Sole primary continuous prepared admission
+
+The existing ProfessionalQualityPrimaryEvaluator owns the v31 policy/evaluator
+contract. Its required profile is continuous v32 with observation v23; adversarial
+and disjoint holdout artifacts must have the same scope, observation identity,
+profile, corpus and engine/evidence binding. A vector alone or a legacy observation
+cannot supply actual prepared-source ownership and is refused. There is no
+alternative legacy evaluator or runtime selector. Historical bundled v30 primary
+and v16 long-horizon artifacts remain ineligible under the corrected evidence and
+current policy; they are not retagged or replaced by retained test artifacts.
+
+The terminal verdict supplies prospective acceptance only after transaction,
+hard-gate and rate checks. Required sealed prepared validation judges the actual
+continuous source observation and any physically necessary qualified successor.
+Only that calibrated verdict can admit the source; missing physical support
+preserves unavailable qualification and rejected evidence leaves accepted state
+unchanged. Diagnostics and bounded recovery intentions use that same observation,
+rather than reconstructing legacy metrics. The preview shares one physical suffix
+demand classifier with its proof constructor. Undefined body energy cannot be
+turned into a fabricated successor request. All work stays detached; source
+correction budgets, callback behavior and musical state ownership remain stable.
+
+Explicit opt-in controls use the retained 7ef30ff native model only to test
+admission mechanics at 44.1k and 48k. They also refuse mixed-scope artifact
+envelopes, vector-only and legacy assessment, altered metrics, missing proofs,
+unsupported rates and unfinished physical windows. They do not recertify that
+historical model, install resources, qualify the current source or activate
+playback. Production bounded successor preparation, protected retained-continuation
+consumption, future live/route context, resource qualification, matching current
+primary/long-horizon artifacts and full source/PCM/lifecycle gates remain pending.
+
+
+## Canonical prospective successor request and replay origin
+
+AutonomousPerformancePreparer owns one detached prospective continuation builder
+under the existing PhrasePreparationRequest and replay identity. It accepts only
+an otherwise bound private source preview and the exact request that produced it.
+The shared route evaluator passes that request's complete replay fingerprint into
+the canonical finalizer. The immutable prepared identity records this origin under
+actual-prepared-modal-successor.v2; callers without a shared origin retain exact
+v1 bytes. The optional origin is operational provenance, not a score parameter,
+quality verdict or source of musical variation. It is captured once before
+prospective/final assembly and cannot change after measurement.
+
+The builder requires the source origin, canonical recovery-aware plan, raw input
+continuation, route/rate/generation, proposal and live target boundary to match.
+A present long-horizon policy must bind the exact primary policy and produce a
+projection through the existing reducer. A missing policy with incoming adaptation
+is unavailable, never a silent context reset. The canonical Core advance applies
+that projected decision, prospective quality and live state exactly once. The
+resulting successor request retains source ending render/graph and long-horizon
+state, uses the same route generation, clears source-only recovery/retry and live
+proposal ownership, and leaves accepted state unchanged. Known live target end
+samples use the actual analyzed frame count with checked integer arithmetic; an
+ordinary source with no app-owned absolute boundary makes no position claim.
+
+ProspectivePerformanceContinuation is constructed only by this builder and holds
+no source PCM. It seals source identity and the complete originating request. Its
+admittedRequest releases future request ownership only for the exact accepted
+source and original context, with the same admitted long-horizon projection. A
+request alone never authorizes scheduling, successor acceptance or early state
+advancement. Cancellation, altered input, missing replay origin or unmatched
+policy preserves refusal and discards tentative work.
+
+Controls use the inherited fixed public root/phrase at 8k, 44.1k and 48k, actual
+source and successor PCM through the canonical renderer, synthetic long-horizon
+policy mechanics, and an actual applied live proposal. They compare the sealed
+request and rendered successor against ordinary accepted Core advance and
+long-horizon reduction, require child qualification and original-window closure,
+refuse foreign inputs before successor PCM, and prevent a proposal from being
+applied twice. They remain mechanical controls, not current artifact qualification
+or runtime activation. Production chain preparation, protected transport
+consumption and the full lookahead memory/time envelope remain pending; the
+existing single-source resource bound is not a bound for multiple retained sources.
+
+
+## Iterative detached successor preparation
+
+The shared AutonomousPerformancePreparer uses one iterative chain transaction
+under the same canonical director, request, route evaluator and DSP finalizer.
+The finalizer may privately suspend an otherwise bound prospective source as
+AutonomousPendingPreparedValidation. That pending value exposes only its sealed
+preview and a canonical resolution operation; preparedPhrase remains absent,
+no accepted state changes, and no pending product can enter playback. Normal
+synchronous DSP callers retain their existing terminal protocol.
+
+Before suspension, the immutable source owns qualified repeat sidecars and
+optional diagnostic captures. Render-only candidate references are released;
+resolution reuses the same source presentation and exact selected PCM, transaction,
+quality/live input and replay origin through the original finalizer. No second
+render or admission policy is introduced. A missing, foreign or cancelled proof
+preserves refusal. Cancellation is checked before reassembly and before the
+shared owner releases any complete result.
+
+The owner prepares actual children only when the existing physical-window
+classifier requires them. Each child uses the sealed canonical successor request
+and must pass its own hard gates, measurement completeness and calibrated policy.
+Rendering calls unwind before another phrase is prepared, rather than nesting
+phrase preparation on the cooperative worker stack. A naturally locally complete
+last source is resolved first; parents then resolve in reverse order using their
+exact accepted immediate children. The source seal must release that exact child's
+request, and the parent's proof must retain that exact immutable child. A rejected,
+unavailable or mismatched descendant discards every tentative parent. A root
+rejection, including one measured with a child, keeps the existing reason-coded
+recovery result but releases no retained child transport ownership.
+
+A rejected descendant also preserves a bounded non-PCM recovery receipt when
+its actual Core decision is already retry-eligible. The receipt binds the entire
+root replay request and the actual rejected child request, phrase and candidate;
+it carries neither preview, prepared product nor continuation state. Both hosts
+and the native journey may use that decision only to advance the root's existing
+finite serial recovery. Every tentative parent and child is still discarded.
+Diagnostic strings cannot construct this receipt. Missing proof, unsafe or
+unavailable evidence, cancellation, route recovery and a changed root request
+remain terminal. This does not replace a child of an already accepted source:
+protected measured-child consumption is unchanged. Native journey v3 records
+root and rejected-child identities separately and fingerprints discarded-chain
+rejections explicitly while preserving the original pre-rejection prefix digest;
+original v2 journeys and their verification retain their original scope. Component
+controls do not prove that the original native refusal is repaired or qualify a
+complete Long corpus, resources, deadlines, either host or physical output.
+
+The read-only history integrity helper interprets journey v3 only when its caller
+explicitly binds that version with effect evidence v3. It checks each ordinary or
+discarded-child rejection without deduplicating occurrences, including the exact
+root/child distinction, finite retry ordinal, calibrated reason set and bounded
+diagnostics. Historical callers still bind journey v2; relabelled descendant
+metadata cannot enter that interpretation. Every original complete-history gate,
+including 7,800 accepted bars, dense native evidence and a closed leaf, remains
+required. This helper adds neither a registered cold-study format nor item-wide
+acceptance authority; those require their own actual source-bound validation.
+
+AutonomousPreparationChainResourceBudget reserves aggregate numeric storage under
+the existing 128 MiB ceiling before every render pass, including a requested
+corrective pass. Each active source uses the unchanged full per-pass workspace
+bound; suspended parents retain selected immutable PCM, ending continuation and
+reduced evidence. The existing complete typed continuation inventory counts actual
+retained numeric storage, including Float array capacity rather than merely
+occupied frames, with checked arithmetic and cancellation. Counting adds typed
+field/scalar metadata and uses no whole-state byte buffer; default replay hashes
+remain exact. Unknown/overflowing storage or values beyond the original conservative
+continuation ceiling refuse admission. Scratch, analyzer and looper workspaces are
+released before suspension. Source/preview/resolved PCM and ending arrays are immutable aliases;
+none is mutated after publication. A parent requiring a measured child drops its
+repeat variants, since protected transport must consume that exact child instead.
+Only a naturally closed leaf retains ordinary qualified repeat fallback variants.
+Optional diagnostic capture separately reserves two eleven-channel role captures
+plus ten stage/residual channels for each active pass and selected retained source.
+Exhaustion refuses before another source's or corrective pass's PCM; no larger
+ceiling, relaxed physical window or easier fixture is substituted. This
+numeric reservation is not process-high-water, deadline, sustained playback or
+physical-output qualification; those remain required evidence.
+
+PreparedPerformancePhrase retains a flat ordered list of admitted child products
+with exact requests, quality/live/render/graph and long-horizon continuation and
+read-only waveforms. The DSP proof independently retains the same immediate child
+by identity. Child list entries do not recursively duplicate that presentation
+list. Neither this detached ownership nor a commitEligible source proves that a
+host scheduled the measured continuation. Protected macOS/Windows consumption,
+replacement and coherent-repeat consequences, future live/route sample-boundary
+admission, full resource/deadline qualification and matching current primary and
+long-horizon artifacts remain required before installation or activation. Historical
+bundled resources remain ineligible. Mechanical controls cannot promote policy.
+
+
+## Protected measured-child scheduling
+
+The same PreparedPerformancePhrase now supplies the transport boundary contract
+for both hosts. Its flat continuation list is an admission dependency, even
+before a child is placed in an output queue. continuationOwnershipIsValid checks
+commit eligibility, exact proof/child object ownership, canonical accepted Core
+advance including the long-horizon decision, outgoing/incoming long-horizon
+identity, request replay origin, route and neutral successor recovery context
+through every bounded link. No live proposal is applied again to a retained child.
+The naturally complete leaf has no required child or retained continuation list.
+
+continuationAtBoundary checks the actual host Core/long-horizon state and route
+rate, channels and generation. A source with an applied live target additionally
+requires the original known end sample with checked arithmetic. Success promotes
+the exact child, carrying the remaining flat list and original reservation; it
+never rerenders or selects a replacement. Failure returns a reason-coded refusal
+and the host stops/rebuilds through its existing route recovery owner. Missing
+ownership cannot turn into accepted-source repeats. An unbound ordinary source
+retains relative phrase continuity; it does not invent an absolute player sample.
+
+macOS preserves root and child inspector projections in one flat detached
+presentation product. Promotion drops the consumed root projection and uses the
+exact precomputed child snapshots and shared PCM/waveforms. Windows uses that
+same shared boundary product directly. Each host performs its existing canonical
+accepted state advance through one boundary helper, suppresses fresh preparation
+and cache replacement while a child is required, and selects protected promotion
+before ordinary caches or repeat policy. Once the naturally closed leaf is current,
+ordinary calibrated preparation, coherent repeat variants, recovery waves and
+future live-feedback eligibility resume unchanged.
+
+A required measured child is already owned future audio. macOS excludes it from
+live correction target contexts and checks that protection again before proposal
+authorization, including results delivered after the analysis context changed.
+The existing feedback owner completes source advancement normally; a proposal
+cannot invalidate the witness or force an incomplete source into a hold. Pause
+preserves immutable ownership. Route rebuilding, stale preparation epochs and
+New Set discard old ownership and require fresh qualification on the new route
+or root; an old occurrence is never counted as a new completed measurement.
+
+All inventory checks, Core reduction, inspector work, cache operations, buffer
+creation and boundary decisions run on detached preparation, the macOS main
+actor, or the Windows state queue. The AVAudioEngine PCM handoff and waveOut
+completion callback are unchanged. Mechanical three-rate consumption, exact
+presentation, missing/foreign ownership, stale Core/long-horizon/route and applied
+live-boundary controls do not prove physical output or sustained deadline/resource
+qualification. Those gates, matching current calibrated artifacts and full source,
+PCM and lifecycle qualification remain required before activation or publication.
+
+
+## Current Long Horizon calibration provenance
+
+The existing test-only LongHorizonPolicyCalibrationIntegrationTests now obtains
+its full evidence through AutonomousPerformancePreparer. It retains the actual
+accepted product until the protected continuation boundary consumes its exact
+measured child at the cumulative sample index. Fresh preparation occurs only at
+a closed leaf; a missing, stale or refused child cannot be replaced. Core,
+render, graph, quality and live-master state advance once per accepted phrase.
+The semantic, signal and effect-dose accumulators commit together only after
+source eligibility, replay identity, ownership, numeric reservation and all
+three observations pass. No musical state is reconstructed from diagnostic files.
+
+This offline bootstrap uses the qualified corrected-source primary model and
+nil Long Horizon state/policy in the existing shared owner. It is not a production
+artifact pair or an adaptation decision. Exact clean execution source and model
+identities are checked before and after each full native route. Every accepted
+phrase contributes signal and effect-dose evidence; observation v4 binds those
+counts and rejects sparse or incompatible routes. The seven development and two
+disjoint holdout roots remain separate and fixed. A naturally closed child chain
+and complete operator coverage are required before fitting; refusal diagnostics
+and the default-off four-phrase probe retain no qualification or activation
+claim. Historical v16 resources remain historical fixtures. Current v18 seals
+are absent until qualified resources are installed together.
+
+The same native producer now retains the accepted closed leaf across fresh
+preparation refusals and uses Core's AutonomousQualityRetryContinuation and
+AutonomousQualityRecoverySchedulingPolicy for serial future requests. Only an
+actual retryable measured rejection advances that ephemeral context. The first
+successor retry waits for an offline coherent repeat selection; an exhausted
+wave requires another repeat boundary. Startup has no accepted source and uses
+the host's finite-wave/yield rule. A protected measured child is consumed through
+the existing boundary API and never supplies repeat material or a replacement
+proposal. Accepted advancement resets ephemeral recovery.
+
+Offline repeat selection reads the retained accepted blocks or the exact
+qualified variant selected by RepeatHoldEvolutionBoundaryPolicy. It validates
+source/Core/render/graph/route origin, checks complete native frame/bar geometry,
+and fingerprints the selected PCM without generating a substitute render.
+Presentation frames and repeat bars are accounted separately. Rejected and
+repeated products never enter accepted semantic/signal/effect accumulators;
+accepted state advances once per newly admitted phrase. Each serial request
+checks the frozen incoming Core/render/graph origin while its recovery context
+and presentation sample index may progress. Cancellation, missing variants,
+foreign origin, non-retryable rejection or overflow refuses the study.
+
+Shared-journey receipt v2 records actual rejected preparation identities,
+repeat selections and boundaries, accepted frame count and the exact accepted
+traversal before the first refusal. The study remains bounded to10416 combined
+accepted/recovery steps,10400 repeat bars and the existing10400 canonical-bar
+coverage refusal. Each preparation retains the unchanged two-pass/128MiB
+preparation-chain reservation. The held playback source is additional live
+storage; combined process memory, deadlines and physical device scheduling are
+unqualified until separately measured. Offline selected PCM is not a device
+presentation receipt. A36-phrase two-native recovery probe is diagnostic
+traversal proof only; the full7/2 corpus still requires7800 canonical bars,
+dense accepted evidence, complete operator transitions and a closed leaf.
+Windows currently uses neutral retry defaults and retains accepted repeats;
+shared runtime recovery convergence remains a separate required validation.
+
+The fresh e3c3741 two-native recovery probe accepted the debt-safe release after
+one six-bar exact retained repeat and two measured rejected proposals. Both
+routes then refused signal evidence for phrase34 as episode-reentry after34
+accepted phrases/368 canonical bars. The accepted phrase33 coordination was
+neutral conservative fallback. The bounded Core/DSP control independently
+reproduces that Core retains payoff episode3243899275292625950 while the prior
+signal accumulator incorrectly closed it on that neutral record. These local
+failed reports are diagnostics, not full native Long Horizon qualification.
+
+Signal trajectory report interpretation v2 now treats a complete neutral
+conservative fallback as globally observed signal without inventing episode or
+operator attribution. The pending episode and its counters remain unchanged;
+only a different bound episode identity completes it. A subsequent observation
+with the same pending identity must preserve the operator and all existing rate,
+order, evidence, overflow and cancellation contracts. A completed identity
+still cannot re-enter, including through an intervening neutral fallback. No
+Core score, musical state, renderer, PCM, primary calibration or callback changes.
+The report retains the existing32 phrase/transition and16 episode capacities.
+
+Report v2 has a separate schema owner and hashes its interpretation identifier.
+Same-pass phrase evidence stays signal-trajectory v1. Current runtime reduction
+requires report v2; observation/adaptation v3, Long observation/corpus v4 and
+profile/adversarial/holdout/policy v18 refuse prior interpretation authority.
+Historical reports/resources keep their bytes and meaning; new version names
+cannot qualify them. No v18 seals or paired resources are installed. The neutral
+fallback/resume and completed-ID/operator controls are structural synthetic
+fixtures; actual two-native recovered traversal and the complete7/2 native
+corpus, capacity, deadlines and physical-output gates remain required.
+
+The fresh full native v18 study on f5dfce0 passed153 accepted phrases and1652
+canonical bars, then stopped on the first44.1k route with candidate-incomplete,
+evidence-missing and hard-gate refusal. Score interest was valid with no overdue
+debt; the actual Core decision was non-retryable/failClosed. No complete native
+route, full corpus, v18 model or activation resulted. Source and model bytes and
+the failed route output remain exact in the terminal receipt.
+The native journey now reports the existing typed candidate completeness failure
+count and at most eight named codes inside the existing24-detail limit. This
+adds no completeness rule, retry eligibility, state, render, PCM or authority.
+A fresh replay at e05312e reproduced every accepted journey field and original
+refusal detail exactly, identifying one instrument-evidence completeness failure.
+The exact selected refused instrument vector is retained as local-only canonical
+JSON, without overwriting an existing witness. A missing output binding or failed
+write carries a fixed failure detail and cannot be reported as a successful
+witness. The vector is diagnostic evidence only and cannot supply accepted PCM,
+imported continuation or qualification. The required evidence must be repaired
+and freshly qualified.
+
+Malformed request identity validation now precedes the large generic shared
+preparation frame, preserving the same cancellation priority and request failure
+codes. The identical helper validates each prospective child as well. This keeps
+invalid inputs out of the Debug frame that previously exceeded a test-worker
+stack guard; valid request preparation still uses the canonical detached owner.
+No validation, planning, analysis or new work is moved onto an audio callback.
+
+The test-only full-journey driver awaits a separate detached preparation task at
+each fresh leaf, matching the host's shared preparation scheduling boundary.
+Its route/controller temporaries survive suspension in the async context rather
+than remaining underneath the large preparation stack. Cancellation forwards to
+the awaited job. Exact owned-child consumption, source/model checks, evidence
+accumulation and quality gates remain unchanged; no enlarged worker stack or
+main-thread preparation supplies qualification evidence.
+
+Full-journey refusal metadata distinguishes a rejected or unavailable prepared
+source from ownership, replay, numeric reservation and semantic/signal/effect
+accumulator refusal. It retains the existing bounded prepared quality and commit
+diagnostics. Rejected products never enter the three committed accumulators or
+advance canonical state, and diagnostic detail does not authorize a retry,
+repeat, changed threshold or qualification artifact.
+The same refusal records its actual request/Core identity and score-interest
+components, the existing Core retry continuation after that single observed
+rejection, the zero-repeat scheduling decision, and one score-only next proposal.
+This bounded inspection supplies no preparation, accepted PCM, presented repeat,
+new recovery wave or state advance. A symbolically valid hypothetical score is
+not evidence that a recovered product would pass calibrated preparation.
+
+
+## Conditional dotted-foundation calibration contract
+
+Primary v32/profile v33 extends the existing detached effectiveBounds owner,
+with observation v23 and original/successor ownership unchanged. The measured
+full-journey rejection after 37 bars identifies two optional score-owned metrics:
+dotted foundation activity ratio and its rendered crest mean. When their local
+checkpoint is exactly the all-zero calibration guard envelope and an observed
+value is nonzero, use the union of this same profile's other active checkpoint
+bounds. Preserve local zero, local measured populations, absent active calibration,
+finite-domain and non-compensable rejection. Legacy/bar-local scopes retain
+previous interpretation; retired continuous profile v32 is not current authority.
+No parameter, score, PCM, callback or automatic retry changes.
+
+Profile schema 25/version v33 and primary policy/evaluator v32 invalidate prior
+qualification. The completed d1259f3 engine-v48 native study supplied historical primary
+seals: profile eb1eba16cde88415, adversarial b76d744054bfa22f and
+holdout 19742f5c60933b29. Engine v49 changes canonical final-anchor ownership, so those seals
+are no longer current authority. The completed frozen a44698c engine-v49 study
+now supplies the sole current primary v33 seals: profile e0f587d6587c72b8,
+adversarial 1a5ad075c35b4635 and holdout a0a036a77dcfd6b4. Its 40 development
+and 6 disjoint holdout trajectories pass all 34 adversarial cases and accept
+all 84 holdout observations. The Long Horizon dependency binds this exact triple;
+primary qualification alone does not authorize the production host. Qualified Long Horizon v18 seals and paired production resources
+remain absent.
+Synthetic reduction/replay controls have no activation authority. The live-target
+artifact gate uses the same continuous observation/profile scope owner and exact
+qualified seals, rather than legacy schema defaults. Target/occurrence controller
+binding, future-boundary eligibility and fail-closed fallback remain unchanged.
+
+The existing cold native cohort executor freezes a separate dotted-rule protocol
+before PCM and authenticates its exact blob, unchanged cohort and score geometry,
+source ancestry, clean accepted source/test/script objects and normative snapshot.
+The same freshly completed typed 40/6 corpora derive the output identities; fit
+ownership, full development relationship, independent adversarial/live-baseline
+and complete disjoint holdout gates remain required. Retained archives and old
+output identities cannot supply qualification. Refused outputs stay reason-coded
+local diagnostics; installing matching seals requires actual completed evidence.
+
+
+## Post-relocation tonal boundary ownership
+
+The engine-v49/quality-schema50 repair extends `SynthPerformancePlan`, not the
+renderer. Exact score-only reconstruction of root 48291, phase 153/start 1652,
+recovery contexts at phases 33 and 87, and the native plan fingerprint
+b35405a7d3f63299 identifies canonical bar 1663. Source motif step 4 relocates to
+11 while source step 8 stays at 8. The old pre-relocation selection placed a wash
+at 8; the later home retrigger cut off its active tail. Cold actual rendering at
+both native rates provides a regression without importing accepted runtime state,
+PCM, a corpus, or model authority.
+
+Final-anchor selection now runs after composition and timing relocation. The
+source and applied arrays retain the same indices, and only the selected existing
+envelope relation changes. The final anchor must retain the existing structural
+marker, energy-release, displaced-kick, macro-15, Tonal Motion, retrigger, and
+step-at-most-12 conditions. Failure falls back home rather than selecting an
+earlier anchor. Attempt-local home correction computes eligibility from fully
+relocated authored notes and applies no wash. All planning stays in Core and off
+the callback; no new continuation state, retry, renderer branch or DSP window is
+introduced. Candidate-vector schema43, transaction14, primary mathematical family
+v32/profilev33 and all signal bounds remain unchanged. Engine-v48 artifacts are
+retained as historical evidence; current seals are nil until fresh complete
+native development/adversarial/holdout qualification. The bounded regression is
+not continuing-journey, full-corpus, resource or physical-output qualification.
+
+
+The primary evaluator retains one canonical transaction/candidate rejection
+boundary in `preparationBoundaryRejection`. `terminalVerdict` invokes it before
+route or prospective acceptance checks. This pure boundary preserves the same
+ordered identity diagnostics and hard-gate reasons independently of installed
+artifacts, so tests can exercise rejection while current resources are
+unavailable. A nil rejection proves only passage through these checks; it never
+establishes quality acceptance, calibration or prepared-source admission. The
+actual evaluator still requires current fully qualified artifacts and exact
+prepared validation. No numeric policy or artifact-loading condition is relaxed.
+
+
+## Bounded same-pass diagnostic bar streaming
+
+`AutonomousPhraseRenderer` retains its one canonical rendering path. An optional
+synchronous detached sink receives one exact `AutonomousBarRoleStemCapture` and
+its final immutable `RenderBlock` before the next bar is rendered. The existing
+small-fixture retained-array capture remains supported; requesting both delivery
+forms refuses before rendering. Normal rendering leaves both absent. Sink failure
+or cancellation returns no render product, and the preparer must discard its
+private attempted state rather than advancing accepted continuation.
+
+`DiagnosticRoleStemCaptureSpool` writes all 32 existing taps: full11, protected11
+and stage/residual10, including silent channels. Each local bar file contains
+aligned little-endian Float32 channels in a fixed versioned enum order. The spool
+checks authored bar order, native geometry, sample rate, finite PCM and bounded
+actual unique captured array capacity. It writes at most one 64KiB byte chunk at
+a time, retaining only fixed per-bar fingerprints and geometry after synchronous
+delivery. Incomplete, malformed, cancelled and failed attempts remove their owned
+files; a finished draft owns its files until released. Readers load at most one
+channel of one bar and verify payload size and the original exact fingerprint.
+
+An opt-in `DiagnosticRoleStemCaptureSession` now belongs to one detached shared
+preparation transaction. It has single-writer fresh, collecting, sealed and
+discarded states; every normal host leaves this owner absent. Each actual render
+attempt creates its private spool only after the existing render reservation.
+Its draft stays on the private `CandidateRenderProduct`; a superseded initial
+draft is removed before a corrective render, and cleanup failure refuses that
+correction. The selected draft survives pending validation privately. Only the
+canonical finalizer can stage its actual proof-bound, commit-eligible prepared
+source object. No file handle or mutable capture owner enters playback products.
+
+The shared iterative owner captures every required source and child, then seals
+only after leaf-to-root proof validation, exact child-object checks, and complete
+long-horizon/presentation packaging. Sealing requires the exact staged objects in
+admitted order and the actual `qualifiedSuccessor` object at every protected
+boundary; a closed leaf terminates the chain. Reduced bindings retain the selected
+attempt/home-correction, canonical plan, candidate, transaction, request replay,
+graph, route, ending-state and exact child identities alongside all 32 channel
+files. Rejected, cancelled, unavailable or partially packaged chains publish no
+bindings and discard all private files. Reusing a sealed session refuses without
+changing its earlier export. Finished drafts own their files independently of the
+session so an existing diagnostic reader can outlive its metadata owner.
+
+These associations identify actual detached prepared products; they are not
+live scheduled/callback PCM, independently calibrated policy authority, or a
+quality promotion. Core intent, PCM, DSP math, signal bounds, quality schema50,
+canonical engine49 and primary mathematical family32/profile33 are unchanged.
+Current production artifact seals remain unavailable. The legacy retained-array
+capture flag still has its existing small-fixture/root-only form; it is mutually
+exclusive with the streamed session. Every streamed source/attempt conservatively
+retains the existing full-capture resource charge until actual complete working
+storage is proved. Native 16-bar captures therefore still refuse before rendering
+under that unchanged charge. The existing128MiB/two-pass gates remain unchanged;
+no zero-cost stream or larger ceiling is inferred from file storage. Captured-array
+and byte-chunk measurements do not cover total workspace/COW/state/analyzer/source/
+child allocations, combined process RSS, deadlines, full native capture capacity
+or physical output. Those gates and fresh current-engine qualification remain
+required before completion or promotion.
+
+
+## Detached renderer storage boundary observations
+
+A default-off `PreparationWorkingStorageProbe` observes the existing canonical
+`AutonomousPhraseRenderer` at protected-voice return, full-voice return, graph/pump
+return and bar delivery, plus synchronous inner voice and graph observations.
+`NumericStorageInventory` registers the allocated
+capacity of primitive numeric arrays through synchronous nonescaping borrows.
+Within one snapshot it counts shared backing storage once and independent COW
+storage separately, including reserved unused capacity. Backing identities are
+private and discarded after that snapshot; addresses can be reused across
+lifetimes, so each observation starts a fresh inventory. Owners must remain alive
+for the complete observation. Instrumentation may extend the observed temporary
+lifetimes and therefore does not claim an uninstrumented peak measurement.
+
+The inventory includes the current render workspace, both returned voice
+products, previously retained primary and repeat-hold blocks, repeat deck buffers,
+visible outer graph/mix products and all32 delivered capture channels. Continuation
+buffers come from the existing canonical typed replay/retention visitor rather
+than a second state-field inventory. Its existing encoded scalar/field headroom
+is reported separately from actual array capacity; that headroom is not a measure
+of dictionary, object, serialization or allocator heap overhead. Repeated typed
+views conservatively retain their own scalar headroom while shared numeric buffers
+are deduplicated. Int/Double collection capacities are registered at their existing
+typed field visits; their encoded scalar values remain in conservative headroom. This observation does not change the existing reservation's
+retained-continuation accounting.
+
+The single-writer detached probe keeps only the largest numeric-plus-headroom
+snapshot for each of at most32 named phases, with at most4096 bounded owner records
+per snapshot. Invalid names, owner/phase exhaustion or arithmetic overflow mark
+the diagnostic invalid. It retains no PCM or raw pointers, makes no admission
+or quality decision, and is absent from host/callback paths. The normal nil path
+performs no inventory work. Both-native16-bar controls compare full output,
+repeat-hold variants and ending typed state with ordinary rendering before
+reporting the observations.
+
+The outer boundaries and implemented inner observations still leave nested voice
+helper/internal processing transients, analyzer storage, encoding and actual heap
+metadata, incoming and parent/child ownership,
+initial/corrected overlap, writer chunks, whole-process RSS and deadlines
+unmeasured. They do not establish complete preparation storage, native admitted
+root/child capture capacity, resource qualification or quality promotion. Every
+existing full-capture charge,128MiB ceiling, two-pass limit and unavailable
+production seal remains in force until complete evidence establishes a bound.
+
+
+## Synchronous inner renderer storage scopes
+
+`PreparationStorageObservation` extends the diagnostic probe through one
+synchronous inner render call. Its closure holds only immutable outer owners that
+remain live during that call. The callee registers its own mutable state and
+workspace; no closure captures the inout owner currently being modified. Complete
+observation lifetimes include every outer scope. Neither inventory nor probe
+retains the scope, PCM or addresses; the call scope ends before later mutations,
+so diagnostic aliases do not force COW storage in a following stage. The normal
+nil path creates no observation scopes.
+
+The existing voice renderer observes its returned product while all swapped
+workspace buses are still local, before recycling them. It includes visible
+spatial-dust, audio-slice and polyphonic-pad buffers, FDN Double scratch, bass and
+kick/tonal onset Int buffers, current render continuation, and outer original or
+protected state, graph continuation, primary/hold blocks and prior diagnostic
+captures. This product observation deliberately extends diagnostic local lifetimes;
+it does not implicitly observe allocations inside earlier voice helpers.
+
+The generated graph observes split channels, both current and retiring graph
+branches, node return after the canonical dictionary-slot borrow, completed
+branches, mixed channels and output. The existing GeneratedDSPContinuationState
+node dictionary is the mutable owner: processUpper borrows its slot directly,
+avoiding the temporary node copy that retained the old delay buffers and forced
+COW on every bar. The readonly node-return projection aliases that same updated
+entry and expires before subsequent mutation. An actually retained incoming
+continuation or retiring graph still preserves its independent state through COW.
+
+At44100 and48000, nil-observer controls require both delay buffers to keep their
+backing identities through three same-topology calls after one initialization;
+retaining an incoming continuation must then detach both buffers while preserving
+its typed fingerprint. Existing four-call topology/retirement controls also hold
+actual incoming state, require two real delay detachments and exact PCM/ending
+state against ordinary rendering, and retain all68 physical observations/eight
+phases. Pointer comparisons are private, transient test facts; no address is
+emitted or used after an owning lifetime. Frozen pre-change native PCM, hold and
+continuation controls provide a separate exact source comparison.
+
+This consolidates mutation into the existing current and retiring node slots,
+without a second renderer, new state, musical parameter, decision or callback work.
+Topology limits, two-bar retirement, fallback and future-boundary application
+remain unchanged. Buffer reuse removes an actual allocation cause; it does not
+establish complete peak storage, justify a smaller reservation, or qualify native
+selected-root/child capture, RSS, deadlines or quality promotion.
+Canonical typed component visitors supply render, graph, node dictionaries and
+individual nodes rather than duplicated state-field inventories. Outer phrase
+workspace, both voice products, graph input/carrier/residual/dose arrays,
+primary/hold/capture owners and non-mutating continuation are joined in the same
+inventory. Inner graph scopes expire before the retiring mix or later bar work.
+Component metadata headroom remains separately labelled and conservative.
+
+Both-native direct graph controls traverse real topology replacement and both
+retirement bars, require exact ordinary PCM/ending state, register both active and
+retiring state, and expose independent old/new delay storage. A weak-owner control
+proves nested scopes release their outer owners at return. Native16-bar controls
+require all eleven applicable phase maxima and every actual node observation,
+while preserving ordinary PCM, hold variants and ending fingerprints. All owners
+remain bounded by the existing32-phase/4096-record diagnostic limits.
+
+These observations still establish neither complete allocation/RSS/deadline bounds
+nor native admitted selected-root/exact-child capture capacity. Nested helper and
+internal processing transients, analysis, encoded/heap storage, incoming/parent/
+child ownership, initial/corrected overlap and writer chunks remain separate
+obligations. Fullcapture charges,128MiB/two-pass limits, current production
+unavailability and every original qualification/promotion gate remain unchanged.
+
+
+## Shared preparation ownership observations
+
+The default-off numeric probe now traverses the same diagnosed canonical
+preparer and iterative shared chain. A synchronous scope joins the original root
+request, active request and suspended parents with the renderer's actual current
+owners. Both primitive capacity and conservative typed continuation headroom use
+the existing canonical visitor. Prepared previews register their private source
+through this inventory without exposing PCM or creating playable authority.
+Finalized primary and hold blocks use the same registration helper. Shared
+request/preview/child buffers are deduplicated only while all actual owners live
+in that snapshot.
+
+Before a corrective render, the existing preparer releases superseded hold
+variants and diagnostic captures. Observation records the remaining initial
+primary blocks and ending state, then retains those actual initial owners beside
+the new render for its synchronous duration. The selected snapshot includes
+initial and selected products together. Initial and corrective renders share
+phase names, so maxima remain bounded across the transaction rather than
+retaining an unbounded per-attempt history. Existing selected-attempt and
+transaction identities continue to identify which pass was accepted.
+
+After rendering, analysis-input observation includes the actual render product
+and ending continuation. It measures that input ownership, not analyzer internals.
+The iterative owner observes suspended requests/previews and then every retained
+preview alongside the actual leaf-to-root reduced products. Reduction still
+requires exact qualified-child object identity and the existing admission proof;
+observation never substitutes for it. Scopes are not retained by pending
+finalizers, prepared playback products or the probe. The normal absent observer
+runs the existing path without inventory work. Numeric observer exhaustion or
+invalid input makes diagnostics unavailable without changing a musical verdict.
+
+Native initial-chain controls compare ordinary and observed whole blocks, hold
+variants, quality, transaction/source identities, ending render/graph state and
+resource reservations, with ordinary arrays leaving scope first. The same native
+forced-correction chain fixture reaches the existing aggregate resource refusal;
+controls require identical ordinary/observed failure details and render trace,
+unchanged incoming state and no admitted product. Its actual partial initial/
+corrective overlap is observed, but a fully admitted native corrective chain
+remains a separate unsatisfied resource obligation. Streamed and capture-off
+reservations intentionally differ under the unchanged fullcapture charge; their
+PCM/state parity comparison does not assert equal resource charges.
+The existing 8kHz streamed selected-root/child controls also observe actual chain
+owners while exporting all32 same-pass channels. These remain mechanical fixture
+checks under an independently declared test evaluator; they do not install policy
+resources, prove native capture admission or confer promotion.
+
+Coverage is still partial: nested voice and node internal transients, analyzer
+windows, encoding and actual heap/Core metadata, waveform envelopes, byte writer
+chunks, combined RSS and deadlines remain separately unqualified. Observed
+lifetimes may be extended by instrumentation. The fullcapture resource charge,
+128MiB ceiling, two-pass bound, current production unavailability and all original
+primary/Long18/Phase1/lifecycle/physical-output requirements remain unchanged.
+
+The shared-chain observation scope holds immutable root/active requests and
+suspended frames behind one detached reference owner. Registration borrows those
+requests through a non-inlined helper. This avoids copying large request tuples
+onto the already-deep cooperative render stack while keeping every numeric owner
+in the same snapshot. It does not increase worker stack size, move rendering to a
+different worker or weaken any observation or test. The first direct native
+observer attempt hit a stack guard in that nested registration closure; its
+negative result remains local until the repaired exact-source controls pass.
+
+A render carrying an actual retained initial candidate also contributes the same
+physical snapshot to one conditional corrective-overlap maximum. The recorded
+observedPhase identifies its original inner phase. This preserves that overlap
+when a larger later child replaces the ordinary phase maximum. It creates no
+second inventory or observation-count increment and shares only immutable owner
+metadata. Both names reserve their slots before registration under the unchanged
+32-phase ceiling; exhausted diagnostics fail closed. Initial and corrective phase
+histories remain bounded and no additional PCM is retained.
+
+
+## Canonical preflight analyzer storage observations
+
+The existing default-off synchronous preparation observer now follows the real
+PhraseAudioPreflight, AudioQualityReport and MusicalQualityMetrics calls. The
+canonical private preparer holds its actual render product and ending typed
+continuation behind one synchronous reference owner during preflight; every
+analyzer snapshot joins those owners with the already-live incoming request,
+suspended parents and remaining initial candidate during correction. This owner
+expires after preflight and never enters a pending finalizer, prepared playback
+product, callback or accepted continuation. No parallel analyzer, evidence cache,
+quality state, musical parameter or additional render is introduced.
+
+BS.1770 observations register the actual momentary and short-term Double rings,
+fixed emitted-energy capacities, returned energy collections, gate populations,
+loudness arrays, and separate filtered/sorted range owners. The sorted operation
+and all numeric arithmetic remain the existing implementation. FIR true-peak
+observations register the two actual fixed histories after consuming the same
+immutable chunks. Perceptual observations register the actual ring, FFT real and
+imaginary arrays, previous normalized magnitudes, and finite-check evidence
+values. FFT mutation stays in place. Per-bar metrics reuse the same phase names
+with the actual source bar, and preflight registers its four movement arrays.
+These actual primitive capacities use the existing per-snapshot live alias
+inventory, including unused capacity and independently stored COW arrays.
+
+The same scope and conditional corrective maximum retain all incoming/parent/
+initial owners during each physical analyzer observation. Native controls require
+exact ordinary/observed preflight reports, original PCM/hold products, typed
+ending state, source/transaction identity, child ownership and reservation or
+refusal outcome. Diagnostic phase exhaustion leaves the ordinary report exact,
+performs no outer registration and confers no quality or admission authority.
+Cancellation remains the original boundary. Nil observers perform no inventory
+work. All scope captures are synchronous; the observer retains only bounded
+metadata maxima and may extend observed owner lifetimes while measuring them.
+
+This is partial allocation evidence. Standard-library sorting/filtering internal
+scratch, other nested analyzer/voice/node transients, immutable coefficient and
+heap/Core metadata, waveform envelopes, encoding and writer temporary storage,
+whole-process RSS and deadlines remain unqualified. Named-owner observations are
+not a complete peak bound. No smaller capture or scratch charge, larger128MiB
+ceiling, extra corrective pass, production seal, activation or completed native
+selected-root/exact-child32-tap capacity follows. Every existing primary, actual
+Long18, Phase1, lifecycle, shared-envelope, deadline/RAM and physical-output gate
+continues to apply before roadmap completion and publication.
+
+
+## Synchronous echo, dust and memory helper storage
+
+The existing detached VoiceRenderer observer joins the actual caller's local
+buses, checked-out workspace, rendered bass starts and canonical typed RenderState
+with live PercussionEchoTextureVoice owners. Gated echo registers its delay;
+anticipation swell registers that delay and its full-frame reverse source;
+spatial dust registers both independent delay arrays. Regenerated memory-source
+PCM is observed after the existing canonical kick render and before AudioSlice
+consumption. AudioSliceRenderer also observes its actual copied source window
+alongside the live source and borrowed destination before processing triggers.
+It joins the same caller inventory, excluding the mutable AudioSlice destination
+before borrowing it. Invalid or absent slice plans allocate no source window and
+make no slice observation. These are existing helpers and actual arrays, with
+unchanged PCM arithmetic and evidence. No musical parameter or alternate renderer
+is added.
+
+One private synchronous owner uses the same caller inventory for helper and
+product boundaries. It excludes mutable helper return buffers before their inout
+borrow; the callee registers those actual buffers. Owner scopes expire before the
+next mutable stage. The default nil path builds no inventory or owner sidecar.
+The canonical typed visitor remains the only continuation-field inventory.
+
+Helper lifetimes share one named helper-working maximum in each protected/full
+voice namespace. Bounded per-phase physical observation counts retain coverage
+when a larger helper snapshot replaces a smaller one; a conditional corrective
+maximum reuses the same physical snapshot and does not double-count it. The
+existing32-phase and4096-owner bounds remain unchanged. Exhaustion invalidates
+the diagnostic before any owner registration and preserves exact PCM/evidence.
+Native direct controls independently cover neutral, gated echo, anticipation
+swell and spatial dust, including delay/reverse geometry, caller/source aliases
+and exhausted fallback. Native whole-render controls retain exact original phase
+counts and compare ordinary PCM, hold products and typed ending continuation.
+
+The existing canonical cross-phrase memory fixture now covers cut and granular
+recall at8k,44100 and48000. It compares the entire RenderedBar and typed ending
+RenderState for ordinary, replay, observed and exhausted paths. Its actual
+regenerated source, independent copied window and borrowed output capacities,
+caller workspace/state, and physical helper counts are required evidence.
+Original whole-render per-phase counts remain exact with added active slice
+visits. A retained maximum is a phase sample, not every helper allocation.
+
+These observations remain partial: GroovePulse dry-event Float scratch, kick
+accumulator arrays, further AudioSlice metadata/trigger work, other
+helper/analyzer/node and standard-library transients, reference-owner
+metadata, heap/allocator overhead, waveform envelopes, encoding/writer buffers,
+whole-process RSS and deadlines are not a complete bound. Instrumentation may
+extend observed lifetimes. No capture charge,128MiB ceiling, two-pass limit,
+native selected-root/exact-child admission, runtime activation or quality
+promotion is changed or proved by these observations. AT-0039's full native
+primary, actual Long18, all lifecycle/Phase1/aggregate, capacity/deadline and
+physical-output requirements remain incomplete until independently qualified.
+
+The shared detached chain reservation v2 charges the root request's complete
+typed numeric continuation inventory before creating its evaluator or rendering
+PCM. Float buffers contribute allocated capacity, including unused elements;
+bounded structural validation reuses the canonical DSP input guard first. The
+root remains charged once across all actual passes and suspended sources.
+Child incoming state is already retained by its completed parent and does not
+create a second root charge. Invalid, cancelled or over-ceiling input refuses
+without a render, selected capture, state advance or playable result.
+
+This closes an incoming-owner omission while retaining every existing active
+render, full-capture, completed-source, analyzer and evidence charge. The 128MiB
+ceiling and two-pass limit remain unchanged. Admission with different unused
+capacity may differ because physical storage differs, while identical admitted
+semantic inputs preserve PCM, replay, evidence and exact child ownership.
+Complete allocation/metadata/chunk lifetime bounds, native corrected selected
+root/child capture, RSS/deadlines and full qualification remain outstanding.
+
+Native detached controls record whole-test-process RSS and raw statistics for
+currently registered malloc zones directly in the validator process. A reported
+`max_size_in_use` value is not an independently observed lifetime peak. Some
+allocators report zero even while current storage is nonzero. The versioned
+process-memory record retains that raw value, classifies inconsistent or
+unvalidated maxima, and emits an unavailable peak as JSON null. Even a value
+above current usage does not establish complete lifetime coverage.
+
+These diagnostics include runtime/instrumentation overhead, retain no PCM or
+addresses, never run in the callback, and do not feed admission or musical
+decisions. Destroyed zones and non-malloc VM remain outside the zone statistics.
+They supplement the named-buffer inventory without claiming complete numeric
+attribution, allocator overhead or a qualified capacity bound. Older reports
+retain their original schema and source; their raw maximum fields must not be
+retagged as validated peak evidence.
+
+## Superseded corrective-render storage lifetime
+
+The existing detached `AutonomousPhrasePreparer` retains the exact initial
+attempt vector in the canonical transaction. Once the evaluator requests the
+same-plan home correction, it releases the initial hold/capture sidecars and
+initial PCM/ending DSP storage before the corrective render. The original
+incoming continuation remains immutable and supplies that render. Released
+storage cannot supply finalization or fallback: internal access fails, and a
+failed or cancelled correction refuses the transaction through the existing
+path. Only the selected product retains audio for pending proof and ownership.
+
+The reusable capability is explicit `CandidateSynthesisStorage` ownership in
+the existing private candidate, avoiding duplicated initial/corrective audio
+lifetimes. Actual source/owned-child controls verify the release boundary and
+unchanged PCM, hold families, attempts, replay/proof and continuation. This is a
+physical overlap reduction, not a complete working-set proof. Existing numeric
+reservations, 128 MiB ceiling, two-pass bound and all final qualification gates
+remain unchanged until complete active-path allocation bounds are established.
+No score, musical parameter, callback, host, policy or renderer is added.
+
+## Shared desktop recovery transition
+
+Both desktop hosts now use the existing Core retry continuation through one
+`recoveringAfterRejection` transition. It retains calibrated rejection reasons,
+fixed ordinals, directional intent, finite waves and presented-repeat bars.
+Initial preparation opens another finite wave through the next detached task;
+successors wait for their first coherent repeat and yield at an exhausted wave.
+Accepted session state and PCM never advance from rejected evidence.
+
+Windows consumes diagnosed prepared rejection decisions and binds the resulting
+context into its exact preparation/replay key. It retains accepted immutable PCM
+while recovering, commits only an eligible exact product, and preserves required
+measured-child priority. Stale results do not change recovery. Unsafe, missing,
+unavailable or route-recovery failures remain fail-closed. Route recovery resets
+ephemeral retries and uses neutral route semantics; accepted phrase commit resets
+the retry target. The macOS orchestration reuses the same Core transition without
+changing its existing recovery sequence. No callback work, alternate renderer,
+new musical parameter, extra pass or relaxed admission is introduced.
+
+Rejected Windows PCM is released on the serial preparation queue before its
+next render; the asynchronous host handoff carries only a bounded rejection
+decision or an eligible immutable accepted product. This removes rejected-audio
+ownership from host retry scheduling without lowering any resource reservation.
+
+The shared policy and request/score binding have deterministic controls. Building
+the Windows host against macOS platform stubs is source validation only; native
+Windows execution, physical-device recovery, fresh engine-v49 qualification,
+complete working storage/deadlines and final runtime gates remain separate.
+
+
+Upper-timbre analysis retains its existing canonical evidence owner, schema3,
+frame/metadata/FFT bounds and exact arithmetic. Single-channel, mono and side
+samples are read through bounded immutable views of the existing Float PCM;
+five full-bar Double arrays and copied onset windows are no longer allocated.
+Only reduced evidence leaves the call, with no change to score, continuation,
+quality thresholds, accepted PCM or future decisions. A private test-only frozen
+actual-source array analyzer verifies every field, fingerprint and encoded report
+on native bars, bounded/invalid inputs and metadata controls. Capacity removal is
+component evidence: the original64-channel scratch charge,128MiB ceiling and
+two-pass admission remain unchanged. Complete allocation/metadata/lifetime,
+parent/child capture, RSS/deadline and runtime qualification remain separate.
+
+
+## Matched ordinary native process control
+
+The existing test-only iterative chain validator shares its detached ordinary
+reference construction with a separate four-case control at 44.1 and 48 kHz,
+covering admitted initial chains and the original forced-correction aggregate
+refusal. Only reduced PCM, hold, replay, continuation and quality identities,
+public reservation fields, terminal ordinals and refusal details survive each
+worker. The observed validator retains its full exact product/reservation
+comparison and storage assertions, then emits the same compact reference for
+external cold comparison. This avoids a second preparation implementation.
+
+The separate process control has no numeric storage probe or full snapshot
+serialization. External whole-process kernel footprint can therefore distinguish
+ordinary execution from observer/reporting overhead on identical source and
+outcomes. Frameworks, allocator caches and compact reporting still belong to
+that process; physical footprint is not complete allocated-storage attribution.
+Neither process is production activation, musical qualification, a per-phase
+peak, a deadline proof or selected native root/child capture admission. Existing
+reservations, 128 MiB ceiling, two-pass bound and all full gates are unchanged.
+
+
+## Current-source score-only coverage preparation
+
+The existing offline calibration test owner requires a private v2 score-selection
+protocol before freezing a new cohort. Exact clean Git head, the six existing
+Package/Sources/Tests/scripts/corpus/contract objects, coherent contract fingerprint,
+current engine, original outcome-blind ordinal domains, fixed 36+4 development and
+4+2 holdout quotas, all seven checkpoints and both native rates must match.
+Unknown fields, historical engine identities, altered quotas or positive quality/
+activation claims refuse before planning. Protocol file and destination must be
+private real paths; protocol and cohort blobs authenticate their actual parsed
+Data through test-owned Git stdin hashing, so path changes/restoration cannot
+substitute other parsed bytes. Protocol paths and source bindings are rechecked before the
+absent destination is written. The resulting immutable v2 cohort binds that actual
+protocol blob and current score/modal geometry. A separate opt-in current-cohort
+replay reauthenticates source/protocol/cohort identities, all322 quality-r0
+checkpoints and complete native modal geometry, retaining room for the actual
+final successor. Historical cohorts and seals remain
+unchanged. This is score-only preparation: no PCM, measured quality, independent
+labels, resource qualification, profile installation or runtime activation follows.
+The existing continuous executor consumes this authenticated v2 cohort through
+the same complete score replay. A separate private v2 execution protocol binds
+current engine, source objects, contract, selection/cohort blobs and the exact
+externally fresh-fetched published runtime ref before new-root PCM. It fixes the
+40/6 matrix at both native rates, all322 checkpoints,644 original reports and
+actual successor receipts, complete continuous observation/profile scope, and
+requested full adversarial/holdout qualification. Unknown fields, partial counts,
+stale source/publication, archive import or activation/installation claims refuse.
+An opt-in launch control authenticates those inputs without creating output or
+rendering. The one existing executeJourney producer still advances actual accepted
+Core/quality/live/render/DSP/graph state and closes each original with its immediate
+actual successor; no alternate renderer, cache import or cold checkpoint substitute
+is introduced. Source, contract and private file identities are rechecked around
+each native route. Fresh typed corpora alone derive profile/output fingerprints;
+historical artifacts and expected seals cannot supply current qualification.
+Full development relationships, all34 adversarial cases, two distinct accepted
+live baselines and all84 disjoint holdout observations remain required. Offline
+results do not install resources, activate playback or replace full runtime,
+allocation/capture/deadline/Windows/physical-output gates.
+
+The current offline executor claims its absent private output leaf with one
+exclusive OS directory-creation operation after input validation. A competing
+writer causes a pre-PCM refusal; its directory and manifest are preserved.
+The no-PCM filesystem control covers competing creation and repeated claims.
+This test-owned output claim performs no callback work or runtime activation.
+
+The same offline executor constructs each trajectory's temporary Foundation JSON
+objects inside one detached serialization scope and returns only the unchanged
+canonical Data before writing. Objective-C platforms drain a local autorelease
+pool; other platforms use the same synchronous serializer directly. Original typed
+report, successor and corpus ownership stays outside that scope. Actual-product
+controls preserve exact diagnostic bytes and source-bound observation construction;
+typed construction and JSON parsing errors propagate unchanged. This
+changes neither PCM nor native study inputs, output identity, file-claim semantics,
+quality/profile authority, callback work or preparation resource reservations.
+A diagnostic lifetime control is not native preparation allocation, RSS/deadline,
+Windows execution or physical-output qualification.
+
+
+## Immutable preparation request storage
+
+The existing `PhrasePreparationRequest` is an immutable `Sendable` reference
+whose fields retain the same typed Core/DSP input snapshot and replay identity.
+Detached tasks, pending chain frames, prospective continuations and admitted
+transport products share that input instead of embedding large value copies in
+worker frames. This addresses a native Debug cooperative-stack overflow at the
+entry to the existing iterative preparer. It adds no mutable continuation,
+preparation path, callback work, scheduling rule, musical parameter or evaluator.
+
+Independent request construction still reproduces semantic identity; pointer
+identity has no admission authority. Local render mutation cannot alter the
+immutable incoming value fields. Detached installed-evaluator controls compare
+PCM, hold products, quality/replay and outgoing continuation with a synchronous
+reference and require the original request to remain fingerprint-identical.
+Cancellation, resource reservation, diagnostic ownership, refusal, exact-child
+and future-boundary contracts remain unchanged. The existing 128 MiB charge and
+two-pass limit are not lowered; reference allocation overhead remains part of
+outstanding complete physical-storage qualification. A worker-stack repair does
+not establish native deadlines, physical output or current runtime promotion.
+
+### Canonical continuation fingerprint parity repair
+
+`AutonomousTypedFingerprint` now uses one RenderState encoder for ordinary and
+cancellable hashing, including the same nested FeedbackDelayNetworkState layout.
+The previous cancellable path flattened that state differently, so identical
+continuation values could fail the full-phrase unchanged-control vector join.
+`render-state.typed.v5` and `render-dsp-continuation.typed.v5` explicitly replace
+both incompatible v4 identities. Historical receipts remain historical; no v4
+qualification identity is translated or admitted as v5 evidence. PCM, planning,
+engine v49 and evaluator policy are unchanged; this is a provenance-format
+repair, and all current qualification seals remain unset.
+
+The existing detached encoder remains the canonical owner. It checks cancellation
+within long storage arrays and returns no digest on cancellation. No new state,
+callback work, adaptation parameter, renderer or fallback is introduced. Tests
+compare empty and populated reverb/live-master continuation through both APIs,
+exercise scalar/storage mutations, and cancel at each observed checkpoint. The
+full-phrase unaltered control fails immediately on any PCM/vector mismatch before
+claiming a fault-matrix result.
+
+### Portable canonical lock-phrase tension arithmetic
+
+`AutonomousSessionDirector` retains the v49 lock tension curve and its existing
+resolved-score/continuation ownership. Its legal phrase lengths are 4...16 bars,
+so the cycle term has exactly 130 reachable length/local-bar coordinates. These
+pre-existing canonical binary64 values are now fixed in one shared lookup;
+native math-library `sin` rounding can no longer choose a different tension bit.
+All hosts use the same table. This adds no engine, profile, parameter, musical
+state, renderer, quality threshold, or runtime selector.
+
+The native diagnostic found eight sine-grid differences between macOS and
+Windows. Thirteen bars of the frozen root 48291 four-hour journey differed by
+one tension ULP; activity, density, repetition and discrete fields matched.
+The repair preserves the original canonical macOS v49 curve exactly and repairs
+Windows realization of that curve. Engine v49 remains the canonical behavior
+identity; the exact source/build witness still changes and old failed Windows
+receipts are never admitted or translated. The original frozen planning oracle
+remains required, as do fresh native tests and all separate qualification gates.
+
+The lookup is bounded and runs in detached planning. Invalid coordinates return
+unavailable and the existing director uses the neutral zero-cycle contribution.
+The resulting tension follows the unchanged PerformanceBar, resolved score,
+render/evidence and bounded future-continuation path. Tests bind the full 130-
+position checksum to the pre-repair grid, check numeric bounds and malformed
+coordinates, and retain exact four-hour score/state replay. Existing baseline
+and director ownership, module dependencies, persistence and boundary flows are
+unchanged; the semantic map has no navigation change for this arithmetic repair.
+
+
+## Natural bass support binding
+
+The existing foundation-rhythm render evidence now retains a bounded digest of
+each actually rendered bass event's start frame and natural frame count. The
+existing candidate binding check compares that same-pass digest with the
+unchanged resolved foundation assignment and destination geometry. Both render
+passes must still agree. A shortened source can no longer satisfy admission
+merely by retaining the correct event count and onset.
+
+This extends VoiceRenderer and the canonical foundation evidence owner; it adds
+no musical parameter, PCM buffer, renderer, callback work or persistent state. The
+separate authorized pre-kick terminal release remains valid because natural
+source support and applied terminal support are distinct. Invalid or missing
+support fails the existing binding gate before a future product can be committed.
+Normal PCM, wire schema and quality thresholds are unchanged. Source-bound
+mutation controls preserve the original16 unexpected admissions, then require
+all16 duration-halved cases to refuse with identical before/after normal and
+damaged PCM. This component repair does not qualify current calibration,
+complete memory/deadlines, lifecycle or physical output.
+
+
+### Kick natural-support admission
+
+The existing detached source-terminal evidence owner binds each kick's actual
+rendered duration to its score onset and original bar boundary, using the
+canonical 0.32-second source contract. It shares the rumble admission predicate;
+terminal de-click completion alone cannot authorize source truncation. The
+canonical fault experiment preserves score, graph, event identities and output
+geometry while halving the actual kick source inside shared nonlinear rendering.
+Normal and damaged PCM remain unchanged by this admission-only repair. Rejection
+uses existing candidate hard gates and future preparation/fallback; there is no
+new state, policy parameter, renderer, extra PCM buffer or callback work.
+
+Shared full-phrase kick/rumble controls use independent rational sample-support
+oracles at both native rates and retain authorized end-of-bar clipping. These
+known construction controls do not supply population or perceptual qualification;
+current full integration, calibration, resource, lifecycle and output requirements
+remain separate.
+
+
+`AutonomousPreparationChainResourceBudget` v3 extends the existing detached
+`RenderReservation` contract without another preparation path or renderer. The
+second `product` call occurs only after
+`CandidateRenderProduct.releaseSupersededSynthesisStorage` has removed the initial
+PCM and ending continuation; failure/cancellation cannot reuse that released
+candidate. The reservation charges one active synthesis product while retaining
+cumulative pass accounting, original incoming capacity, suspended-source
+ownership, and all existing scratch/analyzer/evidence/full-capture charges.
+The existing native observer checks the released boundary and exact corrected
+root/owned-child output. Overfull incoming state and aggregate reservations still
+refuse before rendering; a third pass remains invalid. No callback, persistent
+state, quality threshold or numeric ceiling changes. Complete allocation,
+streamed selected-capture, RSS/deadline and full qualification gates remain open.
+
+
+## AT-0039 hosted full-verification exception
+
+The user explicitly adopted this exception on 2026-10-12 because the local
+Command Line Tools installation lacks XCTest. AT-0039 alone may satisfy the
+existing full-local-verification gate with complete hosted macOS XCTest and
+Swift Testing execution plus the complete tooling suite and macOS Release app
+build at one exact immutable source revision. This is a location equivalence,
+not a local execution claim or an exception for focused-only checks.
+
+A passed receipt using this route must add an `execution` object to that gate:
+`schema` is `autotechno-at0039-hosted-execution.v1`, `environment` is
+`hosted-macos`, `scope` is `complete-native-suites-and-release-build`, and
+`revision` is the enclosing exact source revision. `receipt` is
+`docs/local/result-records/AT-0039-hosted-macos.json`; `receiptSHA256` binds its
+exact bytes. This object is forbidden on other subjects, gates or statuses.
+The existing result-record and roadmap validators verify this binding through
+`scripts/hosted_macos_verification.py`. The complete receipt must identify the
+successful repository workflow, all sixteen exact-source native jobs, strict
+recomputed discovery partitions, matching executed identities/counts and separate
+explicit skips, plus successful tooling, Release app and semantic-map steps.
+Map-only jobs, partial jobs, mixed revisions and mere discovery cannot pass.
+
+The collected verification schema is v4, with bank receipt v2. Each bank binds
+its original complete job-log SHA256, and the collector and bound-receipt reader
+replay native transport, ordered slice summaries, executed identities and named
+skips from those original bytes. The run and every bank job must have the same
+positive integer run attempt. A receipt alone or a legacy v1/v2/v3 receipt cannot
+supply the current original-build and original-log requirements. Historical
+receipts remain unchanged with their original scope; relabeling is unavailable.
+
+The existing hosted owner prepares an absent external build directory through
+`scripts/native_build_provenance.py` and the normal `swift build -v --build-tests`
+command. It retains the actual verbose compiler/linker stdout, emitted dependency
+rules and linker file lists, complete committed source inventory and hashes of
+actual compiler tools, sources, generated support, objects, modules, SDK
+metadata, resolved dependencies, test image and runtime resources. Every linked
+object requires an actual emission in the same original trace. Clang's literal
+`-MT` target is checked against its command; the normal generated DSP resource
+accessor is the sole permitted extra source in a root module. The complete native
+bank owner checks byte and inventory stability before discovery, before and after
+each selected process, and before emitting its final receipt. Original build
+chunks and one pre/post bank binding must surround the native execution. No
+benchmark, source capture, probe, alternative compiler path or test selection is
+introduced by build preparation.
+
+Original build-record self-consistency is separate from an independent source
+join. The M1 command-line reader additionally reads every blob of the exact Git
+source and compares that independently derived inventory with every original
+bank's compile inputs and source/runtime resource bytes. Only this complete
+join can set compiled-build closure authentication. Complete native banks,
+claim semantics, current-source applicability, installed-positive execution,
+resource/ordinary-deadline proof and full item authority remain separate. Neither
+build metadata alone nor a generic success flag supplies them.
+
+Bank0 additionally runs the sole `scripts/tooling_verification.py` owner for
+complete standard-library unittest discovery and execution. It binds every
+tracked source byte to exact Git, the running implementation, Python identity,
+all discovered test identities and any present scoped private governance inputs.
+It preserves the actual verbose output and exit status and rechecks source/input
+stability. The source-bound chunk transport carries the original file bytes,
+not a reconstruction from timestamped Actions lines. The independent reader
+requires every discovered identity exactly once, its actual terminal `ok`, the
+complete summary and zero skips. Expected diagnostic output between a test name
+and its terminal status remains intact. Missing, failed, skipped, repeated or
+substituted identities, empty discovery, generic passed JSON and partial or
+foreign chunks refuse. A successful workflow step alone supplies no tooling
+credit. Actual failures keep their original output and emit no success chunks.
+This verifies tooling execution only; it supplies no calibrated-quality,
+resource, ordinary-deadline, runtime or item-completion authority.
+
+The bound result receipt requires sixteen regular gzip originals at
+`docs/local/result-records/AT-0039-hosted-macos-logs/bank-N.log.gz`, where N is
+0 through15. The collector preserves the same `bank-N.log.gz` files beside its
+collected `receipt.json`; binding an original collection preserves those exact
+bytes at the declared result-record paths. Reads bound compressed and decompressed
+sizes, refuse missing/corrupt archives and symbolic links, and recheck the receipt
+and all archive bytes after verification. Original transformed Actions stdout
+does not independently establish the producer's untransformed slice-file hashes;
+that limitation remains explicit.
+
+The separate exact-head CI, algorithmic/adversarial/holdout, Windows, resource,
+lifecycle, app/route and applicable physical-output requirements remain.
+Nothing here supplies missing item-specific quality authority or makes AT-0039
+complete. Human listening remains optional, and other roadmap items retain the
+ordinary local-verification requirement.
+
+Hosted ordinary-suite skip accounting enumerates the two retired mutation tests
+and existing opt-in diagnostics whose private historical inputs or optimized
+qualification runs are owned separately. Their identities and counts remain
+explicit; they supply no executed-test or separate qualification credit. The
+installed-primary successor test is not exempt: absent current primary seals
+must prevent the hosted full-verification gate from passing. Unexpected skips
+also fail the gate.
+
+
+## Finite relative effect levels in long-horizon evidence
+
+The existing LongHorizonSignalTrajectory owner now distinguishes relative RMS
+levels from absolute signal-safety measurements. A finite, nonzero effect tail
+can yield wet/dry ratios below -240 dB while the accepted full mix remains safe.
+The prior shared range incorrectly made that complete same-pass evidence
+unavailable. Wet/dry and graph output/input ratios now retain their exact values
+within `20 * (log10(Double.greatestFiniteMagnitude) -
+log10(Double.leastNonzeroMagnitude))` in either direction: the mathematical
+range of the positive finite Double inputs used by effect-dose measurement.
+This is a representation bound, not a calibrated quality threshold. Values are
+not clipped; zero/absent denominators keep the existing nil semantics. Nonfinite
+or unrepresentable values, failed absolute safety, stale schema and inconsistent
+score/PCM/effect bindings still refuse before accumulator state advances.
+
+Independent subnormal-tail and gain-ratio controls at both native route rates
+exercise exact preservation, canonical encoding, nil applicability and
+transactional rejection. Rendering, primary features/seals, score, continuation
+and callback work are unchanged. Signal phrase v2/report v3, runtime observation
+and adaptation v4, calibration observation/corpus v5 and profile family v19
+separate this interpretation from historical data. The current Long Horizon
+seals remain unavailable until fresh development, adversarial and disjoint
+holdout qualification completes. Every resource, lifecycle, platform and
+applicable output gate remains required.
+
+
+## Independent native-history qualification
+
+LongHorizonPolicyObservation remains the sole multi-rate calibration owner. It
+retains exactly one complete 44.1 kHz and one complete 48 kHz accepted history
+for each root, bound to the same current engine and primary policy. Native
+primary acceptance can select different continuations; semantic history,
+phrase/bar geometry and effect eligibility therefore belong to each route.
+Every route must independently bind all accepted signal phrases, zero omissions,
+its full operator grid and its own effect-dose bar geometry. Missing, duplicate,
+foreign, partial and stale evidence refuses qualification.
+
+Calibration observation/corpus v7 and profile/adversarial/holdout/policy v21
+replace the historical v20 envelope. Bounds are fitted from both full native
+histories, preserving seven development roots and two disjoint holdout roots.
+The canonical native evaluator checks every semantic lower/upper bound, native
+operator consequence and physical/material effect bound separately. Each root
+passes only if both route verdicts pass every gate. Neither means, preferred
+routes nor cross-route occupancy denominators can compensate for failure.
+Adversarial qualification attacks each route independently while leaving the
+other intact; report identities include the attacked rate. Historical artifacts
+cannot activate current authority; current Long Horizon seals remain nil until
+fresh development, adversarial and holdout qualification completes.
+
+Runtime observation/adaptation v5 binds phrase/bar and signal counts plus all
+material-world fields into source identity. Calibration uses the same native
+judge as runtime, including generated-material fatigue gates. This consolidates
+the former duplicated judges and eliminates the synthetic worst-route effect
+join. Future-boundary application, conservative fallback, the single director,
+score, renderer, primary policy and PCM remain unchanged. Tests cover distinct
+native histories, route-order replay, both-sided metric violations on either
+route, independent effect denominators, material fatigue and tampered evidence.
+Every resource, lifecycle, platform and applicable output requirement remains.
+
+
+The fresh Long Horizon calibration harness canonicalizes an evidence destination
+through its nearest existing ancestor before appending missing path components.
+The same confinement check therefore holds before and after directory creation,
+including macOS `/private/tmp` aliases. It retains confinement below this
+checkout's `docs/local/reports`, rejects outside or dangling symbolic links, and
+adds no capture import, promotion authority, runtime state or PCM change. A
+path failure remains a failed study; missing derived evidence is never rebuilt
+from logs or labeled qualified.
+
+
+## Complete Windows source verification evidence
+
+The existing eight-bank Windows workflow remains the native execution owner.
+`scripts/hosted_windows_verification.py` fetches a completed exact-source run
+and all eight successful jobs from the known repository, requiring the same
+run attempt, native build, checkout-byte validation and bank-zero Release build.
+It derives execution and named skip counts from original BEGIN/END-bounded job
+output, checks the emitted result against those measurements, and recomputes
+the entire deterministic discovery partition and selectors from the union.
+A missing, failed, duplicated or foreign bank, changed run attempt, unexplained
+skip, altered count or incomplete native summary refuses the complete result.
+
+Original job logs are privately retained with SHA256 identities. PowerShell can
+emit an encoding marker at a later process boundary; parsing removes only
+line-leading markers and retains the unmodified original bytes. Actions adds
+timestamps and transforms stdout line endings, so the verifier does not claim
+to recompute the native Tee-Object file hashes from those transformed logs.
+Reported success means complete Windows source tests and Release compilation
+only. App launch, routes, physical output, resource bounds, primary and Long
+Horizon quality, lifecycle qualification and item completion remain separate.
+The existing roadmap completion refusal is unchanged. No engine, PCM, policy,
+continuation, runtime admission, budget or callback behavior changes.
+
+
+The effect-dose evidence fixture's native Debug invocation is MainActor-isolated.
+A hosted debugger replay showed its synchronous value-heavy test body entering
+`___chkstk_darwin` from the Swift Testing cooperative worker and exhausting that
+worker's stack before an assertion. The test keeps the same canonical planned
+sentence, prepared render, complete per-bar/family evidence and bounded JSON
+checks. This changes test invocation only; production planning, rendering,
+preparation, callback work, quality policy and continuation are unchanged.
+The explicit hosted `effect-dose-readiness` component runs all six tests in
+that owner with ordinary native Debug modules plus map validation. It provides
+component evidence only; complete platform and item gates remain mandatory.
+
+
+Prospective successor and private adaptation projection tests now construct their
+mechanical policy from exactly the approved 44.1/48 kHz calibration pair. Their
+former synthetic third 8 kHz route correctly fails v21 completeness and cannot
+be treated as a positive calibrated fixture. Both native PCM and exact successor
+identity checks remain intact; explicit three-rate calibration refusal and
+existing wrong-rate request/seal mutations retain negative coverage. This fixes
+fixture applicability, without extending production rate support or relaxing
+any quality gate. The hosted native-history component validates these owners
+and the policy tests separately from complete platform qualification.
+
+
+## Sparse spectral recovery boundary exchange
+
+Engine v50 extends the existing AutonomousSessionDirector recovery path. When
+a directed spectral-increase retry has a lower-density episode target, an
+unfocused motif role may exchange with the existing percussion role on a
+global four-bar boundary. The foundation, focal role, role count, episode
+target, identity and unscheduled phrase ownership remain unchanged. Ordinal
+zero, structural phrases, non-increase directions and already-percussive bars
+retain their existing role path. The same canonical ensemble, renderer,
+continuation and future-boundary admission process owns the result. No extra
+voice, selector, parameter, callback work or alternate renderer is introduced.
+
+This addresses measured contrast retries whose proposed sparse roles excluded
+percussion, leaving the existing gear-shift response unable to correct spectral
+movement. The score declares the exchanged bar and its ordinary percussion
+events; actual complete PCM and every unchanged primary gate must qualify it.
+A rejected proposal retains the existing coherent-repeat fallback and finite
+recovery bounds. Diagnostic success at one boundary is not qualification.
+
+Engine-v49 primary calibration remains immutable historical evidence. Its
+seals cannot activate engine v50. Fresh complete primary calibration, matching
+Long Horizon qualification and every separate runtime/resource/lifecycle and
+platform/output gate remain required before promotion.
+
+
+## Historical engine-v50 primary qualification resources
+
+The historical ProfessionalQualityPrimaryArtifacts registration loaded resource
+revision v34 from the complete fresh engine-v50 native study. The existing primary v32
+policy and profile v33 measurement contract are unchanged. All40development
+and6disjoint holdout trajectories completed at44.1and48kHz with644original
+reports and644actual successor receipts; all34adversarial cases and all84
+holdout observations passed. No stored capture was imported into construction.
+The previous engine-v49 resources remain historical rejection fixtures.
+
+This supplies current primary calibration only. The installed-artifact control
+checks the exact three seals, rejects the historical engine and verifies that
+host admission remains unavailable without Long Horizon qualification. Fresh
+independent native Long Horizon histories, complete platform checks, resource,
+lifecycle and applicable physical-output requirements still gate promotion.
+No score, renderer, callback, continuation or fallback behavior changes here.
+
+
+## Bounded streamed-capture reservation
+
+The existing detached RenderReservation and chain resource v4 distinguish
+retained diagnostic captures from the synchronous file-spool session. Retained
+captures keep their complete phrase/pass and suspended-source charges. Streamed
+captures check an independent total borrowed-capacity ceiling of 32 channels
+with up to twice their logical Float storage, plus one 64 KiB writer chunk.
+Unused Array capacity counts; logical length alone cannot establish this bound.
+
+The renderer additionally proves 21 live array aliases to ordinary owners
+already included in the unchanged scratch/product reservation: nine current
+workspace taps, two full source outputs, four protected outputs and six existing
+graph/mix arrays. It charges the seven protected dry taps that survive workspace
+reuse and four capture-only residual arrays separately. Each streamed bar checks
+all 21 pointer-and-capacity relationships and the aggregate allocated capacity
+of those eleven additional arrays before delivery. Equal PCM in a copied array
+cannot establish ownership. An alias or capacity mismatch refuses the render;
+it cannot authorize a smaller reservation or an alternate source.
+
+Rendering/capture returns before PhraseAudioPreflight begins. Its temporary
+arrays and bounded synchronous byte chunk do not survive into that analyzer;
+sealed drafts retain only paths and bounded records. The reservation therefore
+uses the larger of render-plus-incremental-capture and analysis storage. Original
+scratch, hold, incoming continuation, suspended parent, selected PCM and evidence
+allowances remain charged. Initial PCM is released before correction, as in v3.
+The numeric ceiling remains 128 MiB and the work limit remains two renders.
+There is no capture control in ordinary playback or new callback work.
+
+Native initial/corrected root-child controls must preserve ordinary PCM, holds,
+selected attempts, state/transaction identities and exact child ownership,
+inspect render and analysis capacities, and read/hash every selected channel.
+Separate controls reject each equal-PCM shared-buffer copy, missing ownership,
+additional-array overflow and total borrowed-capacity overflow. These establish
+only the bounded diagnostic numeric/lifetime contract; allocator overhead,
+whole-process RSS, deadlines, installed quality populations, Phase1 lifecycle
+and physical-output requirements remain separate. Sealed-file lifetime controls
+release the final draft owners and require owned files to disappear while
+unrelated files survive; test teardown cannot substitute for that check.
+
+
+## Completed native-history integrity audit
+
+The existing `LongHorizonPolicyCalibrationIntegrationTests` producer and
+`LongHorizonSignalTrajectoryAccumulator` retain ownership of the actual shared
+journey and its reduced signal evidence. The read-only
+`scripts/long_horizon_history_integrity.py` command audits completed four-hour
+journey artifacts from a clean exact original source. It rechecks the recorded
+source, test, object, executable and source/runtime resource bytes; reconstructs
+the original input fingerprint with registered primary seals; and binds the
+seven development and two disjoint holdout roots to the compiled producer.
+
+Coverage requires all six operator identities and all sixteen metric identities
+exactly once. Neutral fallback observations retain their absent operator, and
+optional measurements retain their actual support counts rather than synthetic
+zeros. The audit also checks recent hard gates and route/phrase/bar adjacency,
+fixed-130-BPM native frame geometry, repeat/sample accounting, preparation and
+owned-child/refusal counts, the existing numeric ceiling, and origin/verifier
+byte stability. JSON input is bounded and duplicate or nonfinite values refuse.
+
+The output's authority flags remain false. Native execution attestation, complete
+corpus/adversarial/holdout qualification, full typed Swift evidence evaluation,
+allocator/RSS/deadline proof, runtime activation, platform/output verification
+and item acceptance retain their separate owners and requirements. This audit
+starts no capture, writes no producer input, changes no PCM or continuation, and
+never supplies a runtime policy or musical decision.
+
+
+## Isolated streamed-chain allocation inspection
+
+The existing `IterativeSuccessorPreparationTests` fixture exposes a default-off
+allocation inspection of exactly one native initial or corrected chain through
+`AutonomousPerformancePreparer`. Its canonical root request, mechanical evaluator,
+streamed session and exact qualified child remain the same as the independent
+PCM/hold/state parity controls. This test process renders no ordinary reference
+and enables no working-storage snapshot observer. Production preparation,
+reservation, numerical limits, score, continuation and fallback are unchanged.
+
+The diagnostic requires explicit 44.1 or 48 kHz and initial/corrected selection with
+uncompacted system allocation history. It emits a reduced ready receipt only
+after the shared detached preparation returns, retains the actual selected root,
+child and capture owners through external inspection, and checks a 180-second monotonic deadline
+for an exact regular-file acknowledgement in its private temporary namespace.
+Invalid configuration, acknowledgement, cancellation or timeout fails the test.
+The rendezvous is test-only and never executes in a production host or callback.
+Its inspection limit is separate from preparation and playback deadlines.
+After acknowledgement it checks every selected 32-channel record. External
+history includes preparation and the inspection rendezvous before acknowledgement;
+these later readback allocations are outside that interval.
+
+The receipt keeps allocation, RSS/deadline and installed-quality authority false.
+External inspection must independently bind exact source/object/resource and
+executable bytes, native case and process lifetime, complete original tool output
+and cold product identities. Allocation history is distinct from resident or
+physical-footprint evidence; raw VM events may include malloc heap backing and
+cannot be summed as net storage. Requested allocation sizes also require
+independent allocated-capacity and allocator-overhead accounting; they cannot
+substitute for the existing unused-capacity charges. Profiler overhead and
+instrumented elapsed time cannot qualify ordinary preparation deadlines or
+authorize reduced admission.
+
+
+## Explicitly declared recovery of an interrupted offline Long study
+
+An explicit user approval may authorize completing this interrupted study without
+recapturing its nine completed native histories. Their original JSON, input
+bindings, source and hashes remain immutable original-candidate evidence. The
+bounded test-only recovery entry point renders only the nine approved missing
+route pairs from initial state through the unchanged `renderPreparedRoute` owner
+and exact frozen production objects/resources. A partial route is rendered in
+full; its old prefix or lost runtime state is never imported into execution.
+
+The recovery supervisor verifies the original clean source, all recorded compiled
+inputs and runtime resources, primary seals, seven-development/two-disjoint-
+holdout cohort, complete original-history integrity and exact missing-pair set.
+It separately binds the new optimized test harness, executable and route requests.
+Every completed fresh route retains its new recovery input binding and explicit
+original-candidate/harness provenance. Native completion and unchanged inputs are
+required before each result is accepted. Missing, duplicate, foreign, modified,
+partial or falsely fresh artifacts refuse; no completed original is retagged.
+
+Only all eighteen complete histories may enter the explicitly declared assembly.
+The same canonical corpus/profile/adversarial/holdout qualification path used by
+uninterrupted generation evaluates each native history independently. Original
+files are never rewritten, observations are not averaged across rates or roots,
+and failed or absent evidence cannot manufacture qualified policy artifacts.
+The assembly declares nine preserved originals and nine fresh complete executions.
+This bounded exception does not admit arbitrary archives, change production
+continuation, add another renderer/profile selector, or relax a quality gate.
+
+An assembled original-candidate study is not evidence of final-source applicability.
+Installation/seal validation and all current source, resource/allocator/RSS/deadline,
+lifecycle, platform, Release, route/recovery and physical-output gates remain
+separate mandatory requirements before runtime promotion or item completion.
+
+
+## Initial-state interrupted-route refusal witness
+
+The existing default-off shared-bootstrap probe can replay root173205 at44.1kHz
+from initial Core/render/graph state and stop at its first phrase15 candidate.
+It uses the same unchanged full-journey owner, primary evaluator and exact-child
+consumption. The witness binds the actual request, incoming Core and selected
+candidate to the preserved failed recovery and retains the existing numeric
+quality diagnostics. No saved state or PCM supplies this execution.
+
+This mode cannot mix with other probe scopes, interrupted-route execution or
+assembly. Its default stops before starting recovery or selecting a repeat. The
+existing optional single-wave flag instead records actual serial candidates and
+coherent retained repeats through the first next-wave candidate or earlier
+acceptance, then stops before committing that target. At most25 preparations and
+two repeats may occur. Its15 accepted phrases and one consumed protected child
+are a diagnostic prefix, never a complete native history. Historical studies, their harnesses and their original provenance
+remain immutable. The diagnostic grants no calibration, capacity, deadline,
+platform, runtime or item-completion authority and changes no quality bound,
+production rendering, callback, continuation or musical decision.
+
+
+## Bounded directed kick source-presence restoration
+
+`KickMorphologyResolver` remains the canonical owner of unscheduled kick retries.
+For an existing calibrated kick-crest increase, `qualityRetryAdjusted` restores
+the same complete-source `presenceScale` toward its existing balanced value of1
+using the existing positive pressure. It preserves episode identity, authored
+home, note events and original source-domain bounds. Ordinal zero is identical;
+neutral and decrease intents retain the former arithmetic. The selected score
+continues through the same VoiceRenderer source transfer, typed source binding,
+physical evidence and primary judge. There is no extra source, DSP decision,
+state accumulator, retry wave, render pass, callback work or selectable profile.
+
+This adds missing source-control room rather than weakening a calibrated floor.
+Each native rate must independently retain an eligible source-local proposal;
+that component result cannot admit a full phrase or activate a resource. Only
+actual complete prepared validation can advance accepted continuation. Rejected
+proposals retain the existing bounded serial retry and coherent-repeat fallback.
+The numeric128MiB ceiling and two-render bound are unchanged.
+
+Engine `autotechno-canonical-engine.v51` separates this PCM consequence from the
+original engine-v50 histories. All old studies, installed v34 resource bytes and
+frozen recovery inputs remain unchanged and cannot be retagged. Primary seals were invalidated by the engine change; the installed-positive test
+remained failed until fresh complete primary qualification supplied the v35
+authority documented below. Matching Long
+seals, independent complete histories, full final-source verification and every
+remaining resource/lifecycle/output gate are still mandatory.
+
+
+## Historical engine-v51 primary qualification resources
+
+These resources retain their original engine-v51 scope. The engine change
+invalidated their current admission; the v36 registration below supplies only
+fresh primary calibration. The
+following installed-control requirements describe the original registration.
+
+The sole `ProfessionalQualityPrimaryArtifacts` owner registers resource revision
+v35 from the complete fresh, frozen9bd42d6 engine-v51 native study. The existing
+primary v32 policy and profile v33 contract are unchanged. All40development and
+6disjoint holdout trajectories completed at44.1and48kHz, retaining644original
+reports and644actual immediate-successor receipts. All34adversarial cases and
+84holdout observations passed. Canonical typed construction imported no archives
+or saved partial state. Retained engine-v49/v50 resources keep historical scope.
+
+The installed positive control must load these exact three seals, admit the
+primary evaluator independently at each native rate, reject historical engines,
+and retain unavailable host admission while matching Long Horizon seals are
+absent. Registration supplies primary calibration only. Fresh independent
+7development/2disjoint holdout Long studies with all18complete native histories,
+final-source applicability, complete allocator/RSS/deadline, lifecycle, platform,
+Release, route/recovery and applicable output gates remain mandatory. This
+resource registration adds no score, renderer, callback, continuation or fallback
+behavior and never imports historical histories into current qualification.
+
+
+## Scoped detached numeric allocation inspection
+
+`PreparationWorkingStorageProbe` remains the detached diagnostic owner. Its optional
+`NumericStorageBorrowObserver` receives one begin/end pair for each physical
+observation and a synchronous borrow of each nonempty numeric buffer while that
+array is pinned. Conditional group maxima do not create another physical visit.
+The receiver must discard address identity within the snapshot and retain neither
+pointers nor PCM. The default nil path has no receiver and preserves the existing
+snapshot encoding, phase counts, aliases, capacities and typed headroom.
+
+This seam lets a local validator identify an actual allocation containing a Swift
+array payload without assuming an object-header layout or passing an interior
+pointer to allocator APIs requiring an allocation base. It returns no value to
+the inventory, admission, evaluator, score, continuation or renderer. Existing
+32phase/4096owner bounds,128MiB numeric ceiling and two-render limit are unchanged.
+Receiver work is detached diagnostic work, never audio callback work or ordinary
+deadline evidence. Observed array extents alone do not cover all transients,
+allocator-internal metadata, complete process memory or current runtime promotion.
+
+
+Original primary study verification uses `scripts/at0039_primary_verification.py`
+with independently preserved cold-proof and terminal-proof SHA256 anchors. It
+checks the original frozen Git/build/runtime bytes, all actual native products,
+checkpoint/successor multiplicities, complete corpus joins and derived artifact
+fingerprints. Recorded JSON remains inspection data; sealed candidate observations
+are never decoded or reconstructed. This check cannot render a new study, rerun
+native predicates, grant later-source applicability, install resources or satisfy
+the complete AT-0039 acceptance matrix. The roadmap completion guard remains
+fail-closed until every item-specific requirement has authoritative evidence.
+
+
+## Original Long-study byte verification
+
+The offline `scripts/at0039_long_verification.py` authenticates an independently
+pinned pre-capture proof and a separately pinned terminal preservation manifest.
+It checks the original frozen Git inventory, actual compiled inputs, compiler
+commands, isolated module search, runtime bundle, executable and canonical input
+binding before and after inspecting products. It never calls a renderer, decodes
+sealed candidate products, imports an archive as construction input or changes
+producer files. The optional collection mode describes existing preserved bytes;
+missing, partial, live or failed studies cannot produce a terminal manifest.
+
+The reader recognizes only the declared original v21/dose2, v22/dose3 and
+v22-recovery/dose3/journey3 harness formats. Independently pinned cold records select the expected inventory, cold
+test count and artifact names; the frozen compiled policy, runtime and dose source
+must agree with every selected version. An old format cannot admit a newer source
+or borrow the other format's observations. Current records additionally bind owned
+macro/header copies, the isolated cache, exact pre-Testing guards and the archived
+observer's narrowly defined schema change. The actual compiler source/object lists,
+known Testing entrypoint and resource accessor must match their inventories; an
+unused inventory or a main that prints a successful test summary cannot substitute.
+These checks authenticate original bytes and products, not current item completion.
+
+The recovery format requires 57 actual cold tests, including retained-repeat
+ownership and descendant rejection/cancellation controls, with zero skips. Its
+exact guarded entrypoint admits only that extended selector or the source-bound
+canonical capture invocation. Cold and protocol records must explicitly agree
+on journey schema3 and match the compiled native journey writer. The archived
+observer is the exact tracked integrity helper, without a private gate patch;
+history inspection explicitly binds journey3 and effect-dose3. Older frozen
+formats retain their original selectors, counts, writer interpretation and
+observer rules. Neither a version relabel nor these synthetic reader controls
+constructs or qualifies a new complete study.
+
+All seven development and two disjoint holdout roots require both native rates
+and eighteen complete independently checked histories. Corpus routes must join
+their own original signal/semantic identities, counts, operator deltas and effect
+reductions. Each native holdout verdict must independently accept every dimension;
+averaging and cross-rate history equality cannot substitute for a gate. Original
+native stdout, the complete terminal test and canonical derived artifact joins
+remain required alongside every raw history and observer archive. Synthetic
+verifier controls never supply actual capture or quality evidence.
+
+A verified original byte context binds that frozen execution only. Installed
+resources, later-source applicability, complete capacity/RSS/deadlines, platforms,
+application/output verification and authoritative full item acceptance retain
+their existing separate requirements. Generic passed JSON cannot bypass the
+unchanged completion refusal.
+
+
+## Late pulse-echo source and delayed return evidence
+
+LongHorizonEffectDoseBarEvidence remains the sole bar-level effect reduction.
+An eligible source send near a bar end can enter the existing three-sixteenth
+delay without returning wet PCM in that bar. Effect-dose v3 preserves the
+measured zero wet level and inactive status while retaining that eligible send.
+A later measured return keeps its existing active/tail-only semantics. Positive
+sends without score eligibility, nonfinite values, inconsistent binding and
+historical dose interpretation still refuse before accumulator state advances.
+
+The fresh native regression constructs a canonical score from initial planning
+and a cold renderer at each native rate, then measures the actual next-bar delay
+return. It imports no candidate, saved continuation or historical PCM. Source-only
+bars contribute no wet activity, fabricated return level or quality credit.
+The score, renderer, existing delay continuation, primary policy and v35 resources,
+PCM, callback ownership, correction work and fallback bounds are unchanged.
+
+Runtime observation/adaptation v6, Long observation/corpus v8 and policy family
+v22 separate the corrected interpretation from historical evidence. Long seals
+remain nil. Fresh complete seven-development/two-disjoint-holdout qualification
+with all18 independent native histories, final-source applicability and every
+resource, lifecycle, platform and applicable output gate remain required.
+
+## Read-only current quality-source and installation applicability
+
+`scripts/at0039_quality_applicability.py` consumes a pinned private request with
+schema `autotechno-at0039-quality-applicability-request.v1`, an exact
+`targetSource`, and `primary` and `long` original-context selectors. Each selector
+contains exactly `source_root`, `study`, `runner`, `evidence_root`, `cold_proof`,
+`cold_sha256`, `source`, `terminal_proof` and `terminal_sha256`. The four roots
+are absolute owned paths; source and proof hashes are independently pinned.
+The CLI requires `--target-root`, `--request` and `--request-sha256`. The request
+selects original inputs, never supplies qualification verdicts. Both complete
+original native verifiers must pass; partial histories or passed result JSON
+cannot supply their authority. Only the current explicit recovery-study format
+can establish this current quality scope. Its installed primary seals must equal
+the independently qualified primary products, without rate averaging or a
+cross-rate accepted-history equality requirement.
+
+The target must be clean at that exact commit. All compiled Core, DSP and
+Transport source inventory, capture-producing tests and Package.swift must match
+both authenticated studies. The existing two artifact loaders permit only
+changes to their three literal resource names and three literal expected seals,
+plus full-line documentation comments. Decoder, control-flow or other executable
+changes refuse. Nonliteral seals, duplicate bindings, unbound source files,
+symlinks and altered package settings also refuse. The running verifier and its
+verification dependencies must match the target's committed implementation.
+
+Applicability result v2 additionally recognizes exactly two non-capture admission
+method transitions in PrimaryEvaluatorReadinessTests and
+LongHorizonProfessionalPolicyTests. The built-in
+`scripts/at0039_readiness_transitions.json` contains their complete old/current
+method templates. The canonical capture entrypoints never call these methods;
+production code and every byte outside these exact method spans remain unchanged.
+Only the declared forward transition is accepted, not rollback, arbitrary test
+edits, client-supplied mappings or a free-form applicability assertion. The
+catalogue itself is bound to target Git and the verifier's implementation digest.
+
+The revised tests preserve missing-Long host refusal, historical v16 rejection,
+the exact completed v35 primary fixture, all current primary qualification
+checks and seal/engine/policy/rate joins. Once seals are present, actual canonical
+loading and compatible host artifacts must succeed; partial or invalid installed
+evidence fails instead of counting as an unavailable pass. Original cold tests
+retain their original source scope. Neither these declared test transitions nor
+synthetic verifier controls prove the new installed-positive branch; actual
+final-source native execution with qualified current resources remains required.
+
+Every installed derived resource must equal its authenticated native product
+byte for byte, allowing only the single final packaging line feed already
+handled by the canonical loader. Existing historical resource bytes cannot be
+overwritten or removed; a changed product requires a new versioned filename.
+No unrelated resource additions are admitted. Original source/build/runtime,
+complete native product archives, target inputs and verifier bytes are checked
+for stability through the audit. No producer, renderer, installer or transport
+is invoked and no saved state or archive is imported into a capture.
+
+The result establishes only `currentQualitySourceApplicabilityVerified` and
+`sourceResourceInstallationVerified`. This checks committed source resources;
+it does not execute an installed loader or inspect a Release app bundle.
+The actual installed-positive native gates remain required and
+`installedArtifactsVerified` stays false. Complete allocated-capacity, overhead,
+physical-memory and ordinary-deadline evidence, all lifecycle and Phase-1 gates,
+final platform/Release/map verification, exact app and applicable physical-output
+validation, and the authoritative item-specific completion verifier remain
+separate requirements. `item39Complete`, runtime, platform and complete-resource
+qualification remain false. Synthetic reader controls prove rejection behavior,
+not a native study, installed product qualification or roadmap completion.
+
+
+## Directed upper-color recovery
+
+Engine v52 extends the existing `AutonomousQualityRecoveryIntent` to schema2.
+A finite out-of-range absolute spectral-rolloff observation reduces in DSP to a
+bounded increase or decrease of upper color. Core's existing retry continuation
+carries that direction into an unscheduled future `SynthPerformancePlan`.
+Ordinal pressure is the existing retry ordinal divided by its existing maximum;
+color moves within `0...1` toward the requested endpoint. Ordinal zero, hold and
+foundation assignments retain their existing path. Patch, effects, note geometry,
+shape, motion and space are preserved. Opposing directions merge to hold.
+
+The same canonical assignment reaches score analysis, typed plan identity and
+phrase rendering, including the existing home-timbre correction. Quality-decision
+continuation identity binds all recovery coordinates and their schema. Unsupported
+or incomplete old intent encodings refuse instead of silently dropping color.
+No new planner, renderer, instrument, user control or accepted state is introduced.
+Rejected attempts never advance accepted continuation; existing wave, repeat,
+render-count, resource and fallback bounds remain unchanged.
+
+For the existing indefinite-pitch noise branch, color below the patch's authored
+home blends its existing high/band result toward its already-computed low
+component. This adds no filter, state, buffer, pass or bus. At and above home the
+existing arithmetic remains unchanged. Source controls at both native rates
+check actual spectral response and frequency independence. Mechanical prepared
+controls trace reducer, future score, PCM and evidence under an explicit test
+policy; they do not establish installed quality, complete resource/deadline or
+Long qualification. Fresh complete engine-v52 qualification remains mandatory.
+
+
+## Engine-v52 Long study verification format
+
+The existing original-product reader has a distinct `v22-upper-color` format.
+Its cold proof and protocol bind engine52, recovery-intent schema2, journey3,
+effect-dose3, runtime6 and Long policy22. The cold suite requires63 actual native
+controls with no skips, including the complete existing recovery selector and
+upper-color controls. The actual compiled Core owner must declare the same
+intent schema and upper-color coordinate. Its entrypoint, production/test/object
+partitions, owned compiler support, isolated cache, actual runtime bundle and
+four pre-Testing refusals retain the existing strict byte bindings.
+
+All18 complete histories, seven development and two disjoint holdout roots,
+independent native-rate gates, global repeat limit, exact reductions, native
+verdict stdout and original cold/terminal archives remain mandatory. Historical
+engine51 formats retain their own identities and cannot be relabeled as engine52.
+The source-applicability reader joins only a matching engine and authenticated
+cold format; it still requires complete original primary and Long verification
+and exact installed bytes. The new result schema distinguishes this format and
+supplies no capture, installed-positive, resource, platform, runtime or item
+completion authority. Generic passed JSON remains insufficient.
+
+
+## Engine-v52 primary qualification resources
+
+The sole `ProfessionalQualityPrimaryArtifacts` owner registers revision v36 from
+the complete fresh frozen 0b8d8a7 engine-v52 native primary study. The unchanged
+primary v32/continuous v23/profile v33 contract independently qualified all 40
+development and six disjoint holdout trajectories at 44.1 and 48 kHz, 644 original
+reports and 644 actual immediate successors, 34 adversarial cases and 84 holdout
+observations. The installed seals are profile `4c033f30f7b23a6b`, adversarial
+`c0323ada2c13f030` and holdout `df692b018c1d1c62`. Registered JSON is the original
+derived product, allowing only its final packaging line feed. All historical
+resource bytes retain their original scope. No state or history is imported.
+
+The required native installed-positive control must admit the primary evaluator
+independently at both native rates and reject historical engines. Matching Long
+Horizon seals remain absent, so production host admission must still refuse.
+This registration adds no musical state, renderer, callback, parameter, buffer,
+pass or continuation. Fresh independent seven-development/two-disjoint-holdout
+Long studies with all 18 complete histories, final-source applicability, complete
+resource and ordinary-deadline evidence, lifecycle, platform, Release, app and
+applicable physical-output qualification remain mandatory.
+
+The engine52 Long cold inventory requires the measured post-v36 total of 18
+actual runtime resources, including the 15 unchanged historical files and the
+three exact new primary products. All historical engine51 study formats retain
+their original 15-resource requirement. Exact resource names, source and bundle
+hashes, compiler accessor and source-to-runtime joins remain mandatory; a count
+alone cannot establish runtime identity.
+
+## Candidate ordinary composition minimalization
+
+The existing canonical phrase-composition resolver applies an ordinary Lock or
+Contrast bar's score-owned `minimalize` gesture to its optional slice/arpeggiator/
+pad composition layer. It retains the same resolved ensemble, foundation and
+identity, with no new rest timer, capability-specific counter or callback work.
+Harmonic continuation retains the last realized voicing across that reduced bar.
+Major Break, Energy Release and Identity Return retain their existing composition
+semantics. Other gestures and all quality, historical recurrence, resource,
+continuation and admission gates remain unchanged. This is an engine54 authoring
+candidate; component/score pilot results do not confer current qualification.
+
+
+### Primary installation before a fresh Long study
+
+The read-only `scripts/at0039_quality_applicability.py` primary-installation
+prerequisite accepts a separately pinned `--primary-installation-request`. It
+invokes the complete original primary-study verifier before comparing installed
+primary artifact bytes and all three seals with the clean exact target source.
+All 46 original trajectory archives, native products, compiled-source/resource
+bindings and existing closed non-capture transitions remain required. Historical
+resource bytes remain unchanged. Only the three verified primary resources may
+be added, and the unselected Long loader must remain byte-exact.
+
+This prerequisite supplies primary source/resource installation evidence only.
+It does not execute installation, qualify Long, run the real installed-positive
+native controls, authorize a new capture or satisfy final source applicability.
+The separate `--request` mode still requires both complete original studies and
+their matching installed artifacts. Its request schema and completion boundaries
+are unchanged; a primary-only request cannot supply a final two-study result.
+The fresh Long launch still requires real primary positive admission and its own
+published immutable source, actual resource inventory and complete cold proof.
+
+
+### Normal compiler forwarding and retained link inputs
+
+Build-provenance v4 interprets the normal Swift frontend's Clang forwarding
+tokens as Clang arguments; an -Xcc marker is never a filesystem path. Swift driver -Xfrontend arguments are likewise projected into their
+actual frontend tokens before binding a configured macro executable; the
+forwarding marker never substitutes for the executable path or its file hash. The
+registered build path distinguishes product compilation from temporary Package
+manifest evaluation. Every root-module output must remain inside that build,
+and every linked product object still requires its own actual fresh emission.
+Manifest evaluation remains in the untransformed original build log. Dependency
+rules may name only outputs declared by their actual frontend command, including
+its emitted Objective-C header and ABI descriptor; arbitrary targets refuse.
+
+The normal SwiftPM command forwards only the driver's supported -save-temps
+option in addition to the original verbose complete build arguments. This keeps
+the compiler's real intermediate linker lists available after compilation.
+The owner reads those exact files, retains their original packed bytes and
+pins their actual file hashes through the same pre/post native-execution guard.
+It never reconstructs a missing list from requested plans or stdout object
+ordering. Missing, changed, foreign or unreferenced inputs refuse. The attempted
+v2 stdout-time copy was insufficient because SwiftPM may expose buffered child
+output only after the child has removed its temporary directory; its actual
+failure remains preserved. No racy observer remains in the stdout owner.
+
+Actual emitted metadata and partial read errors survive a later proof refusal.
+The installed compiler, SDK, code-generation settings, source, native selectors
+and every qualification gate remain unchanged. This flag changes intermediate
+retention, not a cache, SDK, sandbox, assertion or resource/deadline allowance.
+This supplies build evidence only.
+
+
+## Normalized granular source cells
+
+Engine55 extends only the existing AudioSliceRenderer source-cell selection.
+For entropy e and N available frame cells, the selected cell is exactly
+floor(e*N/2^64), using UInt64 full-width multiplication. A zero or negative
+available span returns the existing zero start. The same entropy selects the
+same continuous source quantile at each rate; only the final one-cell rounding
+depends on the frame grid. The grain-position evidence domain advances to v2.
+
+No seed draw, source recipe, trigger, direction, gain, interpolation, fade,
+grain/hop geometry, loop bound, fallback, continuation, buffer, render pass or
+callback operation is added. Planning retains its existing canonical owner,
+while this detached DSP mapping realizes that same intention on a route's
+sample grid. The former frame-count modulus is removed rather than retained as
+an alternative renderer or profile.
+
+PhraseCompositionTests owns the algebraic endpoint and cross-grid quantization
+regressions alongside existing cut/granular PCM, seed, geometry and fallback
+controls. This local capability does not alter the quality evaluator, any
+calibrated metric, required split or acceptance threshold. The versioned engine
+and evidence identity distinguish changed granular PCM from historical outcomes.
+Fresh complete primary/Long studies, matching installation and real positive
+admission, resource/deadline/lifecycle/platform/output qualification and full
+final-source applicability remain required.
+
+
+### Exact engine55 non-capture identity assertion
+
+The closed non-capture transition catalogue v6 retains all six historical
+entries and adds one exact engine55 rehearsal entry. Its pinned original method
+is the current engine54 method; only the engine assertion advances to55. Native
+execution of the unchanged canonical synthetic rehearsal retains fingerprint
+6697de8de20cbdf6. No numeric/state/generation/size/unavailable predicate or
+fingerprint is changed.
+
+This entry requires the actual compiled engine55 source and exact method
+templates. Older/future engines, multi-hop edits, altered fingerprints, weakened
+bounds and capture-method changes still refuse. It supplies no installed
+positive, study, resource, runtime or item authority. Fresh engine55 studies
+compile their current assertions directly; historical source contexts keep
+their original scope.
+
+
+## Physical-time voice DC realization
+
+Engine56 shares the existing detached DC stage through `VoiceDCBlocking`. Each
+voice retains its own `dcInput` and `dcOutput` continuation fields. The coefficient
+pair derives physical decay and reference Nyquist gain from the same authored48kHz
+literal. Exact48kHz arithmetic, source generation, seed consumption, note geometry,
+effect topology, envelopes, tap/evidence ownership and bounded render/fallback
+contracts remain unchanged. No new persistent state, buffer, render pass, alternate
+engine or callback operation is introduced. Unsupported/nonfinite coefficients
+refuse before voice state mutation. Whole-study/resource/runtime/item qualification
+is separate from this candidate and its component controls.
+
+### Exact engine56 non-capture identity assertion
+
+The closed non-capture transition catalogue v7 retains all seven historical entries
+and adds one exact engine55-to-engine56 synthetic rehearsal assertion transition.
+The original full method is SHA256 pinned and its only code change is the engine
+assertion. Actual unchanged native execution retains fingerprint6697de8de20cbdf6,
+all generation/capacity/numeric predicates and unavailable qualification status.
+Matching compiled engine56 is mandatory; older, future, unbound, multi-hop,
+arbitrary-template and weakened-predicate inputs refuse. This does not qualify
+PCM, wallclock entertainment, installed admission, primary/Long or item completion.
+
+## Engine57 authored-noise DC continuity repair
+
+The engine56 cold suite refused two unchanged authored dust-cloud fingerprints.
+Engine57 preserves the existing indefinite-pitch spectral source's authored
+per-sample DC realization at every rate. The existing resolved pitch identity
+selects coefficients once per note; pitched spectral sources retain physical-time
+coefficients. Both coefficient constructions use one VoiceDCBlocking recurrence
+and the same caller-owned dcInput/dcOutput fields. No patch-name, seed, rate-case,
+profile or test-only exception is added. Source generation, envelopes, routing,
+state, buffers, render count, bounds and callback work remain unchanged.
+All original authored-noise golden fingerprints and all physical-time, transfer,
+per-frequency, exact48kHz, continuation and complete-study gates remain required.
+This candidate has not passed native validation or qualification. Original failed
+engine56 cold/study products retain their exact source and scope.
+
+### Exact engine57 non-capture identity assertion
+
+The closed catalogue v8 retains all eight historical entries byte-for-byte and
+adds only the SHA256-pinned engine56-to-engine57 synthetic rehearsal transition.
+Actual unchanged native execution retains fingerprint6697de8de20cbdf6 and every
+generation, capacity, numeric and unavailable-evidence predicate. Matching actual
+compiled engine57 is mandatory; unbound, older, future, multi-hop, arbitrary and
+weakened inputs refuse. This grants no PCM study, installed-positive, runtime,
+primary, Long, wallclock soak or item qualification.
+
+## Engine58 final-mix physical-time candidate
+
+The canonical VoiceRenderer.renderBar retains its existing seven bar-local mix
+scalars, initialization and recurrence order. MixControlResponse supplies immutable
+coefficients once before the final frame loop: the authored 48 kHz literals stay
+exact, while other rates preserve each corresponding continuous-time decay.
+No persistent state, buffer, render pass, feedback path or user parameter is added.
+The existing resolved score and caller-owned delay, chorus and spatial continuation
+remain authoritative. The candidate applies only at a normal prepared render
+boundary; it does not import or amend previously rendered study products.
+
+This tests a measurable hypothesis about rate-dependent final-mix response, using
+independent step, release and per-frequency transfer oracles and unchanged authored
+source fingerprints. Native canonical PCM/effect/complete-state controls, all
+existing cold gates and complete fresh qualification remain required. No fallback
+or acceptance predicate changes: absent qualified matching evidence, runtime
+admission remains closed. The upstream masking observations are computed before
+these controls and cannot be repaired by this change. The original engine57
+relationship failures and all earlier failed studies remain immutable evidence.
+This candidate is unvalidated; physical-time algebra alone supplies no musical,
+primary-study, Long-study, memory, deadline or runtime qualification.
+
+### Exact engine58 non-capture identity assertion
+
+The closed catalogue v9 preserves all nine historical entries byte-for-byte and
+adds only the SHA256-pinned engine57-to-engine58 synthetic rehearsal transition.
+Actual unchanged native execution retains fingerprint6697de8de20cbdf6 and every
+generation, capacity, numeric and unavailable-evidence predicate. Matching actual
+compiled engine58 is mandatory. Unbound, older, future, multi-hop, arbitrary and
+weakened inputs refuse. This supplies no PCM study, installed-positive, runtime,
+primary, Long, wall-clock soak or item qualification.

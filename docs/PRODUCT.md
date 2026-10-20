@@ -112,7 +112,9 @@ canonical kick voice. Ambient Drift then applies deterministic
 When no valid earlier recipe exists, the same planner falls back to the current
 bar's kick or percussion window. Only an accepted phrase advances this memory.
 The score owns source identity, texture, and seed; detached DSP owns
-rate-scaled geometry and causal evidence. No recording, alternative sampler,
+rate-scaled geometry and causal evidence. Granular recall maps that seed to a
+normalized source position before resolving the route-specific frame cell, so a
+sample-rate change does not select an unrelated part of the remembered source. No recording, alternative sampler,
 preset choice, or callback work is introduced.
 
 Long-horizon effect evidence follows the same product boundary. A future phrase
@@ -404,6 +406,14 @@ quarantined; that successor must still pass primary qualification before it can
 advance the canonical score. No failure can enable an unevaluated substitute. See
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 
+Current continuous prepared admission can require an exact qualified child to
+complete the source's physical measurement windows. That child is already owned
+future audio, even before queueing: both hosts consume it at the canonical
+boundary before ordinary cache, live replacement or repeat policy. Live correction
+eligibility resumes at a naturally complete leaf. A missing or stale child requires
+route rebuilding rather than an incomplete-source hold. This transport mechanism
+remains unactivated until matching current policy and full operational gates pass.
+
 The canonical-capture mixer is upstream of the main output mixer. Live feedback
 and its clock map observe the former; the user-facing monitoring mute/volume
 changes only the latter's output gain on the main actor. Monitoring state is not
@@ -470,3 +480,109 @@ contracts rather than silently defining a reduced second runtime. Core, DSP, and
 transport targets have no supported external consumers or source-compatibility
 promise. Retired reference engines, comparison executables, old scene APIs,
 render profiles, and selectable performance models remain outside the product.
+
+
+## Sparse spectral recovery boundary exchange
+
+Engine v50 extends the existing AutonomousSessionDirector recovery path. When
+a directed spectral-increase retry has a lower-density episode target, an
+unfocused motif role may exchange with the existing percussion role on a
+global four-bar boundary. The foundation, focal role, role count, episode
+target, identity and unscheduled phrase ownership remain unchanged. Ordinal
+zero, structural phrases, non-increase directions and already-percussive bars
+retain their existing role path. The same canonical ensemble, renderer,
+continuation and future-boundary admission process owns the result. No extra
+voice, selector, parameter, callback work or alternate renderer is introduced.
+
+This addresses measured contrast retries whose proposed sparse roles excluded
+percussion, leaving the existing gear-shift response unable to correct spectral
+movement. The score declares the exchanged bar and its ordinary percussion
+events; actual complete PCM and every unchanged primary gate must qualify it.
+A rejected proposal retains the existing coherent-repeat fallback and finite
+recovery bounds. Diagnostic success at one boundary is not qualification.
+
+Engine-v49 primary calibration remains immutable historical evidence. Its
+seals cannot activate engine v50. Fresh complete primary calibration, matching
+Long Horizon qualification and every separate runtime/resource/lifecycle and
+platform/output gate remain required before promotion.
+
+
+## Historical engine-v50 primary qualification resources
+
+The historical ProfessionalQualityPrimaryArtifacts registration loaded resource
+revision v34 from the complete fresh engine-v50 native study. The existing primary v32
+policy and profile v33 measurement contract are unchanged. All40development
+and6disjoint holdout trajectories completed at44.1and48kHz with644original
+reports and644actual successor receipts; all34adversarial cases and all84
+holdout observations passed. No stored capture was imported into construction.
+The previous engine-v49 resources remain historical rejection fixtures.
+
+This supplies current primary calibration only. The installed-artifact control
+checks the exact three seals, rejects the historical engine and verifies that
+host admission remains unavailable without Long Horizon qualification. Fresh
+independent native Long Horizon histories, complete platform checks, resource,
+lifecycle and applicable physical-output requirements still gate promotion.
+No score, renderer, callback, continuation or fallback behavior changes here.
+
+
+## Historical engine-v51 primary qualification resources
+
+The sole `ProfessionalQualityPrimaryArtifacts` owner registers resource revision
+v35 from the complete fresh, frozen9bd42d6 engine-v51 native study. The existing
+primary v32 policy and profile v33 contract are unchanged. All40development and
+6disjoint holdout trajectories completed at44.1and48kHz, retaining644original
+reports and644actual immediate-successor receipts. All34adversarial cases and
+84holdout observations passed. Canonical typed construction imported no archives
+or saved partial state. Retained engine-v49/v50 resources keep historical scope.
+
+The installed positive control must load these exact three seals, admit the
+primary evaluator independently at each native rate, reject historical engines,
+and retain unavailable host admission while matching Long Horizon seals are
+absent. Registration supplies primary calibration only. Fresh independent
+7development/2disjoint holdout Long studies with all18complete native histories,
+final-source applicability, complete allocator/RSS/deadline, lifecycle, platform,
+Release, route/recovery and applicable output gates remain mandatory. This
+resource registration adds no score, renderer, callback, continuation or fallback
+behavior and never imports historical histories into current qualification.
+
+
+## Scoped detached numeric allocation inspection
+
+`PreparationWorkingStorageProbe` remains the detached diagnostic owner. Its optional
+`NumericStorageBorrowObserver` receives one begin/end pair for each physical
+observation and a synchronous borrow of each nonempty numeric buffer while that
+array is pinned. Conditional group maxima do not create another physical visit.
+The receiver must discard address identity within the snapshot and retain neither
+pointers nor PCM. The default nil path has no receiver and preserves the existing
+snapshot encoding, phase counts, aliases, capacities and typed headroom.
+
+This seam lets a local validator identify an actual allocation containing a Swift
+array payload without assuming an object-header layout or passing an interior
+pointer to allocator APIs requiring an allocation base. It returns no value to
+the inventory, admission, evaluator, score, continuation or renderer. Existing
+32phase/4096owner bounds,128MiB numeric ceiling and two-render limit are unchanged.
+Receiver work is detached diagnostic work, never audio callback work or ordinary
+deadline evidence. Observed array extents alone do not cover all transients,
+allocator-internal metadata, complete process memory or current runtime promotion.
+
+
+## Engine-v52 primary qualification resources
+
+The sole `ProfessionalQualityPrimaryArtifacts` owner registers revision v36 from
+the complete fresh frozen 0b8d8a7 engine-v52 native primary study. The unchanged
+primary v32/continuous v23/profile v33 contract independently qualified all 40
+development and six disjoint holdout trajectories at 44.1 and 48 kHz, 644 original
+reports and 644 actual immediate successors, 34 adversarial cases and 84 holdout
+observations. The installed seals are profile `4c033f30f7b23a6b`, adversarial
+`c0323ada2c13f030` and holdout `df692b018c1d1c62`. Registered JSON is the original
+derived product, allowing only its final packaging line feed. All historical
+resource bytes retain their original scope. No state or history is imported.
+
+The required native installed-positive control must admit the primary evaluator
+independently at both native rates and reject historical engines. Matching Long
+Horizon seals remain absent, so production host admission must still refuse.
+This registration adds no musical state, renderer, callback, parameter, buffer,
+pass or continuation. Fresh independent seven-development/two-disjoint-holdout
+Long studies with all 18 complete histories, final-source applicability, complete
+resource and ordinary-deadline evidence, lifecycle, platform, Release, app and
+applicable physical-output qualification remain mandatory.

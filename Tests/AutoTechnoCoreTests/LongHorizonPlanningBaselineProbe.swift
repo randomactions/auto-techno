@@ -54,7 +54,8 @@ enum LongHorizonPlanningBaselineProbe {
 
     static func snapshot(
         rootSeed: UInt64,
-        hours: Int
+        hours: Int,
+        traceBarFields: Bool = false
     ) -> LongHorizonPlanningBaselineReport {
         precondition(hours > 0)
         let requestedBars = Int((
@@ -87,6 +88,31 @@ enum LongHorizonPlanningBaselineProbe {
                 if memoryBar.tension <= 0.4 { recoveryTensionBarCount += 1 }
                 eventSignatures.insert(memoryBar.eventSignature)
                 combine(memoryBar, into: &barHasher)
+                if traceBarFields {
+                    // Test-only diagnostics isolate native numerical drift;
+                    // they never change the frozen oracle or canonical state.
+                    var discrete = StableBaselineHasher()
+                    discrete.combine(memoryBar.absoluteBar)
+                    discrete.combine(memoryBar.phraseIndex)
+                    discrete.combine(memoryBar.section.rawValue)
+                    discrete.combine(memoryBar.roles.count)
+                    for role in memoryBar.roles { discrete.combine(role.rawValue) }
+                    discrete.combine(memoryBar.transformations.count)
+                    for value in memoryBar.transformations { discrete.combine(value.rawValue) }
+                    discrete.combine(memoryBar.eventSignature)
+                    let trace = [
+                        "bar": String(memoryBar.absoluteBar),
+                        "discrete": discrete.fingerprint,
+                        "tensionBits": String(memoryBar.tension.bitPattern, radix: 16),
+                        "activityBits": String(memoryBar.activity.bitPattern, radix: 16),
+                        "repetitionBits": String(memoryBar.repetition.bitPattern, radix: 16),
+                        "densityBits": String(memoryBar.density.bitPattern, radix: 16),
+                    ]
+                    let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+                    if let data = try? encoder.encode(trace) {
+                        print("LONG_HORIZON_BAR_FIELDS_JSON \(String(decoding: data, as: UTF8.self))")
+                    }
+                }
             }
 
             state.advancePlanning(using: plan)

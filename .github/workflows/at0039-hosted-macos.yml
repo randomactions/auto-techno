@@ -1,0 +1,223 @@
+name: AT-0039 Complete Hosted macOS Verification
+on:
+  workflow_call:
+    inputs:
+      scope:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      scope:
+        type: choice
+        required: true
+        default: complete
+        options: [complete, map-only, protected-continuation-diagnostic, harmonic-tail-diagnostic, primary-readiness, effect-dose-readiness, native-history-readiness, calibration-diagnostic-readiness, calibration-fixture-readiness]
+permissions:
+  contents: read
+concurrency:
+  group: at0039-hosted-macos-${{ github.ref }}-${{ inputs.scope }}
+  cancel-in-progress: false
+jobs:
+  complete:
+    if: inputs.scope == 'complete'
+    name: Complete macOS bank ${{ matrix.bank }}
+    runs-on: macos-15
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        bank: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Verify macOS environment
+        run: |
+          test "$(uname -s)" = Darwin
+          test "$RUNNER_OS" = macOS
+          git rev-parse HEAD
+          sw_vers
+          xcodebuild -version
+          swift --version
+      - name: Build all native tests
+        run: >-
+          python3 scripts/hosted_macos_verification.py --prepare-native-build
+          --build-path "$RUNNER_TEMP/at0039-tests"
+          --output "$RUNNER_TEMP/at0039-native-build"
+      - name: Preserve original native build output
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: at0039-native-build-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.bank }}
+          path: ${{ runner.temp }}/at0039-native-build/
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 6
+          overwrite: false
+          include-hidden-files: false
+      - name: Execute complete native bank
+        run: >-
+          python3 scripts/hosted_macos_verification.py --bank ${{ matrix.bank }}
+          --build-path "$RUNNER_TEMP/at0039-tests"
+          --build-provenance "$RUNNER_TEMP/at0039-native-build/build-provenance.json"
+          --output "$RUNNER_TEMP/at0039-bank-${{ matrix.bank }}"
+      - name: Run complete tooling tests
+        if: matrix.bank == 0
+        run: >-
+          python3 scripts/tooling_verification.py --source "$GITHUB_SHA"
+          --output "$RUNNER_TEMP/at0039-complete-tooling"
+      - name: Build macOS Release app
+        if: matrix.bank == 0
+        run: swift build -c release --product AutoTechno --build-path "$RUNNER_TEMP/at0039-release"
+      - name: Validate codebase map
+        if: matrix.bank == 0
+        run: python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/at0039-tests"
+      - name: Package macOS Release validation artifact
+        if: matrix.bank == 0
+        run: |
+          binary_directory="$(swift build -c release --show-bin-path --build-path "$RUNNER_TEMP/at0039-release")"
+          python3 scripts/macos_release_delivery.py pack \
+            --bin-directory "$binary_directory" --output "$RUNNER_TEMP/at0039-release-delivery"
+      - name: Upload macOS Release validation artifact
+        if: matrix.bank == 0
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: at0039-macos-release-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/at0039-release-delivery/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          overwrite: false
+          include-hidden-files: false
+  map:
+    if: inputs.scope == 'map-only' || inputs.scope == 'primary-readiness' || inputs.scope == 'effect-dose-readiness' || inputs.scope == 'native-history-readiness' || inputs.scope == 'calibration-diagnostic-readiness' || inputs.scope == 'calibration-fixture-readiness'
+    name: Native map and component (${{ matrix.slice }})
+    runs-on: macos-15
+    timeout-minutes: ${{ inputs.scope == 'native-history-readiness' && 180 || 90 }}
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        slice: ${{ fromJSON(inputs.scope == 'native-history-readiness' && '["policy","successor","live-successor","projection"]' || '["default"]') }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Generate and validate semantic codebase map
+        id: generate-map
+        run: |
+          python3 scripts/hosted_macos_verification.py --prepare-native-build \
+            --build-path "$RUNNER_TEMP/at0039-map" --output "$RUNNER_TEMP/at0039-map-build"
+          python3 scripts/codebase_map.py generate --build-path "$RUNNER_TEMP/at0039-map"
+          python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/at0039-map"
+      - name: Verify installed primary and native stack regression fixtures
+        if: inputs.scope == 'primary-readiness'
+        run: >-
+          swift test --build-path "$RUNNER_TEMP/at0039-map" --skip-build --no-parallel
+          --disable-xctest --enable-swift-testing
+          --filter '(PrimaryEvaluatorReadinessTests|LongHorizonSignalTrajectoryTests|LongHorizonProfessionalPolicyTests|IterativeSuccessorPreparationTests[/.](actualIterativeChain|protectedBoundaryRefusal|childRefusalAndCancellation|selectedStreamedChain|typedRetainedStorageInventory|sealedStreamFileLifetime)|ProfessionalQualityCalibrationTests[/.]activeHarmonicTailProjectionMatchesEvidence|AutonomousPhrasePreparationDiagnosticsTests[/.](renderBoundaryMismatchIsReasonCoded|finalRetryBoundsLatePhraseCrestSpan))'
+      - name: Verify native effect-dose fixture
+        if: inputs.scope == 'effect-dose-readiness'
+        run: >-
+          swift test --build-path "$RUNNER_TEMP/at0039-map" --skip-build --no-parallel
+          --disable-xctest --enable-swift-testing --filter '(LongHorizonEffectDoseTests|LatePulseTests)'
+      - name: Verify calibration render fixture stack
+        if: inputs.scope == 'calibration-fixture-readiness'
+        run: |
+          PYTHONPATH=scripts python3 - <<'PYTHON'
+          import os
+          from pathlib import Path
+          from hosted_macos_verification import run_logged_native, require_native_success
+          root = Path.cwd()
+          build = Path(os.environ['RUNNER_TEMP']) / 'at0039-map'
+          log = Path(os.environ['RUNNER_TEMP']) / 'calibration-fixture-native.log'
+          selector = 'ProfessionalQualityCalibrationTests[./](conditionalMetricCalibration|deterministicProfile|kickProjectionMatchesEvidence|upperPercussionTailScoreApplicability|conditionalModalBoundsFromCurrentProfile|holdoutDisjointnessAndAcceptance|modalProjectionMatchesEvidence|windowCoverageCorpusCapacity|absentWindowMeasurementsKeepCoverage|dottedRhythmCrestPopulationAcrossCandidates|foundationClimaxProjectionMatchesEvidence|kickFoundationPairingPopulationProjectionAcrossCandidates|legacyConstructedPrimaryPolicyIsIneligible|measuredRangeChallengeSourceSelection|transientDensitySpanAcrossRenderedBars|modalEventPopulationProjectionAcrossCandidates|padPopulationProjectionsAcrossCandidates|preparationEvaluatorAvailability|activeSpectralRevealProjectionMatchesEvidence|spectralRevealPopulationAcrossCandidates)($|[(/])'
+          result = run_logged_native(['swift', 'test', '--build-path', str(build),
+              '--skip-build', '--no-parallel', '--disable-xctest', '--enable-swift-testing',
+              '--filter', selector], root, log)
+          require_native_success(result, log.read_bytes(), 'swift-testing', build, selector)
+          PYTHON
+      - name: Verify calibration diagnostic stack entry
+        if: inputs.scope == 'calibration-diagnostic-readiness'
+        run: >-
+          swift test --build-path "$RUNNER_TEMP/at0039-map" --skip-build --no-parallel
+          --disable-xctest --enable-swift-testing
+          --filter 'ProfessionalQualityCalibrationIntegrationTests[./](currentContinuousExecutionProtocolRefusesMutation|freezeFourBarWindowCohort|renderSelectedPlannedBoundary|traceSelectedAccumulatedJourney)($|[(/])'
+      - name: Verify native-history successor fixtures
+        if: inputs.scope == 'native-history-readiness'
+        env:
+          NATIVE_HISTORY_SLICE: ${{ matrix.slice }}
+        run: |
+          case "$NATIVE_HISTORY_SLICE" in
+            policy) filter='(^|\.)LongHorizonProfessionalPolicyTests[./]';;
+            successor) filter='(^|\.)ProspectiveSuccessorRequestTests[./]canonicalPreparedSuccessorContext($|[(/])';;
+            live-successor) filter='(^|\.)ProspectiveSuccessorRequestTests[./]canonicalPreparedLiveSuccessorContext($|[(/])';;
+            projection) filter='(^|\.)ModalSuccessorReportJoinTests[./]preparedValidationLongHorizonProjection($|[(/])';;
+            *) exit 1;;
+          esac
+          echo "BEGIN native-history component: $NATIVE_HISTORY_SLICE"
+          swift test --build-path "$RUNNER_TEMP/at0039-map" --skip-build --no-parallel \
+            --disable-xctest --enable-swift-testing --filter "$filter"
+          echo "END native-history component: $NATIVE_HISTORY_SLICE"
+      - name: Preserve original map build output
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: at0039-map-native-build-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.slice }}
+          path: ${{ runner.temp }}/at0039-map-build/
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 6
+          overwrite: false
+          include-hidden-files: false
+      - name: Emit source-bound generated map
+        if: always() && steps.generate-map.outcome == 'success'
+        run: |
+          python3 - <<'PYMAP'
+          import base64, hashlib, json, pathlib, subprocess
+          raw = pathlib.Path('docs/CODEBASE_MAP.md').read_bytes()
+          source = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          encoded = base64.b64encode(raw).decode('ascii')
+          chunks = [encoded[i:i+8192] for i in range(0, len(encoded), 8192)]
+          for index, chunk in enumerate(chunks):
+              print(json.dumps(dict(schema='autotechno-generated-map-chunk.v1', source=source,
+                  sha256=hashlib.sha256(raw).hexdigest(), bytes=len(raw), index=index,
+                  chunks=len(chunks), payload=chunk), sort_keys=True))
+          PYMAP
+  diagnostic:
+    if: inputs.scope == 'protected-continuation-diagnostic'
+    name: Protected continuation crash diagnostic
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Build all native tests
+        run: swift build --build-tests --build-path "$RUNNER_TEMP/at0039-diagnostic"
+      - name: Replay protected continuation under debugger
+        run: >-
+          python3 scripts/hosted_macos_verification.py
+          --build-path "$RUNNER_TEMP/at0039-diagnostic"
+          --diagnostic-filter 'IterativeSuccessorPreparationTests[/.]protectedBoundaryRefusal'
+  harmonic-tail-diagnostic:
+    if: inputs.scope == 'harmonic-tail-diagnostic'
+    name: Harmonic tail crash diagnostic
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Build all native tests
+        run: swift build --build-tests --build-path "$RUNNER_TEMP/at0039-diagnostic"
+      - name: Replay harmonic tail under debugger
+        run: >-
+          python3 scripts/hosted_macos_verification.py
+          --build-path "$RUNNER_TEMP/at0039-diagnostic"
+          --diagnostic-filter 'ProfessionalQualityCalibrationTests[/.]activeHarmonicTailProjectionMatchesEvidence'

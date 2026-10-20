@@ -2,13 +2,13 @@
 # Canonical authority and hidden-path inventory
 
 Inventory schema: `autotechno-authority-surface-inventory.v1`  
-Inventory version: 1
+Inventory version: 3
 
 ## Scope
 
 The collision boundary is every production Swift type whose name ends in an authority-shaped suffix (Renderer, Preparer, Evaluator, Director, Resolver, Policy, Reducer, Controller, Qualifier, Generator, Engine, Orchestrator, Coordinator, Balancer, Analyzer, Validator, Processor, Artifacts, or Preflight), every production Swift type ending in Profile, Preset, Mode, or Configuration, every static value whose identifier contains profile or preset, every bundled JSON resource under Sources, and every source path assigned to the semantic map's graph-effects-routing-and-mix component. The inventory classifies naming collisions and convergence; it does not infer authority from a suffix alone and does not replace executable data-flow tests.
 
-The checked inventory currently classifies 70 authority-shaped Swift types, 24 profile/mode/configuration/resource surfaces, and 7 graph-component paths. Similar names are candidates for collision analysis, not proof of duplicate runtime authority.
+The checked inventory currently classifies 70 authority-shaped Swift types, 36 profile/mode/configuration/resource surfaces, and 7 graph-component paths. Similar names are candidates for collision analysis, not proof of duplicate runtime authority.
 
 ## Authority summary
 
@@ -57,6 +57,7 @@ The checked inventory currently classifies 70 authority-shaped Swift types, 24 p
 | [`modal-window-profile-contract`](#modal-window-profile-contract) | `profile` | `qualification-support-artifact` | `evidence-calibration-and-primary-evaluation` → `evidence-calibration-and-primary-evaluation` | 2 | `qualifies-without-changing-pcm` |
 | [`primary-installed-profile`](#primary-installed-profile) | `profile` | `installed-calibration-artifact` | `evidence-calibration-and-primary-evaluation` → `evidence-calibration-and-primary-evaluation` | 7 | `qualifies-without-changing-pcm` |
 | [`primary-profile-support`](#primary-profile-support) | `profile` | `qualification-support-artifact` | `evidence-calibration-and-primary-evaluation` → `evidence-calibration-and-primary-evaluation` | 2 | `qualifies-without-changing-pcm` |
+| [`historical-primary-rejection-resources`](#historical-primary-rejection-resources) | `profile` | `qualification-support-artifact` | `evidence-calibration-and-primary-evaluation` → `evidence-calibration-and-primary-evaluation` | 12 | `none` |
 
 ## Effect-path summary
 
@@ -349,7 +350,7 @@ Members:
 
 Convergence anchors:
 
-- [`Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift`](../Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift): `let rendered = VoiceRenderer.renderBar(`
+- [`Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift`](../Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift): `return VoiceRenderer.renderBar(`
 
 Evidence anchors:
 
@@ -372,7 +373,7 @@ Members:
 Convergence anchors:
 
 - [`Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift`](../Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift): `let climaxOutput = ClimaxHangRenderer.render(`
-- [`Sources/AutoTechnoDSP/VoiceRenderer.swift`](../Sources/AutoTechnoDSP/VoiceRenderer.swift): `audioSliceRenderEvidence = AudioSliceRenderer.render(`
+- [`Sources/AutoTechnoDSP/VoiceRenderer.swift`](../Sources/AutoTechnoDSP/VoiceRenderer.swift): `AudioSliceRenderer.render(`
 
 Evidence anchors:
 
@@ -395,7 +396,7 @@ Members:
 Convergence anchors:
 
 - [`Sources/AutoTechnoDSP/VoiceRenderer.swift`](../Sources/AutoTechnoDSP/VoiceRenderer.swift): `let automaticMix = AutomaticMixBalancer.resolve(`
-- [`Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift`](../Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift): `let generated = GeneratedDSPGraphRenderer.process(`
+- [`Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift`](../Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift): `return GeneratedDSPGraphRenderer.process(`
 
 Evidence anchors:
 
@@ -681,7 +682,7 @@ Members:
 
 Convergence anchors:
 
-- [`Sources/AutoTechnoWindows/main.swift`](../Sources/AutoTechnoWindows/main.swift): `AutonomousPerformancePreparer.prepare(`
+- [`Sources/AutoTechnoWindows/main.swift`](../Sources/AutoTechnoWindows/main.swift): `AutonomousPerformancePreparer.prepareDiagnosing(`
 
 Evidence anchors:
 
@@ -815,7 +816,7 @@ Evidence anchors:
 
 Limitation: The historical identifier names a private bounded axis vocabulary, not factory presets, a browser, a selectable profile, or an alternate graph.
 
-## Installed long-horizon calibration profile
+## Retained long-horizon calibration profile and unavailable current target
 <a id="long-horizon-installed-profile"></a>
 
 Classification: `installed-calibration-artifact`  
@@ -832,15 +833,16 @@ Members:
 
 Convergence anchors:
 
-- [`Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift`](../Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift): `"long-horizon-professional-profile-v16"`
+- [`Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift`](../Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift): `"long-horizon-professional-profile-v22"`
+- [`Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift`](../Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift): `guard let expectedProfileFingerprint,`
 
 Evidence anchors:
 
 - [`Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift`](../Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift): `func bundledArtifacts()`
 
-Limitation: One exact packaged profile is fingerprint-bound to the current engine and primary policy; no selector is exposed.
+Limitation: The bundled v16 profile is historical. The sole current loader targets v22 with all expected fingerprints unset and refuses load; the retained resource grants no current qualification or activation. No profile selector is exposed.
 
-## Long-horizon adversarial and holdout support
+## Historical long-horizon adversarial and holdout support
 <a id="long-horizon-profile-support"></a>
 
 Classification: `qualification-support-artifact`  
@@ -854,14 +856,15 @@ Members:
 
 Convergence anchors:
 
-- [`Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift`](../Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift): `"long-horizon-adversarial-suite-v16"`
-- [`Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift`](../Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift): `"long-horizon-holdout-v16"`
+- [`Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift`](../Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift): `"long-horizon-adversarial-suite-v22"`
+- [`Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift`](../Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift): `"long-horizon-holdout-v22"`
+- [`Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift`](../Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift): `guard let expectedProfileFingerprint,`
 
 Evidence anchors:
 
 - [`Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift`](../Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift): `func currentPolicyResourcesFailClosed()`
 
-Limitation: These artifacts qualify the one installed profile and cannot be selected as runtime policies.
+Limitation: The bundled v16 adversarial and holdout resources are historical evidence. The sole current v22 loader requires all three exact fingerprints before loading; unset seals keep it unavailable. These resources do not qualify or activate the current policy.
 
 ## Offline modal-window profile contract identities
 <a id="modal-window-profile-contract"></a>
@@ -884,9 +887,9 @@ Evidence anchors:
 - [`Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationTests.swift`](../Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationTests.swift): `func windowSupportedContractIdentity()`
 - [`Tests/AutoTechnoCoreTests/ModalSuccessorReportJoinTests.swift`](../Tests/AutoTechnoCoreTests/ModalSuccessorReportJoinTests.swift): `func continuousCalibrationMembershipAndFitting()`
 
-Limitation: Unqualified bar-local v31 and continuous v32 identities extend the existing profile type and fitter through one scope owner. Neither is installed; production activation requires v30. Continuous observations require actual report-bank membership and typed original/successor provenance; one-bank analysis cannot satisfy diverse calibration.
+Limitation: Bar-local v31 and continuous v33 profile contracts extend the existing profile type and fitter through one scope owner. The sole installed primary v35 resource set uses the continuous v33 contract; legacy v30 and retired continuous resources cannot activate it. Continuous observations require actual report-bank membership and typed original/successor provenance; one-bank analysis cannot satisfy diverse calibration. Matching Long Horizon artifacts remain required for host activation.
 
-## Installed primary calibration profile
+## Installed current primary calibration profile
 <a id="primary-installed-profile"></a>
 
 Classification: `installed-calibration-artifact`  
@@ -901,19 +904,20 @@ Members:
 - `static-value profileResource` in [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift)
 - `static-value expectedProfileFingerprint` in [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift)
 - `static-value requiredProfileVersion` in [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift)
-- `json-resource professional-quality-primary-profile-v30` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json)
+- `json-resource professional-quality-primary-profile-v36` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v36.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v36.json)
 
 Convergence anchors:
 
-- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-profile-v30"`
+- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-profile-v36"`
+- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `guard let expectedProfileFingerprint,`
 
 Evidence anchors:
 
-- [`Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift`](../Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift): `func primaryResourcesAreV30FailClosed()`
+- [`Tests/AutoTechnoCoreTests/PrimaryEvaluatorReadinessTests.swift`](../Tests/AutoTechnoCoreTests/PrimaryEvaluatorReadinessTests.swift): `func installedPrimaryRetainsUnavailableLongHorizonHost()`
 
-Limitation: Checkpoint profiles are parts of one exact installed calibration profile; neither is a runtime style or engine profile.
+Limitation: Checkpoint profiles belong to one calibration contract. The sole v36 loader binds the complete fresh engine-v52 primary study through its three exact expected fingerprints. That original qualification supplies neither final-source applicability nor matching Long Horizon qualification or host activation. No runtime style or engine selector is exposed.
 
-## Primary adversarial and holdout support
+## Installed current primary adversarial and holdout support
 <a id="primary-profile-support"></a>
 
 Classification: `qualification-support-artifact`  
@@ -922,19 +926,54 @@ PCM consequence: `qualifies-without-changing-pcm`
 
 Members:
 
-- `json-resource professional-quality-primary-adversarial-suite-v30` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v30.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v30.json)
-- `json-resource professional-quality-primary-holdout-v30` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v30.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v30.json)
+- `json-resource professional-quality-primary-adversarial-suite-v36` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v36.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v36.json)
+- `json-resource professional-quality-primary-holdout-v36` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v36.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v36.json)
 
 Convergence anchors:
 
-- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-adversarial-suite-v30"`
-- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-holdout-v30"`
+- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-adversarial-suite-v36"`
+- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-holdout-v36"`
+- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `guard let expectedProfileFingerprint,`
 
 Evidence anchors:
 
+- [`Tests/AutoTechnoCoreTests/PrimaryEvaluatorReadinessTests.swift`](../Tests/AutoTechnoCoreTests/PrimaryEvaluatorReadinessTests.swift): `func installedPrimaryRetainsUnavailableLongHorizonHost()`
+
+Limitation: The installed v36 adversarial and holdout resources bind the same exact profile and original engine-v52 primary study. The loader requires the complete three-fingerprint set and rejects altered or mixed products. Matching Long Horizon qualification and all separate release gates remain required; these support resources alone do not authorize host activation.
+
+## Retained historical primary rejection fixtures
+<a id="historical-primary-rejection-resources"></a>
+
+Classification: `qualification-support-artifact`  
+Owner convergence: `evidence-calibration-and-primary-evaluation` → `evidence-calibration-and-primary-evaluation`  
+PCM consequence: `none`
+
+Members:
+
+- `json-resource professional-quality-primary-profile-v30` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json)
+- `json-resource professional-quality-primary-adversarial-suite-v30` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v30.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v30.json)
+- `json-resource professional-quality-primary-holdout-v30` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v30.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v30.json)
+- `json-resource professional-quality-primary-profile-v33` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v33.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v33.json)
+- `json-resource professional-quality-primary-adversarial-suite-v33` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v33.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v33.json)
+- `json-resource professional-quality-primary-holdout-v33` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v33.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v33.json)
+- `json-resource professional-quality-primary-profile-v34` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v34.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v34.json)
+- `json-resource professional-quality-primary-adversarial-suite-v34` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v34.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v34.json)
+- `json-resource professional-quality-primary-holdout-v34` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v34.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v34.json)
+- `json-resource professional-quality-primary-profile-v35` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v35.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v35.json)
+- `json-resource professional-quality-primary-adversarial-suite-v35` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v35.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v35.json)
+- `json-resource professional-quality-primary-holdout-v35` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v35.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v35.json)
+
+Convergence anchors:
+
+- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-profile-v36"`
+- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `guard let expectedProfileFingerprint,`
+
+Evidence anchors:
+
+- [`Tests/AutoTechnoCoreTests/PrimaryEvaluatorReadinessTests.swift`](../Tests/AutoTechnoCoreTests/PrimaryEvaluatorReadinessTests.swift): `func bundledV30ArtifactsAreIneligible()`
 - [`Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift`](../Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift): `func primaryResourcesAreV30FailClosed()`
 
-Limitation: These exact resources gate construction of the primary evaluator and expose no parallel runtime evaluator path.
+Limitation: Historical v30, v33, v34 and v35 bytes are retained for explicit rejection controls and original-study provenance. They are not selected by the current v36 loader and cannot replace its complete exact seal set or qualify the current engine. Retention and classification confer no new calibration, playback, runtime or final-source authority.
 
 ## Automatic mix planning inside voice rendering
 <a id="automatic-mix-path"></a>
@@ -1017,7 +1056,7 @@ Entry anchors:
 
 Convergence anchors:
 
-- [`Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift`](../Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift): `let generated = GeneratedDSPGraphRenderer.process(`
+- [`Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift`](../Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift): `return GeneratedDSPGraphRenderer.process(`
 
 Evidence anchors:
 

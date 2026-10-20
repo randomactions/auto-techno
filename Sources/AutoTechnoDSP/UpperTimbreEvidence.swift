@@ -254,6 +254,53 @@ package enum UpperTimbreEvidenceAnalyzer {
     private static let spectralFrameLimit = 1_024
     private static let epsilon = 0.000_000_000_001
 
+    /// Read-only normalized views keep signal arrays in their original Float
+    /// storage. Sanitization, Double conversion and arithmetic match the former
+    /// materialized arrays; no PCM or view crosses the analysis boundary.
+    private struct Samples: RandomAccessCollection {
+        enum Channel { case single, mono, side }
+        typealias Index = Int
+        let first: [Float]
+        let second: [Float]
+        let channel: Channel
+        let offset: Int
+        let endIndex: Int
+        var startIndex: Int { 0 }
+        var count: Int { endIndex }
+
+        init(_ first: [Float], count: Int, second: [Float] = [],
+             channel: Channel = .single, offset: Int = 0) {
+            precondition(offset >= 0 && count >= 0 && offset + count <= first.count)
+            if channel != .single { precondition(offset + count <= second.count) }
+            self.first = first; self.second = second; self.channel = channel
+            self.offset = offset; endIndex = count
+        }
+
+        subscript(index: Int) -> Double {
+            precondition(index >= 0 && index < endIndex)
+            let firstValue = Double(first[offset + index])
+            let left = firstValue.isFinite ? firstValue : 0
+            switch channel {
+            case .single: return left
+            case .mono, .side:
+                let secondValue = Double(second[offset + index])
+                let right = secondValue.isFinite ? secondValue : 0
+                return channel == .mono ? (left + right) * 0.5 : (left - right) * 0.5
+            }
+        }
+
+        func index(after index: Int) -> Int { index + 1 }
+        func index(before index: Int) -> Int { index - 1 }
+        func index(_ index: Int, offsetBy distance: Int) -> Int { index + distance }
+        func distance(from start: Int, to end: Int) -> Int { end - start }
+
+        func window(_ range: Range<Int>) -> Self {
+            precondition(range.lowerBound >= 0 && range.upperBound <= endIndex)
+            return Self(first, count: range.count, second: second,
+                channel: channel, offset: offset + range.lowerBound)
+        }
+    }
+
     package static func analyze(_ input: UpperTimbreAnalysisInput) -> UpperTimbreEvidence {
         let rateIsValid = input.sampleRate.isFinite && input.sampleRate > 0
         let sampleRate = rateIsValid ? input.sampleRate : 0
@@ -287,25 +334,18 @@ package enum UpperTimbreEvidenceAnalyzer {
         var finite = rateIsValid && input.left.count == input.right.count &&
             stereoCount <= maximumFrames && metadataComplete && protectedComplete &&
             velocityMetadataValuesValid && velocityMetadataFramesValid
-        var left = [Double]()
-        var right = [Double]()
-        left.reserveCapacity(frameCount)
-        right.reserveCapacity(frameCount)
         for index in 0..<frameCount {
             let leftSample = Double(input.left[index])
             let rightSample = Double(input.right[index])
             finite = finite && leftSample.isFinite && rightSample.isFinite
-            left.append(leftSample.isFinite ? leftSample : 0)
-            right.append(rightSample.isFinite ? rightSample : 0)
         }
-
-        var protected = [Double]()
-        protected.reserveCapacity(min(maximumFrames, input.protectedReferenceMono.count))
         for sample in input.protectedReferenceMono.prefix(maximumFrames) {
-            let value = Double(sample)
-            finite = finite && value.isFinite
-            protected.append(value.isFinite ? value : 0)
+            finite = finite && Double(sample).isFinite
         }
+        let left = Samples(input.left, count: frameCount)
+        let right = Samples(input.right, count: frameCount)
+        let protected = Samples(input.protectedReferenceMono,
+            count: min(maximumFrames, input.protectedReferenceMono.count))
 
         var preceding = input.precedingFrame
         var following = input.followingFrame
@@ -320,8 +360,8 @@ package enum UpperTimbreEvidenceAnalyzer {
             following = nil
         }
 
-        let mono = zip(left, right).map { ($0 + $1) * 0.5 }
-        let side = zip(left, right).map { ($0 - $1) * 0.5 }
+        let mono = Samples(input.left, count: frameCount, second: input.right, channel: .mono)
+        let side = Samples(input.left, count: frameCount, second: input.right, channel: .side)
         let leftEnergy = left.reduce(0) { $0 + $1 * $1 }
         let rightEnergy = right.reduce(0) { $0 + $1 * $1 }
         let stereoEnergy = (leftEnergy + rightEnergy) * 0.5
@@ -535,7 +575,7 @@ package enum UpperTimbreEvidenceAnalyzer {
             .map { $0 }
     }
 
-    private static func onsetLevels(mono: [Double], frames: [Int], sampleRate: Double) -> [Double] {
+    private static func onsetLevels(mono: Samples, frames: [Int], sampleRate: Double) -> [Double] {
         let window = max(1, min(2_048, Int((sampleRate * 0.04).rounded())))
         return frames.map { start in
             let end = min(mono.count, start + window)
@@ -549,7 +589,7 @@ package enum UpperTimbreEvidenceAnalyzer {
     /// high-band ratio and tail/attack ratio are gain-normalized by construction,
     /// so the direct velocity gain cannot masquerade as spectral or decay proof.
     private static func velocityExpressionEvidence(
-        mono: [Double],
+        mono: Samples,
         windows: [UpperVelocityExpressionWindow],
         sampleRate: Double
     ) -> [UpperVelocityExpressionEvidence] {
@@ -651,7 +691,7 @@ package enum UpperTimbreEvidenceAnalyzer {
         return min(60, max(-60, 20 * log10(accent / plain)))
     }
 
-    private static func filterContour(mono: [Double], onsetFrames: [Int],
+    private static func filterContour(mono: Samples, onsetFrames: [Int],
                                       sampleRate: Double) -> (rise: Double, decay: Double) {
         guard !onsetFrames.isEmpty else {
             return filterContourWindow(mono, sampleRate: sampleRate)
@@ -664,7 +704,7 @@ package enum UpperTimbreEvidenceAnalyzer {
             let end = min(mono.count, onset + windowFrames)
             guard end - onset >= 16 else { return nil }
             let result = filterContourWindow(
-                Array(mono[onset..<end]),
+                mono.window(onset..<end),
                 sampleRate: sampleRate
             )
             return (result.rise, result.decay)
@@ -676,7 +716,7 @@ package enum UpperTimbreEvidenceAnalyzer {
         )
     }
 
-    private static func filterContourWindow(_ mono: [Double], sampleRate: Double)
+    private static func filterContourWindow(_ mono: Samples, sampleRate: Double)
         -> (rise: Double, decay: Double) {
         let block = max(16, min(256, Int((sampleRate * 0.01).rounded())))
         guard mono.count >= block else { return (0, 0) }
@@ -702,7 +742,7 @@ package enum UpperTimbreEvidenceAnalyzer {
         return (max(0, peak - first), max(0, peak - last))
     }
 
-    private static func detuneMotion(mono: [Double], sampleRate: Double) -> (depth: Double, period: Double) {
+    private static func detuneMotion(mono: Samples, sampleRate: Double) -> (depth: Double, period: Double) {
         let block = max(16, min(512, Int((sampleRate * 0.01).rounded())))
         guard mono.count >= block * 8 else { return (0, 0) }
         var envelope: [Double] = []
@@ -750,7 +790,7 @@ package enum UpperTimbreEvidenceAnalyzer {
         let bands: [Double]
     }
 
-    private static func spectralSummary(_ samples: [Double], sampleRate: Double) -> SpectrumSummary {
+    private static func spectralSummary(_ samples: Samples, sampleRate: Double) -> SpectrumSummary {
         let limit = min(spectralFrameLimit, samples.count)
         guard limit >= 16 else {
             return SpectrumSummary(highRatio: 0, aliasRatio: 0, bands: Array(repeating: 0, count: 5))
@@ -855,8 +895,8 @@ package enum UpperTimbreEvidenceAnalyzer {
     }
 
     private static func maximumBoundaryDelta(
-        left: [Double],
-        right: [Double],
+        left: Samples,
+        right: Samples,
         preceding: UpperTimbreStereoFrame?,
         following: UpperTimbreStereoFrame?
     ) -> Double {

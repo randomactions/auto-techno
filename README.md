@@ -272,3 +272,28 @@ GitHub source validation and the future distribution re-entry gate.
 ## License
 
 Auto Techno is available under the Apache License 2.0. See [LICENSE](LICENSE).
+
+
+### Verify a hosted macOS Release build for local QA
+
+The complete AT-0039 macOS workflow preserves its bank-zero Release executable and
+SwiftPM resource bundle after that bank's native tests, tooling and map checks.
+The `at0039-macos-release-<commit>-<run>-<attempt>` validation artifact contains an
+archive and `delivery.json`. This is development build delivery, with every app,
+route, quality, soak and item-completion claim explicitly false.
+
+Fetch the artifact, original successful bank-zero job record and original job log
+from the same official GitHub run and attempt. Use
+`python3 scripts/macos_release_delivery.py verify --help` for the required exact
+source/run/attempt, original job-record and original job-log arguments. The verifier
+checks their identity, ordered successful build/check/delivery steps and emitted
+receipt before checking every archived byte. Optional `--extract-to` requires a new
+absolute directory and preserves the existing executable/resource layout. It never
+runs the app or overwrites an existing directory.
+
+A verified delivery still requires the actual final-source app launch, transport,
+route/interruption/recovery, accessibility and applicable physical-output soak.
+One delivered bank cannot replace the full sixteen-bank macOS qualification or
+any primary, Long Horizon, allocation, memory, deadline or Windows requirement.
+The ordinary standalone SwiftPM build remains available; no runtime account or
+service is introduced.

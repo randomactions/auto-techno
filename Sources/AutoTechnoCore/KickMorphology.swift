@@ -106,7 +106,8 @@ package struct KickMorphologyParameters: Equatable, Sendable {
     /// negative pressure lengthens and softens that same source. Zero is
     /// exactly identity-preserving.
     package func qualityRetryAdjusted(
-        pressure requestedPressure: Double
+        pressure requestedPressure: Double,
+        restoringSourcePresence: Bool = false
     ) -> Self {
         let pressure = min(1, max(-1, requestedPressure))
         guard pressure != 0 else { return self }
@@ -153,7 +154,12 @@ package struct KickMorphologyParameters: Equatable, Sendable {
                 range: 0.03...0.075
             ),
             clickFrequencyHz: clickFrequencyHz,
-            presenceScale: presenceScale
+            // Body drive alone cannot restore crest-control room in a held
+            // relaxed source. A directed increase can recover the existing
+            // balanced source presence, without exceeding its authored bound.
+            presenceScale: restoringSourcePresence
+                ? presenceScale + (1 - presenceScale) * max(0, pressure)
+                : presenceScale
         )
     }
 
@@ -256,7 +262,9 @@ package struct KickMorphologyArticulation: Equatable, Sendable {
         start.interpolated(to: end, progress: progress)
     }
 
-    package func qualityRetryAdjusted(pressure: Double) -> Self {
+    package func qualityRetryAdjusted(
+        pressure: Double, restoringSourcePresence: Bool = false
+    ) -> Self {
         guard pressure != 0 else { return self }
         return Self(
             version: version,
@@ -270,8 +278,10 @@ package struct KickMorphologyArticulation: Equatable, Sendable {
             toHome: toHome,
             startProgress: startProgress,
             endProgress: endProgress,
-            start: start.qualityRetryAdjusted(pressure: pressure),
-            end: end.qualityRetryAdjusted(pressure: pressure)
+            start: start.qualityRetryAdjusted(pressure: pressure,
+                restoringSourcePresence: restoringSourcePresence),
+            end: end.qualityRetryAdjusted(pressure: pressure,
+                restoringSourcePresence: restoringSourcePresence)
         )
     }
 
@@ -393,7 +403,8 @@ package enum KickMorphologyResolver {
         if ordinal == AutonomousQualityRetryContinuation.maximumOrdinal {
             switch intent.kickCrestReduction {
             case .increase:
-                return articulation.qualityRetryAdjusted(pressure: 1)
+                return articulation.qualityRetryAdjusted(pressure: 1,
+                    restoringSourcePresence: true)
             case .decrease, .hold:
                 return articulation.qualityRetryTransientRecoveryAdjusted()
             }
@@ -405,7 +416,8 @@ package enum KickMorphologyResolver {
         case .decrease: -abs(basePressure)
         }
         return articulation.qualityRetryAdjusted(
-            pressure: pressure
+            pressure: pressure,
+            restoringSourcePresence: intent.kickCrestReduction == .increase
         )
     }
 

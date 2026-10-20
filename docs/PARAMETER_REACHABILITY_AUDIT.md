@@ -2,7 +2,7 @@
 # Musical and DSP parameter reachability audit
 
 Audit schema: `autotechno-parameter-reachability-audit.v1`  
-Audit version: 2
+Audit version: 3
 
 ## Scope
 
@@ -26,7 +26,7 @@ This is a static, source-linked coverage record. A `composed-causal` row combine
 | [`long-horizon-material-and-effects`](#long-horizon-material-and-effects) | `active-rendered` | 70 | `direct-causal` | `direct-evidence` | `direct-adaptation` |
 | [`dsp-graph-and-spatial-contracts`](#dsp-graph-and-spatial-contracts) | `active-dsp-contract` | 32 | `direct-causal` | `direct-evidence` | `fixed-contract-with-evidence` |
 | [`automatic-mix-and-live-master`](#automatic-mix-and-live-master) | `active-dsp-contract` | 53 | `direct-causal` | `direct-evidence` | `direct-adaptation` |
-| [`repeat-hold-and-future-adaptation`](#repeat-hold-and-future-adaptation) | `active-structural` | 47 | `direct-causal` | `direct-evidence` | `direct-adaptation` |
+| [`repeat-hold-and-future-adaptation`](#repeat-hold-and-future-adaptation) | `active-structural` | 48 | `direct-causal` | `direct-evidence` | `direct-adaptation` |
 
 ## Active semantic intent controls
 <a id="active-semantic-intent"></a>
@@ -391,7 +391,7 @@ Classification: `active-structural`
 | `LongHorizonTrajectoryDecision` in [`Sources/AutoTechnoCore/LongHorizonTrajectoryDecision.swift`](../Sources/AutoTechnoCore/LongHorizonTrajectoryDecision.swift) | `schemaVersion`, `schemaIdentifier`, `rootSeed`, `policyVersion`, `evidenceSchema`, `evidenceFingerprint`, `observedThroughPhraseIndex`, `observedThroughBar`, `targetPhraseIndex`, `targetBar`, `action`, `reasons`, `fingerprint` |
 | `LongHorizonFutureAdaptationUpdate` in [`Sources/AutoTechnoDSP/LongHorizonFutureAdaptation.swift`](../Sources/AutoTechnoDSP/LongHorizonFutureAdaptation.swift) | `state`, `decision` |
 | `LongHorizonFutureAdaptationState` in [`Sources/AutoTechnoDSP/LongHorizonFutureAdaptation.swift`](../Sources/AutoTechnoDSP/LongHorizonFutureAdaptation.swift) | `schemaVersion`, `rootSeed`, `expectedPhraseIndex`, `expectedBar`, `nextEligibleDecisionBar`, `lastDecisionFingerprint`, `lastMaterialReframeGeneration`, `profileFingerprint`, `primaryPolicyVersion`, `semantic`, `effects`, `signals` |
-| `AutonomousQualityRecoveryIntent` in [`Sources/AutoTechnoCore/QualityQualification.swift`](../Sources/AutoTechnoCore/QualityQualification.swift) | `schemaVersion`, `symbolicDensity`, `spectralMovement`, `kickCrestReduction` |
+| `AutonomousQualityRecoveryIntent` in [`Sources/AutoTechnoCore/QualityQualification.swift`](../Sources/AutoTechnoCore/QualityQualification.swift) | `schemaVersion`, `symbolicDensity`, `spectralMovement`, `upperColor`, `kickCrestReduction` |
 | `AutonomousQualityRecoveryContext` in [`Sources/AutoTechnoCore/QualityQualification.swift`](../Sources/AutoTechnoCore/QualityQualification.swift) | `wave`, `ordinal`, `presentedRepeatBars`, `intent` |
 | `AutonomousQualityRetryContinuation` in [`Sources/AutoTechnoCore/QualityQualification.swift`](../Sources/AutoTechnoCore/QualityQualification.swift) | `schemaVersion`, `targetPhraseIndex`, `ordinal`, `wave`, `presentedRepeatBars`, `recoveryIntent`, `exhausted` |
 

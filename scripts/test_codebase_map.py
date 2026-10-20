@@ -194,6 +194,41 @@ class CodebaseMapTests(unittest.TestCase):
             f"expected diagnostic containing {fragment!r}; got {errors!r}",
         )
 
+    def test_swift_failure_keeps_both_streams_and_actual_exit_status(self) -> None:
+        root = Path("/source")
+        for operation in (
+            lambda: codebase_map.run_swift_command(root, ["describe", "--type", "json"]),
+            lambda: codebase_map.ensure_test_modules_are_built(root, Path("/durable-build")),
+        ):
+            result = codebase_map.subprocess.CompletedProcess(
+                ["swift"], 17, "real compiler error on stdout\n", "dependency notice on stderr\n")
+            with self.subTest(operation=operation), \
+                    mock.patch.object(codebase_map.subprocess, "run", return_value=result), \
+                    self.assertRaises(codebase_map.CodebaseMapError) as failure:
+                operation()
+            message = str(failure.exception)
+            self.assertIn("exit 17", message)
+            self.assertIn("stdout:\nreal compiler error on stdout", message)
+            self.assertIn("stderr:\ndependency notice on stderr", message)
+            self.assertNotIn("Use a matching Xcode", message)
+
+    def test_swift_failure_reports_silent_or_single_stream_output(self) -> None:
+        for stdout, stderr, expected in [
+            ("", "", "no diagnostic output"),
+            ("compiler error\n", "", "stdout:\ncompiler error"),
+            ("", "linker error\n", "stderr:\nlinker error"),
+        ]:
+            result = codebase_map.subprocess.CompletedProcess(["swift"], -9, stdout, stderr)
+            self.assertEqual(codebase_map.swift_failure_detail(result), expected)
+
+    def test_successful_package_stdout_is_returned_unchanged(self) -> None:
+        result = codebase_map.subprocess.CompletedProcess(["swift"], 0,
+            '{"original":"package metadata"}\n', "nonfatal notice\n")
+        with mock.patch.object(codebase_map.subprocess, "run", return_value=result) as run:
+            value = codebase_map.run_swift_command(Path("/source"), ["describe"])
+        self.assertEqual(value, result.stdout)
+        self.assertEqual(run.call_count, 1)
+
     def test_valid_fixture_and_deterministic_rendering(self) -> None:
         self.assertEqual(self.fixture.validate(), [])
         first = codebase_map.render_markdown(

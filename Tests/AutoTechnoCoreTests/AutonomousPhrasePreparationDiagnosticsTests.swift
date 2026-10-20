@@ -1,10 +1,15 @@
 import AutoTechnoCore
 @testable import AutoTechnoDSP
 import Testing
+import Foundation
 
 @Suite("Autonomous phrase preparation diagnostics")
 struct AutonomousPhrasePreparationDiagnosticsTests {
     @Test("Input guard identifies the exact render boundary mismatch")
+    // Large Debug fixture values exceed the native cooperative-worker stack.
+    // Only fixture setup/assertions use the main actor; detached production
+    // preparation and its exact continuation/PCM checks remain unchanged.
+    @MainActor
     func renderBoundaryMismatchIsReasonCoded() throws {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         let state = director.initialState()
@@ -179,7 +184,10 @@ struct AutonomousPhrasePreparationDiagnosticsTests {
                 baseline.longHorizonEnergyCoordination)
     }
 
-    @Test("Final coherence retry satisfies the calibrated late-phrase crest-span envelope")
+    @Test("Final retry retains the historical crest-span comparison without activating legacy policy")
+    // Keep large value-type fixture setup on the main stack. Explicit detached
+    // preparation and the original refusal/crest assertions remain unchanged.
+    @MainActor
     func finalRetryBoundsLatePhraseCrestSpan() throws {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         var state = director.initialState()
@@ -207,7 +215,19 @@ struct AutonomousPhrasePreparationDiagnosticsTests {
             cancellationRequested: neverCancelled
         )
         let prepared = try #require(preparedResult)
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+        // Read only the retained comparison bounds. This historical profile
+        // cannot authorize the corrected evidence or continuous primary policy.
+        let repository = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let historicalProfile = try JSONDecoder().decode(ProfessionalQualityCalibrationProfile.self,
+            from: Data(contentsOf: repository.appendingPathComponent(
+                "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json")))
+        #expect(historicalProfile.fingerprint == "45d94400c298892e")
+        #expect(historicalProfile.evidenceVersion == "autotechno-professional-evidence.v29")
+        #expect(!historicalProfile.isComplete)
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try historicalV30PrimaryArtifacts()
+        }
         let observation = try ProfessionalQualityObservation(
             candidate: prepared.selectedCandidateEvidence,
             engineVersion: QualityQualificationContract.engineVersion,
@@ -215,7 +235,7 @@ struct AutonomousPhrasePreparationDiagnosticsTests {
         )
         let value = try #require(observation[.barCrestFactorSpan])
         let bounds = try #require(
-            artifacts.evaluator.profile[.longContinuation]?[.barCrestFactorSpan]
+            historicalProfile[.longContinuation]?[.barCrestFactorSpan]
         )
 
         #expect(plan.barCount == 4)

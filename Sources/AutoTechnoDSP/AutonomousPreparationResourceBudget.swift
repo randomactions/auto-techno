@@ -104,3 +104,127 @@ package struct AutonomousPreparationResourceBudget: Equatable, Sendable {
         peakWorkingByteCount <= Self.maximumPeakWorkingByteCount
     }
 }
+
+/// Phase-aware numeric reservation for one detached chain under the existing
+/// 128 MiB ceiling. A rendering phrase reserves one active synthesis product;
+/// the initial synthesis payload is released before its correction reserves.
+/// Cumulative pass counts still enforce the two-render work limit. Suspended
+/// parents retain only immutable selected PCM/state/evidence. Scratch,
+/// analyzer and looper workspaces die when each render call unwinds. No qualified
+/// child or physical support requirement is removed to fit this bound.
+package struct AutonomousPreparationChainResourceBudget: Equatable, Sendable {
+    package static let version = "autotechno-preparation-chain-resource.v4"
+    package let reservedPeakWorkingByteCount: Int
+    package let retainedNumericByteCount: Int
+    /// The root request stays alive across the entire chain, even after each
+    /// source is suspended. Charge its allocated numeric capacity once; child
+    /// incoming state already belongs to a retained completed source.
+    package let retainedIncomingContinuationNumericByteCount: Int
+    package let sourceCount: Int
+    package let maximumRenderPassCount: Int
+    private let completedSourceCount: Int
+    private let completedRenderPassCount: Int
+
+    package init() {
+        reservedPeakWorkingByteCount = 0; retainedNumericByteCount = 0
+        retainedIncomingContinuationNumericByteCount = 0
+        sourceCount = 0; maximumRenderPassCount = 0
+        completedSourceCount = 0; completedRenderPassCount = 0
+    }
+
+    /// Measured through the complete canonical typed inventory before PCM
+    /// rendering. Unused capacity is retained storage, not an empty input.
+    /// This supplements the existing conservative render/capture charges.
+    package init?(incomingContinuationNumericByteCount: Int) {
+        guard (0...AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount)
+            .contains(incomingContinuationNumericByteCount) else { return nil }
+        reservedPeakWorkingByteCount = incomingContinuationNumericByteCount
+        retainedNumericByteCount = incomingContinuationNumericByteCount
+        retainedIncomingContinuationNumericByteCount = incomingContinuationNumericByteCount
+        sourceCount = 0; maximumRenderPassCount = 0
+        completedSourceCount = 0; completedRenderPassCount = 0
+    }
+
+    private init(peak: Int, retained: Int, incoming: Int, count: Int, passes: Int,
+        completedCount: Int, completedPasses: Int) {
+        reservedPeakWorkingByteCount = peak; retainedNumericByteCount = retained
+        retainedIncomingContinuationNumericByteCount = incoming
+        sourceCount = count; maximumRenderPassCount = passes
+        completedSourceCount = completedCount; completedRenderPassCount = completedPasses
+    }
+
+    package func reserving(sampleRate: Double, barCount: Int,
+        renderPassCount: Int = QualityQualificationContract.maximumRenderPasses,
+        diagnosticRoleStemCapture: Bool = false,
+        streamedDiagnosticRoleStemCapture: Bool = false
+    ) -> Self? {
+        guard !(diagnosticRoleStemCapture && streamedDiagnosticRoleStemCapture),
+            let source = AutonomousPreparationResourceBudget(sampleRate: sampleRate,
+            barCount: barCount, renderPassCount: renderPassCount),
+            let activeSynthesis = AutonomousPreparationResourceBudget(sampleRate: sampleRate,
+                barCount: barCount, renderPassCount: 1) else { return nil }
+        // GeneratedDSPGraph's sole preparer releases the initial synthesis
+        // payload before calling the second reservation. Its attempt/vector
+        // remain under the unchanged reduced-evidence charge; PCM and ending
+        // continuation do not overlap the corrected product. Incoming/root and
+        // suspended-parent storage remain charged separately below.
+        // In-memory captures retain every bar/pass. The synchronous file sink
+        // instead borrows one bounded bar and writes one bounded byte chunk;
+        // no numeric payload survives in a selected draft. The renderer proves
+        // 21 capture aliases to ordinary charged owners and bounds only the
+        // seven extra protected taps plus four residuals. All ordinary charges
+        // and the spool's independent full borrowed-capacity guard remain.
+        let captureBytes = diagnosticRoleStemCapture
+            ? source.phraseFrameCount * 32 * MemoryLayout<Float>.stride * source.renderPassCount
+            : (streamedDiagnosticRoleStemCapture
+                ? DiagnosticRoleStemCaptureSpool.maximumAdditionalNumericCapacityByteCount(
+                    framesPerBar: source.framesPerBar) + DiagnosticRoleStemCaptureSpool.maximumWriteChunkBytes
+                : 0)
+        // The synchronous renderer releases its borrowed taps/write chunk
+        // before product() starts PhraseAudioPreflight. Reserve the larger of
+        // render-with-stream and analysis, not both disjoint workspaces. This
+        // does not reuse scratch/continuation/selected PCM or evidence storage.
+        let additionalCaptureBytes = streamedDiagnosticRoleStemCapture
+            ? max(0, captureBytes - activeSynthesis.analyzerWorkingByteCount)
+            : captureBytes
+        let active = activeSynthesis.peakWorkingByteCount.addingReportingOverflow(additionalCaptureBytes)
+        let total = retainedNumericByteCount.addingReportingOverflow(active.partialValue)
+        let count = completedSourceCount.addingReportingOverflow(1)
+        let passes = completedRenderPassCount.addingReportingOverflow(renderPassCount)
+        guard !active.overflow, !total.overflow, !count.overflow, !passes.overflow,
+            total.partialValue <= AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount
+        else { return nil }
+        return Self(peak: max(reservedPeakWorkingByteCount, total.partialValue),
+            retained: retainedNumericByteCount,
+            incoming: retainedIncomingContinuationNumericByteCount,
+            count: count.partialValue, passes: passes.partialValue,
+            completedCount: completedSourceCount, completedPasses: completedRenderPassCount)
+    }
+
+    /// Called only after the canonical pending finalizer has released candidate
+    /// sidecars. A source needing its measured child owns no repeat variants:
+    /// protected transport must consume that child. A closed leaf retains them.
+    package func retainingCompletedSource(sampleRate: Double, barCount: Int,
+        requiresQualifiedSuccessor: Bool, diagnosticRoleStemCapture: Bool = false,
+        retainedContinuationNumericByteCount: Int? = nil
+    ) -> Self? {
+        guard sourceCount == completedSourceCount + 1,
+            let source = AutonomousPreparationResourceBudget(sampleRate: sampleRate,
+                barCount: barCount, renderPassCount: 1) else { return nil }
+        let variants = requiresQualifiedSuccessor ? 0 : RepeatHoldEvolutionDSPContract.maximumPreparedVariantCount
+        // Source/preview/finalized blocks and ending state are immutable aliases
+        // of the selected product. No source copy is mutated after suspension.
+        let pcm = source.phraseFrameCount * 2 * MemoryLayout<Float>.stride * (1 + variants)
+        let capture = diagnosticRoleStemCapture ? source.phraseFrameCount * 32 * MemoryLayout<Float>.stride : 0
+        let continuation = retainedContinuationNumericByteCount ?? source.continuationPCMByteCount
+        guard (0...source.continuationPCMByteCount).contains(continuation) else { return nil }
+        let bytes = pcm + continuation + source.reducedEvidenceByteCount + capture
+        let retained = retainedNumericByteCount.addingReportingOverflow(bytes)
+        guard !retained.overflow,
+            retained.partialValue <= reservedPeakWorkingByteCount else { return nil }
+        return Self(peak: reservedPeakWorkingByteCount, retained: retained.partialValue,
+            incoming: retainedIncomingContinuationNumericByteCount,
+            count: sourceCount, passes: maximumRenderPassCount,
+            completedCount: sourceCount, completedPasses: maximumRenderPassCount)
+    }
+}

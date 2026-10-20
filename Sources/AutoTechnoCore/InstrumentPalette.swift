@@ -184,6 +184,25 @@ package struct InstrumentAssignment: Equatable, Sendable {
         return use != .foundationBass || automation.space == 0
     }
 
+    /// One future retry changes only the existing upper-instrument color.
+    /// Ordinal zero, neutral intent and the protected foundation are exact.
+    package func applyingUpperColorRecovery(
+        _ context: AutonomousQualityRecoveryContext
+    ) -> Self {
+        guard use != .foundationBass, context.ordinal > 0,
+              context.intent.upperColor != .hold else { return self }
+        let pressure = Double(context.ordinal) /
+            Double(AutonomousQualityRetryContinuation.maximumOrdinal)
+        let color: Double = switch context.intent.upperColor {
+        case .decrease: automation.color * (1 - pressure)
+        case .increase: automation.color + (1 - automation.color) * pressure
+        case .hold: automation.color
+        }
+        return Self(use: use, patch: patch,
+            automation: InstrumentAutomation(color: color, shape: automation.shape,
+                motion: automation.motion, space: automation.space), effects: effects)
+    }
+
     /// Acid spectral intent is derived from the canonical patch assignment,
     /// so it introduces no second selector or disconnected automation value.
     package var resonantMonoSpectralRelation: ResonantMonoSpectralRelation? {
@@ -298,6 +317,12 @@ package enum InstrumentPalette {
 
     package static func capability(for patch: InstrumentPatch) -> InstrumentCapability? {
         capabilities.first { $0.patch == patch }
+    }
+
+    /// The authored home remains the boundary of the existing noise color.
+    /// Below it the same voice can expose its already-computed low component.
+    package static func homeColor(for patch: InstrumentPatch) -> Double {
+        automationBase(for: patch).color
     }
 
     package static func safeFoundation() -> InstrumentAssignment {

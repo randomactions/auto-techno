@@ -1,6 +1,6 @@
 {
   "schema": "autotechno-parameter-reachability-audit.v1",
-  "auditVersion": 2,
+  "auditVersion": 3,
   "scopePolicy": "The audited boundary is every named semantic control plus every stored field of the immutable score, articulation, instrument, composition, material-world, DSP-graph, spatial, mix, live-master, repeat-hold, and future-adaptation types that currently carry musical or signal-processing intent across the canonical Core-to-DSP-to-evidence path. Local variables, derived evidence/report payloads, transport counters, caches, raw PCM containers, and implementation coefficients that never cross an owner boundary are not parameter state; their safety remains owned by their focused DSP and evaluator tests.",
   "domains": [
     {
@@ -1635,6 +1635,7 @@
             "schemaVersion",
             "symbolicDensity",
             "spectralMovement",
+            "upperColor",
             "kickCrestReduction"
           ]
         },
