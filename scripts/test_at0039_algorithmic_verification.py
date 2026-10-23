@@ -231,33 +231,62 @@ class AlgorithmicVerificationTests(unittest.TestCase):
             found = [block for block in blocks if block.splitlines()[0] == name]
             self.assertEqual(len(found), 1)
             return found[0]
-        core = step('Run core and evidence tests')
-        self.assertIn("if: matrix.bank == 'core-evidence'", core)
-        expression = re.findall(r"--filter '([^']+)'", core)
-        self.assertEqual(len(expression), 1)
-        self.assertEqual(set(expression[0].removeprefix('(').removesuffix(')').split('|')), {
-            'ClimaxHangTests', 'FoundationRhythmicRelationTests',
+        names = ['Run core and evidence tests', 'Run core foundation tests',
+                 'Run core full-phrase bass matrix', 'Run core full-phrase companion matrices']
+        owners = ['core-evidence', 'core-foundation', 'core-phrase-bass', 'core-phrase-companion']
+        original_terms = ['ClimaxHangTests', 'FoundationRhythmicRelationTests',
             'GeneratedDSPTopologyTests', 'FeedbackDelayNetworkTests',
             'IdentityReturnContinuationTests', 'KickSyntaxTests',
             'PercussionEchoTextureTests', 'PhraseCompositionTests',
             'QualityQualificationFoundationTests', 'SpectrumMaskingAnalyzerTests',
             'StreamingPerceptualEvidenceTests', 'TPTAntialiasedNonlinearCoreTests',
-            'fixedSessionIdentity', 'currentPlanningIsDeterministic'})
-        self.assertIn("--skip 'FoundationRhythmicRelationTests/(algorithmicFoundation(Bass|Companion|Release)Faults|algorithmicFullPhrase((Absent|Monotone|Point|Pump|SubPulse)Bass|OutputFrame)Faults)'", core)
-        self.assertIn('swift test --no-parallel', core)
-        self.assertEqual(workflow.count('- name: Run core and evidence tests'), 1)
+            'fixedSessionIdentity', 'currentPlanningIsDeterministic']
+        original_filter = '(' + '|'.join(original_terms) + ')'
+        original_skip = ('FoundationRhythmicRelationTests/'
+            '(algorithmicFoundation(Bass|Companion|Release)Faults|'
+            'algorithmicFullPhrase((Absent|Monotone|Point|Pump|SubPulse)Bass|OutputFrame)Faults)')
+        selections = []
+        for name, owner in zip(names, owners):
+            body = step(name)
+            self.assertIn("if: matrix.bank == '" + owner + "'", body)
+            self.assertIn('swift test --no-parallel', body)
+            selected = re.findall(r"--filter (?:'([^']+)'|([^\s]+))", body)
+            skipped = re.findall(r"--skip '([^']+)'", body)
+            self.assertEqual(len(selected), 1)
+            selections.append((next(x for x in selected[0] if x), skipped[0] if skipped else None))
+        self.assertEqual(set(selections[0][0][1:-1].split('|')),
+                         set(original_terms) - {'FoundationRhythmicRelationTests'})
+        self.assertEqual(selections[0][1], original_skip + '|FoundationRhythmicRelationTests')
+        self.assertEqual(selections[1][0], 'FoundationRhythmicRelationTests')
+        self.assertEqual(selections[2][0], 'FoundationRhythmicRelationTests/algorithmicFullPhraseBassFaults')
+        self.assertEqual(selections[3][0], 'FoundationRhythmicRelationTests/algorithmicFullPhraseCompanionFaults')
+        # Include all declared foundation methods, exclusions, and a future
+        # method sentinel. New methods in an original suite cannot silently drop.
+        foundation = (Path(__file__).resolve().parents[1] /
+                      'Tests/AutoTechnoCoreTests/FoundationRhythmicRelationTests.swift').read_text()
+        methods = set(re.findall(r'func ([A-Za-z_][A-Za-z_0-9]*)\(', foundation))
+        methods |= {'futureMethod', 'fixedSessionIdentity', 'currentPlanningIsDeterministic'}
+        for suite in original_terms + ['UnrelatedTests']:
+            for method in methods:
+                identity = 'AutoTechnoCoreTests.' + suite + '/' + method + '()'
+                expected = bool(re.search(original_filter, identity)) and not re.search(original_skip, identity)
+                assigned = sum(bool(re.search(selected, identity)) and
+                               not (skip and re.search(skip, identity)) for selected, skip in selections)
+                self.assertEqual(assigned, int(expected), identity)
         bootstrap = step('Build core and evidence test modules')
-        self.assertIn("if: matrix.bank == 'core-evidence'", bootstrap)
+        self.assertIn("if: startsWith(matrix.bank, 'core-')", bootstrap)
         self.assertIn('swift build --build-tests', bootstrap)
         self.assertNotIn('swift test', bootstrap)
         upper = step('Build tests and run upper score slices')
-        self.assertIn("if: matrix.bank != 'core-evidence'", upper)
+        self.assertIn("if: ${{ !startsWith(matrix.bank, 'core-') }}", upper)
         banks = re.findall(r'bank: \[([^\]]+)\]', workflow)
         self.assertEqual(len(banks), 1)
         self.assertEqual([value.strip() for value in banks[0].split(',')],
-                         ['foundation', 'primary', 'modal', 'remaining', 'core-evidence'])
+                         ['foundation', 'primary', 'modal', 'remaining'] + owners)
         self.assertIn('fail-fast: false', workflow)
-        self.assertIn('timeout-minutes: 360', workflow)
+        self.assertEqual(workflow.count('timeout-minutes: 360'), 1)
+        self.assertIn('needs: swift-gates', workflow)
+        self.assertIn('run: test "$SWIFT_GATES_RESULT" = success', workflow)
 
     def test_foreign_source_partial_banks_or_modified_original_logs_refuse(self):
         bundle, logs = fixture()

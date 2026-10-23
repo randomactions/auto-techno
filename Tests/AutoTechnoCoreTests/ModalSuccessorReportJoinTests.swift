@@ -1299,20 +1299,51 @@ struct ModalSuccessorReportJoinTests {
             "qualification": "diagnostic-not-activated"
         ], options: [.sortedKeys]))
         FileHandle.standardOutput.write(Data([0x0A]))
-        // Full report identity includes engine and render continuation identity.
-        // Engine55 macOS bank observed from this canonical mechanical control.
-        // Every membership, missing-population and fitting check stays required.
-        // This one-bank fixture cannot qualify or activate a policy.
-        #expect(bank.engineVersion == QualityQualificationContract.engineVersion)
-        // Exact PCM-derived reports are pinned per supported native platform.
-        // Engine54 Windows bank observed independently in run39159523720.
-        // An engine55 Windows observation is still required before final qualification.
-        // Platform-specific observations do not substitute for one another.
+        // The bank includes engine identity, exact PCM-derived reports and
+        // continuation. Keep observations versioned instead of applying an old
+        // engine's golden to newly rendered current evidence. Missing platform
+        // observations fail closed; they never borrow another engine's pin.
+        // Historical: engine54 Windows run39159523720; engine55 macOS pin.
+        // Current: engine58 macOS run39464163769/attempt1/job118771055172,
+        // exact source00c tree; original failure is retained independently.
+        let recordedBankFingerprints = [
+            "autotechno-canonical-engine.v54": ["Windows": "225a87b87ed59c1e"],
+            "autotechno-canonical-engine.v55": ["macOS": "1744a5bb898e44a4"],
+            "autotechno-canonical-engine.v58": ["macOS": "6ea1ef4a9246b0ef"]
+        ]
         #if os(Windows)
-        #expect(complete.sourceBankFingerprint == "225a87b87ed59c1e")
+        let nativePlatform = "Windows"
+        #elseif os(macOS)
+        let nativePlatform = "macOS"
         #else
-        #expect(complete.sourceBankFingerprint == "1744a5bb898e44a4")
+        let nativePlatform = "unregistered"
         #endif
+        #expect(bank.engineVersion == QualityQualificationContract.engineVersion)
+        let expectedBankFingerprint = try #require(
+            recordedBankFingerprints[bank.engineVersion]?[nativePlatform],
+            "An independent current-engine native bank observation is required")
+        #expect(complete.sourceBankFingerprint == expectedBankFingerprint)
+        // Independently encode the typed FNV wire bytes, without calling the
+        // production fingerprint sink. The exact versioned golden still guards
+        // the entire rendered bank, not merely this hash implementation.
+        let bankBytes = try bank.deterministicJSON()
+        let domainBytes = Array("professional-quality-source-bank-json.v1".utf8)
+        func lengthBytes(_ count: Int) -> [UInt8] {
+            (0..<8).map { UInt8(truncatingIfNeeded: UInt64(count) >> ($0 * 8)) }
+        }
+        let wirePrefix = [UInt8(0xd0), 0x73] + lengthBytes(domainBytes.count) +
+            domainBytes + [0x73] + lengthBytes(bankBytes.count)
+        var independentHash = wirePrefix.reduce(UInt64(0xcbf29ce484222325)) {
+            ($0 ^ UInt64($1)) &* 0x100000001b3
+        }
+        for byte in bankBytes {
+            independentHash = (independentHash ^ UInt64(byte)) &* 0x100000001b3
+        }
+        let independentFingerprint = String(repeating: "0",
+            count: 16 - String(independentHash, radix: 16).count) +
+            String(independentHash, radix: 16)
+        #expect(independentFingerprint == expectedBankFingerprint)
+        #expect(complete.sourceBankFingerprint == independentFingerprint)
         #expect(unsupportedTrainingMetrics == [.upperPercussionTailRenderedTailToAttackDBMean])
         #expect(throws: ProfessionalQualityCalibrationError.invalidMetricSet) {
             try ProfessionalQualityCalibrationProfile(continuousBank: bank, successors: receipts)
