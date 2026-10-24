@@ -166,13 +166,60 @@ class HostedMacOSVerificationTests(unittest.TestCase):
                  mock.patch.object(hosted.subprocess,'check_output',side_effect=output), \
                  mock.patch.object(hosted,'bounded_regular',return_value=json.dumps(record).encode()), \
                  mock.patch.object(hosted.native_build,'git_source_files',return_value=record['trackedInputs']), \
-                 mock.patch.object(hosted.native_build,'guard',side_effect=[None,None,ValueError('post-native object drift')]), \
+                 mock.patch.object(hosted.native_build,'guard',side_effect=[None,None,None,None,ValueError('post-native object drift')]), \
                  mock.patch.object(hosted,'plan',return_value={'selected':[selection]}), \
                  mock.patch.object(hosted,'run_logged_native',side_effect=native) as run, \
                  mock.patch.object(hosted,'emit') as emit,contextlib.redirect_stdout(io.StringIO()):
                 with self.assertRaisesRegex(ValueError,'post-native object drift'):
                     hosted.run_bank(0,Path('/native-build'),Path(directory)/'out',Path('/original-build.json'))
                 self.assertEqual(run.call_count,1);emit.assert_not_called()
+
+    def test_discovery_mutation_refuses_before_other_library_or_any_native_slice(self):
+        record=build_tests.fixture();calls=[]
+        with tempfile.TemporaryDirectory() as directory:
+            def output(argv,**kwargs):
+                calls.append(argv)
+                if argv[0]=='git':return SOURCE if 'rev-parse' in argv else ''
+                return 'AutoTechnoCoreTests.Fixture/test()'
+            with mock.patch.object(hosted.platform,'system',return_value='Darwin'), \
+                 mock.patch.dict(hosted.os.environ,{'GITHUB_ACTIONS':'true','RUNNER_OS':'macOS','GITHUB_SHA':SOURCE}), \
+                 mock.patch.object(hosted.subprocess,'check_output',side_effect=output), \
+                 mock.patch.object(hosted,'bounded_regular',return_value=json.dumps(record).encode()), \
+                 mock.patch.object(hosted.native_build,'git_source_files',return_value=record['trackedInputs']), \
+                 mock.patch.object(hosted.native_build,'guard',side_effect=[None,ValueError('discovery metadata drift')]), \
+                 mock.patch.object(hosted,'run_logged_native') as native, \
+                 mock.patch.object(hosted,'emit') as emit,contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaisesRegex(ValueError,'discovery metadata drift'):
+                    hosted.run_bank(0,Path('/native-build'),Path(directory)/'out',Path('/original-build.json'))
+                native.assert_not_called();emit.assert_not_called()
+            discoveries=[row for row in calls if row[0]=='swift']
+            self.assertEqual(discoveries,[['swift','test','-v','-Xswiftc','-save-temps','--build-path','/native-build','list','--skip-build','--enable-xctest','--disable-swift-testing']])
+
+    def test_native_invocation_uses_same_original_build_options_and_selector(self):
+        record=build_tests.fixture();commands=[]
+        with tempfile.TemporaryDirectory() as directory:
+            def output(argv,**kwargs):
+                if argv[0]=='git':return SOURCE if 'rev-parse' in argv else ''
+                commands.append(argv);return 'AutoTechnoCoreTests.Fixture/test()'
+            def native(command,root,log):
+                commands.append(command);log.write_bytes(b'Test run with 1 test passed\n')
+                return hosted.subprocess.CompletedProcess(command,0)
+            selection=dict(library='swift-testing',suite='Fixture',selector='literal',identifiers=['AutoTechnoCoreTests.Fixture/test()'])
+            with mock.patch.object(hosted.platform,'system',return_value='Darwin'), \
+                 mock.patch.dict(hosted.os.environ,{'GITHUB_ACTIONS':'true','RUNNER_OS':'macOS','GITHUB_SHA':SOURCE}), \
+                 mock.patch.object(hosted.subprocess,'check_output',side_effect=output), \
+                 mock.patch.object(hosted,'bounded_regular',return_value=json.dumps(record).encode()), \
+                 mock.patch.object(hosted.native_build,'git_source_files',return_value=record['trackedInputs']), \
+                 mock.patch.object(hosted.native_build,'guard') as guard, \
+                 mock.patch.object(hosted,'plan',return_value={'selected':[selection]}), \
+                 mock.patch.object(hosted,'run_logged_native',side_effect=native), \
+                 mock.patch.object(hosted,'emit') as emit,contextlib.redirect_stdout(io.StringIO()):
+                hosted.run_bank(0,Path('/native-build'),Path(directory)/'out',Path('/original-build.json'))
+                self.assertEqual(guard.call_count,6);emit.assert_called_once()
+            prefix=['swift','test','-v','-Xswiftc','-save-temps','--build-path','/native-build']
+            self.assertEqual(commands,[prefix+['list','--skip-build','--enable-xctest','--disable-swift-testing'],
+                prefix+['list','--skip-build','--disable-xctest','--enable-swift-testing'],
+                prefix+['--skip-build','--no-parallel','--disable-xctest','--enable-swift-testing','--filter','literal']])
 
     def test_existing_full_workflow_owns_fresh_build_and_all_original_selectors(self):
         workflow=(Path(__file__).resolve().parents[1]/'.github/workflows/at0039-hosted-macos.yml').read_text()

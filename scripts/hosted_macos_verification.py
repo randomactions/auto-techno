@@ -438,15 +438,16 @@ def run_bank(bank, build_path, output, build_provenance=None):
                  'swift-testing': ['--disable-xctest', '--enable-swift-testing']}
     discoveries = {}
     for library, flags in libraries.items():
-        discoveries[library] = subprocess.check_output(['swift', 'test', '--build-path', str(build_path),
-            'list', '--skip-build', *flags], cwd=root, text=True)
+        discoveries[library] = subprocess.check_output(native_build.test_command(record,
+            'list', '--skip-build', *flags), cwd=root, text=True)
+        native_build.guard(record, root)
     selection = plan(discoveries, bank, BANKS); results = []
     for ordinal, selected in enumerate(selection['selected']):
         native_build.guard(record, root)
         print(f'BEGIN native slice {bank}:{selected["library"]}:{selected["suite"]}', flush=True)
         log = output / f'{ordinal}.log'
-        result = run_logged_native(['swift', 'test', '--build-path', str(build_path), '--skip-build',
-            '--no-parallel', *libraries[selected['library']], '--filter', selected['selector']], root, log)
+        result = run_logged_native(native_build.test_command(record, '--skip-build',
+            '--no-parallel', *libraries[selected['library']], '--filter', selected['selector']), root, log)
         raw = log.read_bytes()
         require_native_success(result, raw, selected['library'], build_path, selected['selector'])
         native_build.guard(record, root)

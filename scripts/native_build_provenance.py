@@ -290,7 +290,12 @@ def check_files(records):
     names=[]
     for record in records:
         need(type(record) is dict and set(record)=={'path','resolvedPath','bytes','sha256'}, 'compiled file fields')
-        need(file_record(record['path'])==record,'compiled build input/output changed')
+        try:
+            observed=file_record(record['path'])
+        except (OSError, ValueError) as error:
+            raise ValueError('compiled build input/output unavailable: '+record['path']) from error
+        need(observed==record,'compiled build input/output changed: '+
+             json.dumps(dict(expected=record,observed=observed),sort_keys=True))
         names.append(record['path'])
     need(names==sorted(set(names)),'unique ordered compiled inventory')
 
@@ -462,6 +467,19 @@ def decode(text,source):
     size,digest=next(iter(common))
     need(decoder.eof and not decoder.unconsumed_tail and not decoder.unused_data and len(raw)==size and sha(raw)==digest,'exact complete original native build transport')
     return strict(raw)
+
+
+def test_command(record, *arguments):
+    """Keep SwiftPM planning identical to the original verbose save-temps build.
+
+    Even --skip-build discovery can regenerate pinned debug.yaml/description.json
+    when the original compiler options are omitted. Never recapture those files
+    or exempt their hashes: invoke the same build configuration instead.
+    """
+    build=record['buildPath']
+    need(record['command']==['swift','build','-v','--build-tests','-Xswiftc',
+         '-save-temps','--build-path',build], 'known original test build configuration')
+    return ['swift','test','-v','-Xswiftc','-save-temps','--build-path',build,*arguments]
 
 
 def guard(record,root):

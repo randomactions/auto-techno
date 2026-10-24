@@ -178,6 +178,36 @@ class NativeBuildProvenanceTests(unittest.TestCase):
             build.check_files([record]);p.write_bytes(b'changed bytes')
             with self.assertRaisesRegex(ValueError,'changed'):build.check_files([record])
 
+    def test_pinned_metadata_mutation_reports_exact_bytes_without_resealing(self):
+        for name in ['debug.yaml','description.json','object.o']:
+            with self.subTest(name=name),tempfile.TemporaryDirectory() as tmp:
+                p=Path(tmp)/name;p.write_bytes(b'original bytes');record=build.file_record(p)
+                original=copy.deepcopy(record);p.write_bytes(b'mutated! bytes')
+                with self.assertRaises(ValueError) as caught:build.check_files([record])
+                prefix='compiled build input/output changed: '
+                self.assertTrue(str(caught.exception).startswith(prefix))
+                diagnostic=json.loads(str(caught.exception)[len(prefix):])
+                self.assertEqual(diagnostic['expected'],original)
+                self.assertEqual(diagnostic['observed'],build.file_record(p))
+                self.assertNotEqual(diagnostic['expected']['sha256'],diagnostic['observed']['sha256'])
+                self.assertEqual(record,original)
+
+    def test_missing_pinned_file_names_the_path_and_still_refuses(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p=Path(tmp)/'object.o';p.write_bytes(b'original');record=build.file_record(p);p.unlink()
+            with self.assertRaises(ValueError) as caught:build.check_files([record])
+            self.assertEqual(str(caught.exception),'compiled build input/output unavailable: '+str(p))
+
+    def test_test_commands_retain_original_verbose_compiler_options(self):
+        r=fixture()
+        for args in [('list','--skip-build','--enable-xctest','--disable-swift-testing'),
+                     ('--skip-build','--no-parallel','--disable-xctest','--enable-swift-testing','--filter','Owner/test')]:
+            self.assertEqual(build.test_command(r,*args),['swift','test','-v','-Xswiftc','-save-temps','--build-path','/native-build',*args])
+        for option in ['-v','-Xswiftc','-save-temps']:
+            changed=copy.deepcopy(r);changed['command'].remove(option)
+            with self.subTest(option=option),self.assertRaisesRegex(ValueError,'original test build configuration'):
+                build.test_command(changed,'list','--skip-build')
+
     def test_complete_git_source_is_read_from_original_blobs(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);subprocess.run(['git','init','-q',str(root)],check=True)
