@@ -901,4 +901,65 @@ class HostedMacOSVerificationTests(unittest.TestCase):
             with self.assertRaises(ValueError):hosted.run_bank(0,Path('/tmp/build'),Path('/tmp/output'))
             call.assert_not_called()
 
+class HostedWorkflowDispatchRoutingTests(unittest.TestCase):
+    """Exercise the registered gateway, not only the reusable workflow body."""
+    alias = 'hosted-macos-upper-color-stack-readiness'
+    scope = 'upper-color-stack-readiness'
+    expected = {
+        'complete-hosted-macos': 'complete',
+        'hosted-macos-map': 'map-only',
+        'hosted-macos-diagnostic': 'protected-continuation-diagnostic',
+        'hosted-macos-harmonic-tail-diagnostic': 'harmonic-tail-diagnostic',
+        **{'hosted-macos-' + name: name for name in (
+            'primary-readiness', 'effect-dose-readiness', 'native-history-readiness',
+            'calibration-diagnostic-readiness', 'calibration-fixture-readiness',
+            'upper-color-stack-readiness')},
+    }
+
+    def setUp(self):
+        root = Path(__file__).resolve().parents[1]
+        self.gateway = (root / '.github/workflows/windows-distribution.yml').read_text()
+        self.called = (root / '.github/workflows/at0039-hosted-macos.yml').read_text()
+        self.jobs = dict(re.findall(r'^  ([a-z-]+):\n    if: ([^\n]+)', self.gateway, re.M))
+        self.options = re.findall(r'^          - ([a-z-]+)$', self.gateway, re.M)
+
+    def test_diagnostic_is_available_through_registered_gateway(self):
+        self.assertEqual(self.options.count(self.alias), 1)
+        self.assertIn('uses: ./.github/workflows/at0039-hosted-macos.yml', self.gateway)
+        self.assertIn('  workflow_call:\n', self.called)
+        self.assertIn(self.scope, self.called.split('        options: [', 1)[1].split(']', 1)[0].split(', '))
+
+    def test_diagnostic_selects_only_hosted_job(self):
+        selected = []
+        for job, expression in self.jobs.items():
+            terms = expression.split(' || ')
+            for term in terms:
+                self.assertRegex(term, r"^inputs\.validation == '[a-z-]*'$")
+            if self.alias in [term.split("'")[1] for term in terms]:
+                selected.append(job)
+        self.assertEqual(selected, ['hosted-macos'])
+
+    def test_every_hosted_mode_has_exact_scope_and_existing_modes_stay_bound(self):
+        expression = re.search(r'^      scope: \$\{\{ (.+) \}\}$', self.gateway, re.M).group(1)
+        terms = expression.split(' || ')
+        self.assertEqual(terms.pop(), "'complete'")
+        mappings = [re.fullmatch(r"inputs\.validation == '([a-z-]+)' && '([a-z-]+)'", term)
+                    for term in terms]
+        self.assertTrue(all(mappings))
+        pairs = [match.groups() for match in mappings]
+        self.assertEqual(len(pairs), len(dict(pairs)))
+        self.assertEqual(dict(pairs), {key: value for key, value in self.expected.items()
+                                      if key != 'complete-hosted-macos'})
+        admitted = re.findall(r"inputs\.validation == '([a-z-]+)'", self.jobs['hosted-macos'])
+        self.assertCountEqual(admitted, self.expected)
+        self.assertTrue(set(self.expected) <= set(self.options))
+
+    def test_diagnostic_cannot_select_complete_or_other_reusable_jobs(self):
+        jobs = re.findall(r'^  ([a-z-]+):\n    if: ([^\n]+)', self.called, re.M)
+        selected = [job for job, expression in jobs
+                    if self.scope in re.findall(r"inputs\.scope == '([a-z-]+)'", expression)]
+        self.assertEqual(selected, ['map'])
+        self.assertEqual(self.called.count("        if: inputs.scope == 'upper-color-stack-readiness'"), 1)
+
+
 if __name__ == '__main__':unittest.main()

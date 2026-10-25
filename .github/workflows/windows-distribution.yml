@@ -17,6 +17,7 @@ on:
           - hosted-macos-native-history-readiness
           - hosted-macos-calibration-diagnostic-readiness
           - hosted-macos-calibration-fixture-readiness
+          - hosted-macos-upper-color-stack-readiness
           - hosted-macos-diagnostic
           - hosted-macos-harmonic-tail-diagnostic
           - windows-diagnostics
@@ -45,10 +46,10 @@ concurrency:
 
 jobs:
   hosted-macos:
-    if: inputs.validation == 'complete-hosted-macos' || inputs.validation == 'hosted-macos-map' || inputs.validation == 'hosted-macos-diagnostic' || inputs.validation == 'hosted-macos-harmonic-tail-diagnostic' || inputs.validation == 'hosted-macos-primary-readiness' || inputs.validation == 'hosted-macos-effect-dose-readiness' || inputs.validation == 'hosted-macos-native-history-readiness' || inputs.validation == 'hosted-macos-calibration-diagnostic-readiness' || inputs.validation == 'hosted-macos-calibration-fixture-readiness'
+    if: inputs.validation == 'complete-hosted-macos' || inputs.validation == 'hosted-macos-map' || inputs.validation == 'hosted-macos-diagnostic' || inputs.validation == 'hosted-macos-harmonic-tail-diagnostic' || inputs.validation == 'hosted-macos-primary-readiness' || inputs.validation == 'hosted-macos-effect-dose-readiness' || inputs.validation == 'hosted-macos-native-history-readiness' || inputs.validation == 'hosted-macos-calibration-diagnostic-readiness' || inputs.validation == 'hosted-macos-calibration-fixture-readiness' || inputs.validation == 'hosted-macos-upper-color-stack-readiness'
     uses: ./.github/workflows/at0039-hosted-macos.yml
     with:
-      scope: ${{ inputs.validation == 'hosted-macos-map' && 'map-only' || inputs.validation == 'hosted-macos-diagnostic' && 'protected-continuation-diagnostic' || inputs.validation == 'hosted-macos-harmonic-tail-diagnostic' && 'harmonic-tail-diagnostic' || inputs.validation == 'hosted-macos-primary-readiness' && 'primary-readiness' || inputs.validation == 'hosted-macos-effect-dose-readiness' && 'effect-dose-readiness' || inputs.validation == 'hosted-macos-native-history-readiness' && 'native-history-readiness' || inputs.validation == 'hosted-macos-calibration-diagnostic-readiness' && 'calibration-diagnostic-readiness' || inputs.validation == 'hosted-macos-calibration-fixture-readiness' && 'calibration-fixture-readiness' || 'complete' }}
+      scope: ${{ inputs.validation == 'hosted-macos-map' && 'map-only' || inputs.validation == 'hosted-macos-diagnostic' && 'protected-continuation-diagnostic' || inputs.validation == 'hosted-macos-harmonic-tail-diagnostic' && 'harmonic-tail-diagnostic' || inputs.validation == 'hosted-macos-primary-readiness' && 'primary-readiness' || inputs.validation == 'hosted-macos-effect-dose-readiness' && 'effect-dose-readiness' || inputs.validation == 'hosted-macos-native-history-readiness' && 'native-history-readiness' || inputs.validation == 'hosted-macos-calibration-diagnostic-readiness' && 'calibration-diagnostic-readiness' || inputs.validation == 'hosted-macos-calibration-fixture-readiness' && 'calibration-fixture-readiness' || inputs.validation == 'hosted-macos-upper-color-stack-readiness' && 'upper-color-stack-readiness' || 'complete' }}
 
   validate-windows-source:
     if: inputs.validation == 'windows-calibration-fixture-readiness' || inputs.validation == 'windows-primary-readiness' || inputs.validation == 'windows' || inputs.validation == 'windows-diagnostics' || inputs.validation == 'windows-recovery-build' || inputs.validation == 'windows-full-banks' || inputs.validation == 'windows-planning-probe' || inputs.validation == 'windows-planning-math' || inputs.validation == ''
