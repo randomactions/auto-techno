@@ -767,10 +767,51 @@ class HostedMacOSVerificationTests(unittest.TestCase):
             self.assertIn('--no-lldbinit', command)
             self.assertIn('process launch --shell-expand-args false', command)
             self.assertIn('thread backtrace --count 40 all', command)
+            self.assertIn('register read sp fp pc lr x9', command)
+            self.assertIn('image lookup --address $lr', command)
+            self.assertIn("disassemble --start-address '$lr-32' --count 24", command)
             self.assertEqual(run.call_args.kwargs['timeout'], 900)
             self.assertIn('/Xcode/MacOSX.platform/Developer/usr/lib',
                           run.call_args.kwargs['env']['DYLD_LIBRARY_PATH'])
             emit.assert_not_called()
+
+    def test_upper_color_component_is_exact_guarded_and_preserves_native_failure(self):
+        import textwrap
+        workflow = (Path(__file__).resolve().parents[1] / '.github/workflows/at0039-hosted-macos.yml').read_text()
+        self.assertIn('upper-color-stack-readiness', workflow)
+        body = workflow.split("<<'PYUPPER'\n", 1)[1].split('          PYUPPER\n', 1)[0]
+        code = compile(textwrap.dedent(body), '<upper-color-component>', 'exec')
+        exact = 'AutoTechnoCoreTests.LongHorizonEnergyCoordinationTests/upperColorPreparedRecoveryPipeline()'
+        for exit_code, raw in [(0, b'Test run with 1 test passed\n'),
+                               (0, b'Test run with 0 tests passed\n'),
+                               (1, b'assertion failure\n'),
+                               (1, b'error: Exited with unexpected signal code 10\n')]:
+            with self.subTest(exit_code=exit_code, raw=raw), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory); build = root/'at0039-map'; output = root/'at0039-map-build'; output.mkdir()
+                record = build_tests.fixture(SOURCE); record['buildPath'] = str(build); record['command'][-1] = str(build)
+                def native(command, cwd, log):
+                    self.assertEqual(command[:7], ['swift', 'test', '-v', '-Xswiftc', '-save-temps', '--build-path', str(build)])
+                    selector = command[-1]
+                    self.assertRegex(exact + '/LongHorizonEnergyCoordinationTests.swift:31:4', selector)
+                    self.assertNotRegex(exact.replace('Pipeline()', 'PipelineExtra()'), selector)
+                    self.assertNotRegex(exact.replace('CoordinationTests/', 'CoordinationTestsExtra/'), selector)
+                    log.write_bytes(raw)
+                    return hosted.subprocess.CompletedProcess(command, exit_code)
+                with mock.patch.dict(os.environ, {'GITHUB_SHA':SOURCE, 'RUNNER_TEMP':directory}), \
+                     mock.patch.object(Path, 'cwd', return_value=root), \
+                     mock.patch.object(hosted, 'bounded_regular', return_value=json.dumps(record).encode()), \
+                     mock.patch.object(hosted.native_build, 'git_source_files', return_value=record['trackedInputs']), \
+                     mock.patch.object(hosted.native_build, 'validate') as validate, \
+                     mock.patch.object(hosted.native_build, 'guard') as guard, \
+                     mock.patch.object(hosted, 'run_logged_native', side_effect=native) as run, \
+                     mock.patch.object(hosted, 'diagnose_crash', return_value=0) as debugger:
+                    if exit_code == 0 and b'with 1 test passed' in raw:
+                        exec(code, {})
+                    else:
+                        with self.assertRaises(ValueError): exec(code, {})
+                    run.assert_called_once(); validate.assert_called_once(); self.assertEqual(guard.call_count, 2)
+                    self.assertEqual(debugger.call_count, int(exit_code != 0 and b'unexpected signal code' in raw))
+                    self.assertEqual((output/'upper-color-stack-original-native.log').read_bytes(), raw)
 
     def test_diagnostic_execution_refuses_non_hosted_environment(self):
         with mock.patch.object(hosted.platform,'system',return_value='Darwin'), \

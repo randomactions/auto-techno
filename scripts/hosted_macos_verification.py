@@ -379,7 +379,9 @@ def diagnose_crash(build_path, selector):
     command = ['xcrun', 'lldb', '--batch', '--no-lldbinit',
                '-o', 'settings set target.env-vars ' + target_environment,
                '-o', 'process launch --shell-expand-args false']
-    for instruction in ['thread backtrace --count 40 all', 'register read sp fp pc x9',
+    for instruction in ['thread backtrace --count 40 all', 'register read sp fp pc lr x9',
+                        'image lookup --address $lr',
+                        "disassemble --start-address '$lr-32' --count 24",
                         'memory region $sp', 'disassemble --frame --count 12',
                         'frame select 1', 'disassemble --frame --count 24']:
         command.extend(['-k', instruction])

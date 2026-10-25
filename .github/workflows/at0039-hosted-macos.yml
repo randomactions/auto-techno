@@ -11,7 +11,7 @@ on:
         type: choice
         required: true
         default: complete
-        options: [complete, map-only, protected-continuation-diagnostic, harmonic-tail-diagnostic, primary-readiness, effect-dose-readiness, native-history-readiness, calibration-diagnostic-readiness, calibration-fixture-readiness]
+        options: [complete, map-only, protected-continuation-diagnostic, harmonic-tail-diagnostic, primary-readiness, effect-dose-readiness, native-history-readiness, calibration-diagnostic-readiness, calibration-fixture-readiness, upper-color-stack-readiness]
 permissions:
   contents: read
 concurrency:
@@ -92,7 +92,7 @@ jobs:
           overwrite: false
           include-hidden-files: false
   map:
-    if: inputs.scope == 'map-only' || inputs.scope == 'primary-readiness' || inputs.scope == 'effect-dose-readiness' || inputs.scope == 'native-history-readiness' || inputs.scope == 'calibration-diagnostic-readiness' || inputs.scope == 'calibration-fixture-readiness'
+    if: inputs.scope == 'map-only' || inputs.scope == 'primary-readiness' || inputs.scope == 'effect-dose-readiness' || inputs.scope == 'native-history-readiness' || inputs.scope == 'calibration-diagnostic-readiness' || inputs.scope == 'calibration-fixture-readiness' || inputs.scope == 'upper-color-stack-readiness'
     name: Native map and component (${{ matrix.slice }})
     runs-on: macos-15
     timeout-minutes: ${{ inputs.scope == 'native-history-readiness' && 180 || 90 }}
@@ -140,6 +140,31 @@ jobs:
               '--filter', selector], root, log)
           require_native_success(result, log.read_bytes(), 'swift-testing', build, selector)
           PYTHON
+      - name: Inspect original upper-color preparation stack failure
+        if: inputs.scope == 'upper-color-stack-readiness'
+        run: |
+          PYTHONPATH=scripts python3 - <<'PYUPPER'
+          import os
+          from pathlib import Path
+          import native_build_provenance as native
+          from hosted_macos_verification import bounded_regular, require, run_logged_native, require_native_success, summarize_log
+          root = Path.cwd()
+          source = os.environ['GITHUB_SHA']
+          build = Path(os.environ['RUNNER_TEMP']) / 'at0039-map'
+          directory = Path(os.environ['RUNNER_TEMP']) / 'at0039-map-build'
+          record = native.strict(bounded_regular(directory / 'build-provenance.json', native.MAX_METADATA))
+          require(record['source'] == source and Path(record['buildPath']) == build, 'same original component build source/path')
+          native.validate(record, source, native.git_source_files(str(root), source))
+          native.guard(record, root)
+          selector = r'(^|\.)LongHorizonEnergyCoordinationTests[./]upperColorPreparedRecoveryPipeline\(\)(/|$)'
+          log = directory / 'upper-color-stack-original-native.log'
+          result = run_logged_native(native.test_command(record, '--skip-build', '--no-parallel',
+              '--disable-xctest', '--enable-swift-testing', '--filter', selector), root, log)
+          native.guard(record, root)
+          require_native_success(result, log.read_bytes(), 'swift-testing', build, selector)
+          summarize_log(log.read_text(), 'swift-testing', 1,
+              ['AutoTechnoCoreTests.LongHorizonEnergyCoordinationTests/upperColorPreparedRecoveryPipeline()'])
+          PYUPPER
       - name: Verify calibration diagnostic stack entry
         if: inputs.scope == 'calibration-diagnostic-readiness'
         run: >-
