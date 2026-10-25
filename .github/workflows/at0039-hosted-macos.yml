@@ -109,10 +109,12 @@ jobs:
       - name: Generate and validate semantic codebase map
         id: generate-map
         run: |
+          # Map inspection prepares test modules and may rewrite compiler metadata.
+          # Finish it in separate scratch space before sealing the fresh native build.
+          python3 scripts/codebase_map.py generate --build-path "$RUNNER_TEMP/at0039-map-inspection"
+          python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/at0039-map-inspection"
           python3 scripts/hosted_macos_verification.py --prepare-native-build \
             --build-path "$RUNNER_TEMP/at0039-map" --output "$RUNNER_TEMP/at0039-map-build"
-          python3 scripts/codebase_map.py generate --build-path "$RUNNER_TEMP/at0039-map"
-          python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/at0039-map"
       - name: Verify installed primary and native stack regression fixtures
         if: inputs.scope == 'primary-readiness'
         run: >-

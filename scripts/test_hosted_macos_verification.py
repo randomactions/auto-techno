@@ -962,4 +962,70 @@ class HostedWorkflowDispatchRoutingTests(unittest.TestCase):
         self.assertEqual(self.called.count("        if: inputs.scope == 'upper-color-stack-readiness'"), 1)
 
 
+class HostedMapBuildIsolationTests(unittest.TestCase):
+    """Run the actual workflow command plan against compiler-mutation fixtures."""
+    def exercise(self, directory, fail_map_operation=''):
+        import shlex
+        import textwrap
+        workflow = (Path(__file__).resolve().parents[1] / '.github/workflows/at0039-hosted-macos.yml').read_text()
+        step = workflow.split('      - name: Generate and validate semantic codebase map\n', 1)[1]
+        body = step.split('        run: |\n', 1)[1].split('      - name: ', 1)[0]
+        commands = [shlex.split(line) for line in textwrap.dedent(body).replace('\\\n', '').splitlines()
+                    if line.strip() and not line.lstrip().startswith('#')]
+        proxy = directory / 'compiler_mutation_fixture.py'
+        proxy.write_text("""import hashlib, json, pathlib, sys
+args = sys.argv[1:]
+root = pathlib.Path(__file__).parent
+with (root / 'commands.jsonl').open('a') as stream:
+    stream.write(json.dumps(args) + '\\n')
+build = pathlib.Path(args[args.index('--build-path') + 1])
+if args[0] == 'scripts/codebase_map.py':
+    build.mkdir(exist_ok=True)
+    (build / 'compiler-dependency').write_text('map-inspection:' + args[1])
+    if args[1] == """ + repr(fail_map_operation) + """:
+        sys.exit(23)
+elif args[0] == 'scripts/hosted_macos_verification.py':
+    assert '--prepare-native-build' in args and not build.exists()
+    output = pathlib.Path(args[args.index('--output') + 1])
+    assert not output.exists()
+    build.mkdir(); output.mkdir()
+    dependency = build / 'compiler-dependency'
+    dependency.write_bytes(b'fresh-normal-native-build')
+    (output / 'sealed-dependency.sha256').write_text(hashlib.sha256(dependency.read_bytes()).hexdigest())
+else:
+    raise AssertionError('unexpected workflow command')
+""")
+        results = []
+        for command in commands:
+            self.assertEqual(command[0], 'python3')
+            argv = [arg.replace('$RUNNER_TEMP', str(directory)) for arg in command[1:]]
+            result = hosted.subprocess.run([sys.executable, str(proxy), *argv], capture_output=True)
+            results.append(result)
+            if result.returncode:
+                break
+        journal = [json.loads(line) for line in (directory / 'commands.jsonl').read_text().splitlines()]
+        return results, journal
+
+    def test_map_inspection_cannot_mutate_sealed_native_build(self):
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name); results, commands = self.exercise(root)
+            self.assertEqual([result.returncode for result in results], [0, 0, 0])
+            self.assertEqual([args[:2] for args in commands], [
+                ['scripts/codebase_map.py', 'generate'], ['scripts/codebase_map.py', 'check'],
+                ['scripts/hosted_macos_verification.py', '--prepare-native-build']])
+            paths = [Path(args[args.index('--build-path') + 1]) for args in commands]
+            self.assertEqual(paths[0], paths[1]); self.assertNotEqual(paths[1], paths[2])
+            sealed = (root / 'at0039-map-build/sealed-dependency.sha256').read_text()
+            self.assertEqual(hosted.sha((paths[2] / 'compiler-dependency').read_bytes()), sealed)
+
+    def test_map_failure_prevents_native_preparation_and_seal(self):
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name); results, commands = self.exercise(root, 'check')
+            self.assertEqual([result.returncode for result in results], [0, 23])
+            self.assertEqual([args[:2] for args in commands], [
+                ['scripts/codebase_map.py', 'generate'], ['scripts/codebase_map.py', 'check']])
+            self.assertFalse((root / 'at0039-map').exists())
+            self.assertFalse((root / 'at0039-map-build').exists())
+
+
 if __name__ == '__main__':unittest.main()
