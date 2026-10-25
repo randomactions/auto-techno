@@ -357,6 +357,40 @@ def emit(value):
 
 
 
+def retain_upper_color_compile_object(record, root, output):
+    """Retain one already sealed compiler object; never execute tests or DSP."""
+    native_build.validate(record, record['source'],
+                          native_build.git_source_files(str(root), record['source']))
+    native_build.guard(record, root)
+    name = 'LongHorizonEnergyCoordinationTests.swift.o'
+    matches = [row for row in record['files'] if Path(row['path']).name == name]
+    require(len(matches) == 1, 'one sealed upper-color compiler object required')
+    row = matches[0]; path = Path(row['path'])
+    require(path.parent.name == 'AutoTechnoCoreTests.build' and
+            Path(record['buildPath']).resolve() in path.resolve().parents,
+            'upper-color object belongs to original build')
+    raw = bounded_regular(path, 8 * 1024 * 1024)
+    require(len(raw) == row['bytes'] and sha(raw) == row['sha256'],
+            'same original sealed upper-color object bytes')
+    output = Path(output)
+    require(output.is_dir() and not output.is_symlink() and
+            output.resolve() != Path(record['buildPath']).resolve() and
+            Path(record['buildPath']).resolve() not in output.resolve().parents,
+            'diagnostic output outside sealed build')
+    target = output / name
+    with target.open('xb') as stream:
+        stream.write(raw)
+    require(bounded_regular(target, 8 * 1024 * 1024) == raw,
+            'retained compiler object copy matches original bytes')
+    native_build.guard(record, root)
+    return dict(schema='autotechno-upper-color-compile-object-diagnostic.v1',
+                source=record['source'], buildProvenanceSHA256=native_build.record_digest(record),
+                object=name, bytes=len(raw), sha256=sha(raw),
+                diagnosticOnly=True, nativeExecutions=0, nativeExecutionAuthenticated=False,
+                fullAlgorithmicAcceptanceVerified=False, runtimeQualification=False,
+                item39Complete=False)
+
+
 def diagnose_crash(build_path, selector):
     """One bounded native debugger replay; never emits verification receipts."""
     require(platform.system() == 'Darwin' and os.environ.get('GITHUB_ACTIONS') == 'true' and

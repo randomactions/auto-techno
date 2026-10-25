@@ -913,7 +913,7 @@ class HostedWorkflowDispatchRoutingTests(unittest.TestCase):
         **{'hosted-macos-' + name: name for name in (
             'primary-readiness', 'effect-dose-readiness', 'native-history-readiness',
             'calibration-diagnostic-readiness', 'calibration-fixture-readiness',
-            'upper-color-stack-readiness')},
+            'upper-color-stack-readiness', 'upper-color-object-diagnostic')},
     }
 
     def setUp(self):
@@ -959,7 +959,7 @@ class HostedWorkflowDispatchRoutingTests(unittest.TestCase):
         selected = [job for job, expression in jobs
                     if self.scope in re.findall(r"inputs\.scope == '([a-z-]+)'", expression)]
         self.assertEqual(selected, ['map'])
-        self.assertEqual(self.called.count("        if: inputs.scope == 'upper-color-stack-readiness'"), 1)
+        self.assertEqual(self.called.count("        if: inputs.scope == '" + self.scope + "'"), 1)
 
 
 class HostedMapBuildIsolationTests(unittest.TestCase):
@@ -1027,5 +1027,103 @@ else:
             self.assertFalse((root / 'at0039-map').exists())
             self.assertFalse((root / 'at0039-map-build').exists())
 
+
+
+
+class HostedCompileObjectDispatchRoutingTests(HostedWorkflowDispatchRoutingTests):
+    alias = 'hosted-macos-upper-color-object-diagnostic'
+    scope = 'upper-color-object-diagnostic'
+
+
+class HostedCompileObjectDiagnosticTests(unittest.TestCase):
+    """Synthetic compile-object transport; never native or quality evidence."""
+    def setup_record(self, folder):
+        root = Path(folder); build = root/'build'
+        obj = build/'arm64-apple-macosx/debug/AutoTechnoCoreTests.build/LongHorizonEnergyCoordinationTests.swift.o'
+        obj.parent.mkdir(parents=True); obj.write_bytes(b'original compiler object fixture')
+        output = root/'output'; output.mkdir()
+        record = dict(source=SOURCE, buildPath=str(build),
+                      files=[dict(path=str(obj), bytes=obj.stat().st_size, sha256=hosted.sha(obj.read_bytes()))])
+        return root, obj, output, record
+
+    def exercise(self, record, root, output):
+        with mock.patch.object(hosted.native_build, 'validate') as validate, \
+             mock.patch.object(hosted.native_build, 'guard') as guard, \
+             mock.patch.object(hosted.native_build, 'git_source_files', return_value={}), \
+             mock.patch.object(hosted.native_build, 'record_digest', return_value='b'*64), \
+             mock.patch.object(hosted.subprocess, 'run') as run, \
+             mock.patch.object(hosted, 'emit') as emit:
+            result = hosted.retain_upper_color_compile_object(record, root, output)
+            validate.assert_called_once_with(record, SOURCE, {})
+            self.assertEqual(guard.call_args_list, [mock.call(record, root)]*2)
+            run.assert_not_called(); emit.assert_not_called()
+            return result
+
+    def test_original_object_is_retained_with_both_guards_and_no_native_authority(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, obj, output, record = self.setup_record(folder)
+            observation = self.exercise(record, root, output)
+            self.assertEqual((output/obj.name).read_bytes(), obj.read_bytes())
+            self.assertEqual(observation['sha256'], record['files'][0]['sha256'])
+            self.assertEqual(observation['nativeExecutions'], 0)
+            self.assertTrue(observation['diagnosticOnly'])
+            with self.assertRaises(ValueError):
+                hosted.parse_bank(json.dumps(observation), SOURCE, 0)
+            for key in ['nativeExecutionAuthenticated', 'fullAlgorithmicAcceptanceVerified',
+                        'runtimeQualification', 'item39Complete']:
+                self.assertIs(observation[key], False)
+            with self.assertRaises(FileExistsError): self.exercise(record, root, output)
+
+    def test_missing_duplicate_foreign_changed_or_oversized_object_is_refused(self):
+        for case in ['missing', 'duplicate', 'foreign', 'changed', 'oversized', 'symlink']:
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as folder:
+                root, obj, output, record = self.setup_record(folder)
+                if case == 'missing': record['files'] = []
+                elif case == 'duplicate': record['files'] *= 2
+                elif case == 'foreign': record['buildPath'] = str(root/'other-build')
+                elif case == 'changed': obj.write_bytes(b'changed')
+                elif case == 'oversized':
+                    with obj.open('wb') as stream: stream.truncate(8*1024*1024+1)
+                elif case == 'symlink':
+                    data = obj.read_bytes(); obj.unlink(); other = root/'other'; other.write_bytes(data); obj.symlink_to(other)
+                with self.assertRaises(ValueError): self.exercise(record, root, output)
+                self.assertEqual(list(output.iterdir()), [])
+
+    def test_seal_refusal_is_not_overridden_and_output_cannot_modify_build(self):
+        for failure in ['before', 'after']:
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as folder:
+                root, obj, output, record = self.setup_record(folder)
+                with mock.patch.object(hosted.native_build, 'validate'), \
+                     mock.patch.object(hosted.native_build, 'git_source_files', return_value={}), \
+                     mock.patch.object(hosted.native_build, 'guard',
+                         side_effect=[ValueError('original seal refused')] if failure == 'before' else [None, ValueError('original seal refused')]), \
+                     mock.patch.object(hosted.native_build, 'record_digest') as digest:
+                    with self.assertRaisesRegex(ValueError, 'original seal refused'):
+                        hosted.retain_upper_color_compile_object(record, root, output)
+                    digest.assert_not_called()
+                self.assertEqual(len(list(output.iterdir())), int(failure == 'after'))
+        with tempfile.TemporaryDirectory() as folder:
+            root, obj, output, record = self.setup_record(folder)
+            with self.assertRaisesRegex(ValueError, 'outside sealed build'):
+                self.exercise(record, root, obj.parent)
+            self.assertEqual(obj.read_bytes(), b'original compiler object fixture')
+
+    def test_workflow_scope_retains_only_compiler_object_without_native_or_debugger(self):
+        import textwrap
+        workflow = (Path(__file__).resolve().parents[1]/'.github/workflows/at0039-hosted-macos.yml').read_text()
+        body = workflow.split("<<'PYOBJECT'\n", 1)[1].split('          PYOBJECT\n', 1)[0]
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder); output = root/'at0039-map-build'; output.mkdir()
+            record = dict(source=SOURCE, buildPath=str(root/'at0039-map'))
+            with mock.patch.dict(os.environ, {'GITHUB_SHA':SOURCE, 'RUNNER_TEMP':folder}), \
+                 mock.patch.object(Path, 'cwd', return_value=root), \
+                 mock.patch.object(hosted, 'bounded_regular', return_value=json.dumps(record).encode()), \
+                 mock.patch.object(hosted, 'retain_upper_color_compile_object', return_value={'nativeExecutions':0}) as retain, \
+                 mock.patch.object(hosted, 'run_logged_native') as native, \
+                 mock.patch.object(hosted, 'diagnose_crash') as debug, \
+                 contextlib.redirect_stdout(io.StringIO()):
+                exec(compile(textwrap.dedent(body), '<compile-object-component>', 'exec'), {})
+                retain.assert_called_once_with(record, root, output)
+                native.assert_not_called(); debug.assert_not_called()
 
 if __name__ == '__main__':unittest.main()
