@@ -21,9 +21,13 @@ struct LongHorizonEnergyCoordinationTests {
       Issue.record("Preparation failed at \(failure.stage.rawValue): \(failure.code.rawValue) \(failure.details)")
     }
     let prepared = try #require(outcome.preparedPhrase)
-    #expect(prepared.plan == plan && prepared.playbackHardGatesPassed && prepared.commitEligible)
+    // Keep the unchanged predicate outside Swift Testing's expression capture.
+    // The native Swift 6.1 summary prologue otherwise exhausts its worker stack.
+    let preparationPassed = prepared.plan == plan && prepared.playbackHardGatesPassed && prepared.commitEligible
+    #expect(preparationPassed)
     let fullMix = prepared.selectedCandidateEvidence.fullMix
-    #expect(fullMix.perceptual.finite)
+    let evidenceIsFinite = fullMix.perceptual.finite
+    #expect(evidenceIsFinite)
     return (fullMix.sampleHash, fullMix.perceptual.spectralRolloff85MeanHz,
       prepared.audioPreflight.quality.analyzedFrameCount)
   }
