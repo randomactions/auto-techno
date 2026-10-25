@@ -222,6 +222,12 @@ package struct RenderState: Equatable, Sendable {
 
     package init() {}
 
+    // Bind the existing position before this value leaves its canonical owner.
+    // Callers can pass the finished continuation directly into preparation.
+    package init(barIndex: Int) {
+        self.barIndex = barIndex
+    }
+
     package mutating func reset() {
         self = RenderState()
     }

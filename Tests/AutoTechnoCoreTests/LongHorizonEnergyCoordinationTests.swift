@@ -12,11 +12,10 @@ struct LongHorizonEnergyCoordinationTests {
   @inline(never)
   private func upperColorPreparationOutcome(plan: AutonomousPhrasePlan,
       state: AutonomousSessionState, rate: Double) -> AutonomousPhrasePreparationOutcome {
-    var renderState = RenderState()
-    renderState.barIndex = state.memory.totalBars
     return AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(
       plan: plan, sessionSeed: state.rootSeed, memory: state.memory, sampleRate: rate,
-      incomingRenderState: renderState, incomingGraphState: GeneratedDSPContinuationState(),
+      incomingRenderState: RenderState(barIndex: state.memory.totalBars),
+      incomingGraphState: GeneratedDSPContinuationState(),
       previousGraph: nil, incomingQualityState: state.quality,
       evaluator: AcceptingPrimaryTestEvaluator(), cancellationRequested: { false })
   }
