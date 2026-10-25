@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 
 IDENTIFIER = re.compile(r'^(?P<module>[A-Za-z_][A-Za-z_0-9]*Tests)\.(?P<suite>[A-Za-z_][A-Za-z_0-9]*)/(?P<test>\S.*)$')
+SWIFT_SOURCE_LOCATION = re.compile(r'(?P<method>.+)/[^/\r\n]+\.swift:[1-9][0-9]*:[1-9][0-9]*$')
 
 
 def plan(discoveries, bank, banks, *, isolated_identity=None, isolated_identities=()):
@@ -26,6 +27,7 @@ def plan(discoveries, bank, banks, *, isolated_identity=None, isolated_identitie
     if set(discoveries) != {'xctest', 'swift-testing'}:
         raise ValueError('both native frameworks must be discovered')
     all_cases = []
+    matched_isolated = set()
     slices = []
     suite_count = 0
     for library in sorted(discoveries):
@@ -54,10 +56,20 @@ def plan(discoveries, bank, banks, *, isolated_identity=None, isolated_identitie
                 # Equal suite/method names across modules must stay together:
                 # SwiftPM's cross-framework filter can match either module.
                 identity = library + ':' + suite + '/' + test
+                # A Swift Testing discovery ID carries a source location after
+                # its method token. Match optional isolation by the method while
+                # retaining the exact discovered ID in selectors and coverage.
+                # Ordinary hashing (including Windows' default plan) stays exact.
+                location = SWIFT_SOURCE_LOCATION.fullmatch(test) if library == 'swift-testing' else None
+                method_identity = (library + ':' + suite + '/' + location['method']
+                                   if location else identity)
+                isolated_key = identity if identity in isolated else method_identity
+                if isolated_key in isolated:
+                    matched_isolated.add(isolated_key)
                 # Reserve one complete bank per expensive identity, in caller
                 # order from the final bank. Windows retains its default plan.
                 ordinary_banks = banks - len(isolated)
-                assignment = (banks - 1 - isolated.index(identity) if identity in isolated else
+                assignment = (banks - 1 - isolated.index(isolated_key) if isolated_key in isolated else
                               int.from_bytes(hashlib.sha256(identity.encode()).digest()[:8], 'big') % ordinary_banks)
                 groups.setdefault(assignment, []).append(case)
             for assignment, selected_cases in sorted(groups.items()):
@@ -70,6 +82,8 @@ def plan(discoveries, bank, banks, *, isolated_identity=None, isolated_identitie
                 slices.append(dict(library=library, suite=suite, selector=selector,
                                    bank=assignment, identifiers=sorted(selected_cases)))
         all_cases.extend(library + ':' + item for item in sorted(identifiers))
+    if matched_isolated != set(isolated):
+        raise ValueError('configured isolated native identity missing from discovery')
     return dict(schema='autotechno-windows-test-bank-plan.v2', bank=bank, banks=banks,
                 discoverySHA256=hashlib.sha256('\n'.join(sorted(all_cases)).encode()).hexdigest(),
                 discoveredIdentifiers=len(all_cases), discoveredSuites=suite_count,

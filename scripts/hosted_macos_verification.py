@@ -289,6 +289,7 @@ def parse_bank(raw, source, bank):
     expected = plan(receipt['discovery'], bank, BANKS)
     require(receipt['plan'] == expected, 'recomputed original native plan')
     completed = receipt['completedSlices']
+    require(expected['selected'], 'nonempty assigned native bank required')
     require(isinstance(completed, list) and len(completed) == len(expected['selected']),
             'complete original native slices')
     # The producer emits BEGIN before each native process and chunks only after
@@ -316,8 +317,7 @@ def parse_bank(raw, source, bank):
     require(receipt['buildProvenanceSHA256'] == digest, 'original bank/build provenance binding')
     begin = list(re.finditer(r'(?m)^(?:\d{4}-\d\d-\d\dT\S+ )?BEGIN native build binding ' + str(bank) + ':' + digest + r'\r?\n', log))
     end_binding = list(re.finditer(r'(?m)^(?:\d{4}-\d\d-\d\dT\S+ )?END native build binding ' + str(bank) + ':' + digest + r'\r?\n', log))
-    # An empty assigned bank is permitted only by the unchanged exhaustive plan;
-    # it still requires its complete original build and pre/post seals.
+    # Every nonempty assigned bank retains its exact original pre/post seals.
     require(len(begin) == len(end_binding) == 1 and begin[0].end() <= end_binding[0].start() < transport and
             all(begin[0].end() <= marker.start() < marker.end() <= end_binding[0].start() for marker in markers),
             'original pre/post native build bindings')
@@ -343,6 +343,7 @@ def parse_bank(raw, source, bank):
         # producer's untransformed per-process file hash from this job log.
         for key in counts:
             counts[key] += measured[key]
+    require(counts['executedTests'] > 0, 'nonempty native execution required')
     return receipt, counts
 
 
@@ -442,6 +443,7 @@ def run_bank(bank, build_path, output, build_provenance=None):
             'list', '--skip-build', *flags), cwd=root, text=True)
         native_build.guard(record, root)
     selection = plan(discoveries, bank, BANKS); results = []
+    require(selection['selected'], 'nonempty assigned native bank required')
     for ordinal, selected in enumerate(selection['selected']):
         native_build.guard(record, root)
         print(f'BEGIN native slice {bank}:{selected["library"]}:{selected["suite"]}', flush=True)
@@ -453,6 +455,7 @@ def run_bank(bank, build_path, output, build_provenance=None):
         native_build.guard(record, root)
         counts = summarize_log(raw.decode(), selected['library'], len(selected['identifiers']), selected['identifiers'])
         results.append(dict(selection=selected, **counts, exitCode=result.returncode, logSHA256=sha(raw)))
+    require(sum(row['executedTests'] for row in results) > 0, 'nonempty native execution required')
     require(git('rev-parse', 'HEAD') == source and not git('status', '--porcelain', '--untracked-files=normal'), 'source changed during tests')
     native_build.guard(record, root)
     print(f'END native build binding {bank}:{digest}', flush=True)

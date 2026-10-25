@@ -114,5 +114,52 @@ class NativeWindowsBankPlanTests(unittest.TestCase):
         for bank,banks in [(True,8),(0,False),(-1,8),(8,8),(0,0),(0,33)]:
             with self.assertRaises(ValueError):plan(self.fixture(),bank,banks)
 
+    def test_source_locations_do_not_defeat_isolation_or_split_module_variants(self):
+        identities = ['swift-testing:HeavyTests/compare(rate:)',
+                      'swift-testing:HeavyTests/faults()']
+        heavy = ['FirstTests.HeavyTests/compare(rate:)/One.swift:42:5',
+                 'SecondTests.HeavyTests/compare(rate:)/Two.swift:81:9']
+        faults = 'FirstTests.HeavyTests/faults()/One.swift:90:5'
+        neighbors = ['FirstTests.HeavyTests/compareExtra(rate:)/One.swift:43:5',
+                     'FirstTests.HeavyTests/compare(rate:mode:)/One.swift:44:5',
+                     'FirstTests.HeavyTestsExtra/compare(rate:)/One.swift:45:5']
+        inputs = {'xctest': 'FirstTests.TrimTests/testTrim',
+                  'swift-testing': '\n'.join(heavy + [faults] + neighbors)}
+        rows = [plan(inputs, i, 8, isolated_identities=identities) for i in range(8)]
+        selected = [(r['bank'], item, case) for r in rows for item in r['selected']
+                    for case in item['identifiers']]
+        self.assertEqual(sorted(case for bank, _, case in selected if bank == 7), sorted(heavy))
+        self.assertEqual([case for bank, _, case in selected if bank == 6], [faults])
+        self.assertEqual(len(selected), sum(len(text.splitlines()) for text in inputs.values()))
+        self.assertEqual(len(selected), len({(item['library'], case) for _, item, case in selected}))
+        for _, item, _ in selected:
+            self.assertEqual({case for case in inputs[item['library']].splitlines()
+                              if re.search(item['selector'], case)}, set(item['identifiers']))
+        reversed_inputs = {k: '\n'.join(reversed(v.splitlines())) for k, v in inputs.items()}
+        self.assertEqual(rows, [plan(reversed_inputs, i, 8, isolated_identities=identities)
+                                for i in range(8)])
+
+    def test_missing_or_malformed_source_located_isolation_refuses(self):
+        for method in ['heavyExtra()/File.swift:12:4', 'heavy()/File.swift:0:4',
+                       'heavy()/File.swift:12:x', 'heavy()/File.swift:12:4junk']:
+            inputs = {'xctest': 'FirstTests.TrimTests/testTrim',
+                      'swift-testing': 'FirstTests.HeavyTests/' + method}
+            with self.assertRaisesRegex(ValueError, 'isolated native identity missing'):
+                plan(inputs, 7, 8, isolated_identity='swift-testing:HeavyTests/heavy()')
+        with self.assertRaisesRegex(ValueError, 'isolated native identity missing'):
+            plan(self.fixture(), 0, 8, isolated_identity='swift-testing:MissingTests/absent()')
+
+    def test_default_windows_assignment_retains_source_located_identity_hash(self):
+        import hashlib
+        inputs = self.fixture()
+        inputs['swift-testing'] = '\n'.join(case + '/Fixture.swift:42:5'
+                                              for case in inputs['swift-testing'].splitlines())
+        for bank in range(8):
+            for row in plan(inputs, bank, 8)['selected']:
+                for case in row['identifiers']:
+                    identity = row['library'] + ':' + row['suite'] + '/' + case.split('/', 1)[1]
+                    expected = int.from_bytes(hashlib.sha256(identity.encode()).digest()[:8], 'big') % 8
+                    self.assertEqual(bank, expected)
+
 
 if __name__ == '__main__':unittest.main()

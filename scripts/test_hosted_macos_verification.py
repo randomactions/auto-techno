@@ -23,6 +23,9 @@ SOURCE = 'a' * 40
 def fixture(include_retired=False):
     discovery = {library: '\n'.join(f'AutoTechnoCoreTests.OwnerTests/test{i}()' for i in range(128))
                  for library in ['xctest', 'swift-testing']}
+    discovery['swift-testing'] += '\n' + '\n'.join(
+        'AutoTechnoCoreTests.' + identity.split(':', 1)[1]
+        for identity in hosted.ISOLATED_IDENTITIES)
     if include_retired:
         discovery['swift-testing'] += '\n' + '\n'.join(hosted.RETIRED_SKIPS.values())
     rows = []
@@ -233,8 +236,8 @@ class HostedMacOSVerificationTests(unittest.TestCase):
 
     def test_complete_native_matrix_has_only_verification_scope(self):
         bundle = fixture(); result = hosted.verify(bundle, SOURCE, original_logs(bundle))
-        self.assertEqual(result['discoveredTests'], 256)
-        self.assertEqual(result['executedTests'], 256)
+        self.assertEqual(result['discoveredTests'], 259)
+        self.assertEqual(result['executedTests'], 259)
         self.assertTrue(result['completeNativeSuitesAndReleaseBuild'])
         self.assertTrue(result['originalJobLogsVerified'])
         self.assertTrue(result['completeToolingTestsVerified'])
@@ -386,7 +389,8 @@ class HostedMacOSVerificationTests(unittest.TestCase):
                      third.replace('Faults()', 'FaultsExtra()'), heavy, heavy.replace('Fitting()', 'FittingExtra()'),
                      heavy.replace('JoinTests/', 'JoinTestsExtra/'),
                      heavy.replace('Fitting()', 'Fitting(rate:)')]
-        discovery['swift-testing'] += '\n' + '\n'.join(neighbors)
+        discovery['swift-testing'] += '\n' + '\n'.join(
+            case for case in neighbors if case not in discovery['swift-testing'].splitlines())
         expected = sorted(library + ':' + identity for library, text in discovery.items()
                           for identity in text.splitlines())
         actual = []
@@ -415,6 +419,66 @@ class HostedMacOSVerificationTests(unittest.TestCase):
         self.assertEqual(sorted(actual), expected)
         self.assertEqual(len(actual), len(set(actual)))
 
+    def test_realistic_source_suffixes_isolate_all_three_fixtures_exactly(self):
+        discovery = fixture()['banks'][0]['receipt']['discovery']
+        discovery['swift-testing'] = '\n'.join(
+            case + '/Fixture.swift:42:5' for case in discovery['swift-testing'].splitlines())
+        actual = []
+        for bank in range(hosted.BANKS):
+            result = hosted.plan(discovery, bank, hosted.BANKS)
+            cases = [row['library'] + ':' + case for row in result['selected']
+                     for case in row['identifiers']]
+            actual.extend(cases)
+            if bank >= hosted.BANKS - len(hosted.ISOLATED_IDENTITIES):
+                identity = hosted.ISOLATED_IDENTITIES[hosted.BANKS - 1 - bank]
+                self.assertEqual(cases, [identity.replace(':', ':AutoTechnoCoreTests.', 1)
+                                         + '/Fixture.swift:42:5'])
+        expected = [lib + ':' + case for lib, text in discovery.items() for case in text.splitlines()]
+        self.assertEqual(sorted(actual), sorted(expected))
+        self.assertEqual(len(actual), len(set(actual)))
+
+    def test_empty_producer_plan_refuses_before_native_or_receipt(self):
+        record = build_tests.fixture()
+        with tempfile.TemporaryDirectory() as directory:
+            def output(argv, **kwargs):
+                if argv[0] == 'git': return SOURCE if 'rev-parse' in argv else ''
+                return 'AutoTechnoCoreTests.Fixture/test()'
+            with mock.patch.object(hosted.platform, 'system', return_value='Darwin'), \
+                 mock.patch.dict(hosted.os.environ, {'GITHUB_ACTIONS':'true', 'RUNNER_OS':'macOS', 'GITHUB_SHA':SOURCE}), \
+                 mock.patch.object(hosted.subprocess, 'check_output', side_effect=output), \
+                 mock.patch.object(hosted, 'bounded_regular', return_value=json.dumps(record).encode()), \
+                 mock.patch.object(hosted.native_build, 'git_source_files', return_value=record['trackedInputs']), \
+                 mock.patch.object(hosted.native_build, 'guard'), \
+                 mock.patch.object(hosted, 'plan', return_value={'selected':[]}), \
+                 mock.patch.object(hosted, 'run_logged_native') as native, \
+                 mock.patch.object(hosted, 'emit') as emit, contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaisesRegex(ValueError, 'nonempty assigned native bank'):
+                    hosted.run_bank(0, Path('/native-build'), Path(directory)/'out', Path('/original-build.json'))
+                native.assert_not_called(); emit.assert_not_called()
+
+    def test_skip_only_bank_cannot_replace_native_execution(self):
+        receipt = copy.deepcopy(fixture()['banks'][0]['receipt'])
+        identity = next(iter(hosted.RETIRED_SKIPS.values()))
+        selection = dict(library='swift-testing', suite=identity.split('.')[1].split('/')[0],
+                         selector='literal', bank=0, identifiers=[identity])
+        receipt['plan']['selected'] = [selection]
+        receipt['completedSlices'] = [dict(selection=selection, reportedTests=1,
+            explicitlySkippedTests=1, executedTests=0, skippedIdentifiers=[identity],
+            exitCode=0, logSHA256='b'*64)]
+        with mock.patch.object(hosted, 'plan', return_value=receipt['plan']):
+            with self.assertRaisesRegex(ValueError, 'nonempty native execution'):
+                hosted.parse_bank(native_log(receipt), SOURCE, 0)
+
+    def test_successful_empty_bank_receipt_cannot_supply_native_evidence(self):
+        receipt = copy.deepcopy(fixture()['banks'][0]['receipt'])
+        receipt['plan']['selected'] = []
+        receipt['completedSlices'] = []
+        # Even a self-consistent empty producer plan and original build seals
+        # cannot replace a required native execution.
+        with mock.patch.object(hosted, 'plan', return_value=receipt['plan']):
+            with self.assertRaisesRegex(ValueError, 'nonempty assigned native bank'):
+                hosted.parse_bank(native_log(receipt), SOURCE, receipt['bank'])
+
     def test_partial_mixed_failed_or_falsely_counted_receipts_refuse(self):
         changes = [lambda d:d['banks'].pop(), lambda d:d.__setitem__('source','f'*40),
           lambda d:d['run'].__setitem__('conclusion','failure'),
@@ -442,7 +506,7 @@ class HostedMacOSVerificationTests(unittest.TestCase):
     def test_skips_do_not_become_executed_behavior(self):
         bundle=fixture(include_retired=True)
         result=hosted.verify(bundle,SOURCE,original_logs(bundle))
-        self.assertEqual(result['executedTests'],256)
+        self.assertEqual(result['executedTests'],259)
         self.assertEqual(result['explicitlySkippedTests'],2)
 
 
