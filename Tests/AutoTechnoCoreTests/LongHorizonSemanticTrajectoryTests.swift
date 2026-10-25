@@ -45,10 +45,11 @@ struct LongHorizonSemanticTrajectoryTests {
         #expect(first.trajectoryFingerprint == "ed436c478a3e9b37")
         #expect(first.engineVersion == "autotechno-canonical-engine.v58")
         #if os(macOS)
-        // Observed engine54 macOS bytes bind ordinary composition minimalization.
+        // Observed engine58 macOS score-only JSON; independent FNV64 agrees.
+        // Substituting only engineVersion v54 reproduces the historical pin.
         // Scalar, storage, replay and unavailable-qualification checks stay exact.
         // This macOS JSON identity does not supply a Windows native observation.
-        #expect(stableFingerprint(firstData) == "4877a49bedd86628")
+        #expect(stableFingerprint(firstData) == "0db247d16854d624")
         #else
         // Independently observed engine54 Windows JSON in native run39163161893.
         // This platform observation does not qualify macOS or a live study.
