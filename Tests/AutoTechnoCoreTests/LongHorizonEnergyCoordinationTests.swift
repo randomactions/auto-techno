@@ -7,22 +7,36 @@ import Testing
 @Suite("Long-horizon score-owned energy coordination")
 struct LongHorizonEnergyCoordinationTests {
 
+  // Separate preparation and assertion/projection frames without retaining
+  // a prepared PCM owner across the independent before/after comparisons.
   @inline(never)
-  private func upperColorPreparedSummary(plan: AutonomousPhrasePlan,
-      state: AutonomousSessionState, rate: Double) throws -> (hash: String, rolloff: Double, frames: Int) {
+  private func upperColorPreparationOutcome(plan: AutonomousPhrasePlan,
+      state: AutonomousSessionState, rate: Double) -> AutonomousPhrasePreparationOutcome {
     var renderState = RenderState()
     renderState.barIndex = state.memory.totalBars
-    let outcome = AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(
+    return AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(
       plan: plan, sessionSeed: state.rootSeed, memory: state.memory, sampleRate: rate,
       incomingRenderState: renderState, incomingGraphState: GeneratedDSPContinuationState(),
       previousGraph: nil, incomingQualityState: state.quality,
       evaluator: AcceptingPrimaryTestEvaluator(), cancellationRequested: { false })
+  }
+
+  @inline(never)
+  private func upperColorPreparedSummary(plan: AutonomousPhrasePlan,
+      state: AutonomousSessionState, rate: Double) throws -> (hash: String, rolloff: Double, frames: Int) {
+    let outcome = upperColorPreparationOutcome(plan: plan, state: state, rate: rate)
     if let failure = outcome.failure {
       Issue.record("Preparation failed at \(failure.stage.rawValue): \(failure.code.rawValue) \(failure.details)")
     }
     let prepared = try #require(outcome.preparedPhrase)
-    // Keep the unchanged predicate outside Swift Testing's expression capture.
-    // The native Swift 6.1 summary prologue otherwise exhausts its worker stack.
+    return upperColorCheckedEvidenceSummary(prepared: prepared, plan: plan)
+  }
+
+  @inline(never)
+  private func upperColorCheckedEvidenceSummary(prepared: PreparedAutonomousPhrase,
+      plan: AutonomousPhrasePlan) -> (hash: String, rolloff: Double, frames: Int) {
+    // Pass only Boolean values to Testing expression capture. All original
+    // plan, playback, commit and finite-evidence predicates remain required.
     let preparationPassed = prepared.plan == plan && prepared.playbackHardGatesPassed && prepared.commitEligible
     #expect(preparationPassed)
     let fullMix = prepared.selectedCandidateEvidence.fullMix
