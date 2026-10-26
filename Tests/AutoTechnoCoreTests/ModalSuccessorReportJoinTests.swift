@@ -1311,10 +1311,13 @@ struct ModalSuccessorReportJoinTests {
         // Historical: engine54 Windows run39159523720; engine55 macOS pin.
         // Current: engine58 macOS run39464163769/attempt1/job118771055172,
         // exact source00c tree; original failure is retained independently.
+        // Current engine58 Windows: native run40346735791/attempt1/job121655546411.
+        // Exact bank JSON SHA256 aecdeca55c606c7c1a04099370b45941d80c557ad0a625abf4a54ee835d365cc;
+        // independently encoded typed FNV64 agrees. Original missing-pin failure is retained.
         let recordedBankFingerprints = [
             "autotechno-canonical-engine.v54": ["Windows": "225a87b87ed59c1e"],
             "autotechno-canonical-engine.v55": ["macOS": "1744a5bb898e44a4"],
-            "autotechno-canonical-engine.v58": ["macOS": "6ea1ef4a9246b0ef"]
+            "autotechno-canonical-engine.v58": ["macOS": "6ea1ef4a9246b0ef", "Windows": "5f30371edebbabc5"]
         ]
         #if os(Windows)
         let nativePlatform = "Windows"
