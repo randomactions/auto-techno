@@ -212,6 +212,8 @@ struct KickFoundationCollisionIntegrationTests {
         var previousGraph: DSPGraphPlan?
         var horizon: LongHorizonFutureAdaptationState?
         var previousChapter: InterlockChapter?
+        var predecessor: PreparedPerformancePhrase?
+        var boundarySample: Int64 = 0
         for _ in 0..<limit {
             let request = PhrasePreparationRequest(
                 key: PhrasePreparationKey(
@@ -241,14 +243,27 @@ struct KickFoundationCollisionIntegrationTests {
                 previousGraph: previousGraph,
                 pendingLiveMasterBinding: nil
             )
+            let owned: PreparedPerformancePhrase?
+            if let predecessor {
+                owned = try predecessor.continuationAtBoundary(
+                    sessionState: state, longHorizonState: horizon,
+                    sampleRate: Double(route.sampleRate),
+                    channelCount: route.channelCount,
+                    routeGeneration: route.routeGeneration,
+                    actualStartSample: boundarySample
+                ).get()
+            } else { owned = nil }
+            predecessor = nil
             let prepared = try #require(
-                AutonomousPerformancePreparer.prepare(
+                owned ?? AutonomousPerformancePreparer.prepare(
                     request: request,
                     director: director,
                     artifacts: primary,
                     longHorizonArtifacts: longHorizon
                 )
             )
+            guard prepared.prepared.commitEligible, prepared.continuationOwnershipIsValid
+            else { throw IntegrationError.ineligiblePreparation }
             let plan = prepared.prepared.plan
             let chapters = plan.resolvedBars.map(\.interlockChapter)
             let chapterChanged = zip(chapters, chapters.dropFirst()).contains {
@@ -263,6 +278,14 @@ struct KickFoundationCollisionIntegrationTests {
             ).contains(fixture.checkpoint) {
                 return prepared
             }
+            let phraseFrames = try #require(Int64(exactly:
+                prepared.prepared.audioPreflight.quality.analyzedFrameCount
+            ))
+            try #require(phraseFrames > 0)
+            let nextBoundary = boundarySample.addingReportingOverflow(phraseFrames)
+            try #require(!nextBoundary.overflow)
+            boundarySample = nextBoundary.partialValue
+            predecessor = prepared
             previousChapter = chapters.last ?? previousChapter
             state = state.advance(
                 using: plan,
@@ -503,6 +526,7 @@ struct KickFoundationCollisionIntegrationTests {
     }
 
     private enum IntegrationError: Error {
+        case ineligiblePreparation
         case missingCheckpoint
         case identityMismatch(String)
         case eventBinding(String)

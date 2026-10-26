@@ -626,6 +626,57 @@ struct KickSourceDynamicsTests {
         }
     }
 
+    @Test("Directed relaxed-kick recovery reaches the native crest interval within existing source bounds")
+    func directedRelaxedKickCrestRecoveryRoom() throws {
+        let director = AutonomousSessionDirector(rootSeed: 173_205)
+        let plan = director.plan(from: director.initialState())
+        let source = try #require(plan.resolvedBars.first {
+            $0.ensemble.events.contains { $0.voice == .kick }
+        })
+        let context = KickMorphologyEpisodeContext(episodeID: 0x4B49_434B,
+            episodeIndex: 3, operatorKind: .reframe,
+            startedAtPresentationBar: 1_024, previousOperatorKind: .maintain)
+        // The actual Long refusal requests more source crest reduction from
+        // the held relaxed material. These are source-local controls, not a
+        // complete prepared phrase, calibrated verdict or study history.
+        for rate in [44_100.0, 48_000.0] {
+            var insideInterval = 0
+            for ordinal in 0...AutonomousQualityRetryContinuation.maximumOrdinal {
+                let articulation = KickMorphologyResolver.articulation(
+                    sessionSeed: plan.scene.seed, absoluteBar: 40,
+                    presentationBar: 1_064, episodeContext: context,
+                    qualityRetryOrdinal: ordinal,
+                    qualityRecoveryIntent: AutonomousQualityRecoveryIntent(
+                        kickCrestReduction: .increase))
+                #expect(articulation.isComplete)
+                #expect(articulation.episodeID == context.episodeID)
+                #expect(articulation.fromHome == .relaxed && articulation.toHome == .relaxed)
+                let neutral = KickMorphologyResolver.articulation(
+                    sessionSeed: plan.scene.seed, absoluteBar: 40,
+                    presentationBar: 1_064, episodeContext: context)
+                if ordinal == 0 { #expect(articulation == neutral) }
+                let rendered = render(resolved: replacingMorphology(source, with: articulation),
+                    plan: plan, sampleRate: rate, layer: .protectedRhythm)
+                let evidence = rendered.kickMix.sourceDynamics
+                #expect(AutonomousKickSourceDynamicsEvidence(render: evidence).isComplete(
+                    sampleRate: rate, expectedEventCount: rendered.kickMix.renderedKickEventCount))
+                let crest = 20 * log10(evidence.inputCrestFactor / evidence.outputCrestFactor)
+                let within = (1.2144946063546112...1.493816067026296).contains(crest)
+                if within { insideInterval += 1 }
+                let row: [String: Any] = ["sampleRate": Int(rate), "ordinal": ordinal,
+                    "crestReductionDB": crest, "insideOriginalInterval": within,
+                    "presence": evidence.presenceScaleStart, "bodyDrive": evidence.bodyDriveStart,
+                    "outputRMS": evidence.outputRMS, "outputSampleHash": evidence.outputSampleHash,
+                    "qualityQualification": false]
+                print("AUTOTECHNO_RELAXED_KICK_CONTROL " + String(decoding:
+                    try JSONSerialization.data(withJSONObject: row, options: [.sortedKeys]), as: UTF8.self))
+            }
+            // Each native rate must independently retain a usable serial
+            // proposal. No cross-rate averaging or verdict substitution.
+            #expect(insideInterval > 0)
+        }
+    }
+
     private struct LegacyOracle {
         let sampleCount: Int
         let sampleHash: String
@@ -636,6 +687,181 @@ struct KickSourceDynamicsTests {
         let outputRMS: Double
         let outputAttackRMS: Double
         let outputBodyRMS: Double
+    }
+
+    @MainActor
+    @Test("Native score-to-kick binding rejects rendered fault recipes")
+    func algorithmicScoreRenderFaults() throws {
+        struct Row: Encodable {
+            let rootSeed: UInt64
+            let split: String
+            let referencePlanFingerprint: String
+            let sampleRate: Int
+            let scenario: String
+            let scoreRole: String
+            let scoreBar: Int
+            let scoreEventCount: Int
+            let renderedEventCount: Int
+            let scoreStepMask: UInt16
+            let renderedStepMask: UInt16
+            let detectorSampleHash: String
+            let audibleSampleHash: String
+            let audibleNonzeroSamples: Int
+            let expectedComplete: Bool
+            let observedComplete: Bool
+            let protectedAndFullMatch: Bool
+        }
+        struct Report: Encodable {
+            let schema = "autotechno-score-kick-fault-component.v1"
+            let scope = "native-canonical-bar-render-and-kick-syntax-contract-only"
+            let unavailable = ["full-prepared-transaction", "foundation-companion-fidelity",
+                               "nonlinear-full-mix-quality", "perceptual-quality"]
+            let rows: [Row]
+        }
+        // Fixed roots and first grounded downbeat bar are selected from score
+        // facts only. No audio, feature value or successful outcome selects them.
+        let roots: [(UInt64, String)] = [(1, "development"), (42, "development"),
+            (6011, "held-out-root"), (7011, "held-out-root")]
+        var rows: [Row] = []
+        for (seed, split) in roots {
+            let director = AutonomousSessionDirector(rootSeed: seed)
+            let plan = director.plan(from: director.initialState())
+            let source = try #require(plan.resolvedBars.first {
+                $0.kickSyntaxRole == .grounded &&
+                    $0.ensemble.events.contains { $0.voice == .kick && $0.step == 0 }
+            })
+            for rate in [44_100.0, 48_000.0] {
+                var baselineDetectorHash: String?
+                for scenario in ["unaltered", "deleted-kicks", "shifted-kicks",
+                                 "wrong-voice", "zero-intensity", "intentional-absence"] {
+                    let absent = scenario == "intentional-absence"
+                    let events = source.ensemble.events.compactMap { event -> EnsembleResolvedEvent? in
+                        guard event.voice == .kick else { return event }
+                        switch scenario {
+                        case "deleted-kicks", "intentional-absence": return nil
+                        case "shifted-kicks":
+                            return EnsembleResolvedEvent(voice: .kick, step: event.step + 1,
+                                intensity: event.intensity, relocated: event.relocated)
+                        case "wrong-voice":
+                            return EnsembleResolvedEvent(voice: .percussion, step: event.step,
+                                intensity: event.intensity, relocated: event.relocated)
+                        case "zero-intensity":
+                            return EnsembleResolvedEvent(voice: .kick, step: event.step,
+                                intensity: 0, relocated: event.relocated)
+                        default: return event
+                        }
+                    }
+                    let renderedScore = scoreFaultBar(source, events: events,
+                        role: absent ? .withheld : source.kickSyntaxRole)
+                    // Identity copy protects every non-injected field from
+                    // accidental fallback/default substitution in the helper.
+                    if scenario == "unaltered" { #expect(renderedScore == source) }
+                    let expectedScore = absent ? renderedScore : source
+                    let expectedEvents = expectedScore.ensemble.events.filter { $0.voice == .kick }
+                    let expectedMask = expectedEvents.reduce(UInt16(0)) {
+                        $0 | (UInt16(1) << UInt16($1.step))
+                    }
+                    let full = render(resolved: renderedScore, plan: plan,
+                        sampleRate: rate, layer: .full)
+                    let protected = render(resolved: renderedScore, plan: plan,
+                        sampleRate: rate, layer: .protectedRhythm)
+                    let actual = full.kickMix
+                    if scenario == "unaltered" {
+                        baselineDetectorHash = actual.detectorSampleHash
+                    } else {
+                        #expect(actual.detectorSampleHash != baselineDetectorHash)
+                    }
+                    switch scenario {
+                    case "deleted-kicks", "wrong-voice", "intentional-absence":
+                        #expect(actual.renderedKickEventCount == 0)
+                        #expect(actual.audibleNonzeroSampleCount == 0)
+                    case "shifted-kicks":
+                        #expect(actual.renderedKickEventCount == expectedEvents.count)
+                        #expect(actual.renderedKickStepMask != expectedMask)
+                    case "zero-intensity":
+                        #expect(actual.audibleNonzeroSampleCount == 0)
+                    default: break
+                    }
+                    let passMatch = actual == protected.kickMix
+                    let evidence = AutonomousKickSyntaxBarEvidence(
+                        bar: expectedScore.performance.bar, role: expectedScore.kickSyntaxRole,
+                        scoreKickEventCount: expectedEvents.count, scoreKickStepMask: expectedMask,
+                        renderedKickEventCount: actual.renderedKickEventCount,
+                        renderedKickStepMask: actual.renderedKickStepMask,
+                        renderedFrameCount: actual.renderedFrameCount,
+                        audibleGain: actual.audibleGain, detectorPeak: actual.detectorPeak,
+                        detectorRMS: actual.detectorRMS, audiblePeak: actual.audiblePeak,
+                        audibleRMS: actual.audibleRMS, duckingEnvelopePeak: actual.duckingEnvelopePeak,
+                        detectorSampleHash: actual.detectorSampleHash,
+                        audibleSampleHash: actual.audibleSampleHash,
+                        detectorNonzeroSampleCount: actual.detectorNonzeroSampleCount,
+                        audibleNonzeroSampleCount: actual.audibleNonzeroSampleCount,
+                        sourceDynamics: AutonomousKickSourceDynamicsEvidence(render: actual.sourceDynamics),
+                        detectorToAudibleScaleMatches: actual.detectorToAudibleScaleMatches,
+                        renderPassesMatch: passMatch,
+                        bindingValid: expectedScore.performance.bar == renderedScore.performance.bar &&
+                            expectedScore.kickSyntaxRole == renderedScore.kickSyntaxRole)
+                    let shouldComplete = scenario == "unaltered" || absent
+                    let complete = evidence.isComplete(sampleRate: rate)
+                    #expect(passMatch)
+                    #expect(complete == shouldComplete)
+                    #expect(full.leftSamples.allSatisfy { $0.isFinite })
+                    #expect(full.rightSamples.allSatisfy { $0.isFinite })
+                    rows.append(Row(rootSeed: seed, split: split,
+                        referencePlanFingerprint: AutonomousCandidateFingerprint.plan(plan),
+                        sampleRate: Int(rate), scenario: scenario,
+                        scoreRole: expectedScore.kickSyntaxRole.rawValue,
+                        scoreBar: expectedScore.performance.bar,
+                        scoreEventCount: expectedEvents.count,
+                        renderedEventCount: actual.renderedKickEventCount,
+                        scoreStepMask: expectedMask, renderedStepMask: actual.renderedKickStepMask,
+                        detectorSampleHash: actual.detectorSampleHash,
+                        audibleSampleHash: actual.audibleSampleHash,
+                        audibleNonzeroSamples: actual.audibleNonzeroSampleCount,
+                        expectedComplete: shouldComplete, observedComplete: complete,
+                        protectedAndFullMatch: passMatch))
+                }
+            }
+        }
+        #expect(rows.count == 48)
+        #expect(rows.filter { $0.expectedComplete }.count == 16)
+        #expect(rows.filter { !$0.expectedComplete }.count == 32)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        FileHandle.standardOutput.write(try encoder.encode(Report(rows: rows)))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
+    private func scoreFaultBar(
+        _ source: ResolvedPerformanceBar,
+        events: [EnsembleResolvedEvent],
+        role: KickSyntaxRole
+    ) -> ResolvedPerformanceBar {
+        ResolvedPerformanceBar(
+            performance: source.performance,
+            ensemble: EnsembleContext(focusRole: source.ensemble.focusRole,
+                events: events, kickAnchors: role == .withheld ? [] : source.ensemble.kickAnchors,
+                intentionalPileup: source.ensemble.intentionalPileup),
+            arrangementGesture: source.arrangementGesture,
+            percussionGear: source.percussionGear,
+            performanceCharacter: source.performanceCharacter,
+            foundationBehavior: source.foundationBehavior,
+            foundationRhythmicRelation: source.foundationRhythmicRelation,
+            foundationCompanion: source.foundationCompanion,
+            pulseEchoEnabled: source.pulseEchoEnabled,
+            interlockChapter: source.interlockChapter,
+            groovePulses: source.groovePulses,
+            closedHatDecayArticulations: source.closedHatDecayArticulations,
+            upperPercussionTailArticulations: source.upperPercussionTailArticulations,
+            modalPercussionArticulations: source.modalPercussionArticulations,
+            spatialContrast: source.spatialContrast,
+            narrative: source.narrative, kickSyntaxRole: role,
+            climaxHang: source.climaxHang,
+            percussionEchoTexture: source.percussionEchoTexture,
+            percussionPolymetricEvidence: source.percussionPolymetricEvidence,
+            upperMusicalPump: source.upperMusicalPump,
+            harmonicDisclosureRelationship: source.harmonicDisclosureRelationship,
+            kickMorphology: source.kickMorphology)
     }
 
     private func morphology(

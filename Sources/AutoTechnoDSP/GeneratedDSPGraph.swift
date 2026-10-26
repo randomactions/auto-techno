@@ -534,7 +534,8 @@ package struct GeneratedDSPContinuationState: Equatable, Sendable {
 package enum GeneratedDSPGraphRenderer {
     package static func process(left: [Float], right: [Float], sampleRate: Double,
                                plan: DSPGraphPlan,
-                               state: inout GeneratedDSPContinuationState) -> ([Float], [Float]) {
+                               state: inout GeneratedDSPContinuationState,
+                               storageObservation: PreparationStorageObservation? = nil) -> ([Float], [Float]) {
         let count = min(left.count, right.count)
         guard count > 0, sampleRate > 0 else { return (left, right) }
         if let old = state.graph, !old.hasSameTopology(as: plan) {
@@ -563,16 +564,65 @@ package enum GeneratedDSPGraphRenderer {
             upperRight[index] = right[index] - lowRight[index]
         }
 
+        storageObservation?.observe("split") { inventory in
+            inventory.register(left, owner: "graph.input-left")
+            inventory.register(right, owner: "graph.input-right")
+            inventory.register(lowLeft, owner: "graph.low-left")
+            inventory.register(lowRight, owner: "graph.low-right")
+            inventory.register(upperLeft, owner: "graph.upper-left")
+            inventory.register(upperRight, owner: "graph.upper-right")
+            AutonomousTypedFingerprint.registerGeneratedDSPStorage(state,
+                inventory: inventory, owner: "graph.state")
+            withExtendedLifetime((left, right, lowLeft, lowRight, upperLeft, upperRight, state)) {}
+        }
         var currentLeft = upperLeft
         var currentRight = upperRight
-        processUpper(left: &currentLeft, right: &currentRight, sampleRate: sampleRate,
-                     plan: plan, states: &state.nodeStates)
+        do {
+            let observation = storageObservation.map { observation in
+                let otherStates = state.retiringStates
+                return observation.extending("current") { inventory in
+                    inventory.register(left, owner: "graph.input-left")
+                    inventory.register(right, owner: "graph.input-right")
+                    inventory.register(lowLeft, owner: "graph.low-left")
+                    inventory.register(lowRight, owner: "graph.low-right")
+                    inventory.register(upperLeft, owner: "graph.upper-left")
+                    inventory.register(upperRight, owner: "graph.upper-right")
+                    AutonomousTypedFingerprint.registerGraphNodeStorage(otherStates,
+                        inventory: inventory, owner: "graph.retiring-state")
+                    withExtendedLifetime((left, right, lowLeft, lowRight,
+                        upperLeft, upperRight, otherStates)) {}
+                }
+            }
+            processUpper(left: &currentLeft, right: &currentRight, sampleRate: sampleRate,
+                plan: plan, states: &state.nodeStates, storageObservation: observation)
+        }
 
         if let retiring = state.retiringGraph, state.retiringBarsRemaining > 0 {
             var oldLeft = state.retiringBarsRemaining == 2 ? upperLeft : [Float](repeating: 0, count: count)
             var oldRight = state.retiringBarsRemaining == 2 ? upperRight : [Float](repeating: 0, count: count)
-            processUpper(left: &oldLeft, right: &oldRight, sampleRate: sampleRate,
-                         plan: retiring, states: &state.retiringStates)
+            do {
+                let observation = storageObservation.map { observation in
+                    let otherStates = state.nodeStates
+                    let currentOutputLeft = currentLeft
+                    let currentOutputRight = currentRight
+                    return observation.extending("retiring") { inventory in
+                        inventory.register(left, owner: "graph.input-left")
+                        inventory.register(right, owner: "graph.input-right")
+                        inventory.register(lowLeft, owner: "graph.low-left")
+                        inventory.register(lowRight, owner: "graph.low-right")
+                        inventory.register(upperLeft, owner: "graph.upper-left")
+                        inventory.register(upperRight, owner: "graph.upper-right")
+                        inventory.register(currentOutputLeft, owner: "graph.current-left")
+                        inventory.register(currentOutputRight, owner: "graph.current-right")
+                        AutonomousTypedFingerprint.registerGraphNodeStorage(otherStates,
+                            inventory: inventory, owner: "graph.current-state")
+                        withExtendedLifetime((left, right, lowLeft, lowRight,
+                            upperLeft, upperRight, currentOutputLeft, currentOutputRight, otherStates)) {}
+                    }
+                }
+                processUpper(left: &oldLeft, right: &oldRight, sampleRate: sampleRate,
+                    plan: retiring, states: &state.retiringStates, storageObservation: observation)
+            }
             if state.retiringBarsRemaining == 2 {
                 for index in 0..<count {
                     let progress = Double(index) / Double(max(1, count - 1))
@@ -602,27 +652,92 @@ package enum GeneratedDSPGraphRenderer {
             outputLeft[index] = Float(tanh(Double(lowLeft[index] + currentLeft[index]) * 1.08) / normalizer * 0.90)
             outputRight[index] = Float(tanh(Double(lowRight[index] + currentRight[index]) * 1.08) / normalizer * 0.90)
         }
+        storageObservation?.observe("output") { inventory in
+            inventory.register(left, owner: "graph.input-left")
+            inventory.register(right, owner: "graph.input-right")
+            inventory.register(lowLeft, owner: "graph.low-left")
+            inventory.register(lowRight, owner: "graph.low-right")
+            inventory.register(upperLeft, owner: "graph.upper-left")
+            inventory.register(upperRight, owner: "graph.upper-right")
+            inventory.register(currentLeft, owner: "graph.current-left")
+            inventory.register(currentRight, owner: "graph.current-right")
+            inventory.register(outputLeft, owner: "graph.output-left")
+            inventory.register(outputRight, owner: "graph.output-right")
+            AutonomousTypedFingerprint.registerGeneratedDSPStorage(state,
+                inventory: inventory, owner: "graph.state")
+            withExtendedLifetime((left, right, lowLeft, lowRight, upperLeft, upperRight,
+                currentLeft, currentRight, outputLeft, outputRight, state)) {}
+        }
         return (outputLeft, outputRight)
     }
 
     private static func processUpper(left: inout [Float], right: inout [Float],
                                      sampleRate: Double, plan: DSPGraphPlan,
-                                     states: inout [Int: DSPGraphNodeState]) {
+                                     states: inout [Int: DSPGraphNodeState],
+                                     storageObservation: PreparationStorageObservation? = nil) {
         let count = min(left.count, right.count)
         let branchCount = max(1, plan.branchCount)
         var branchLeft = Array(repeating: left, count: branchCount)
         var branchRight = Array(repeating: right, count: branchCount)
         for node in plan.nodes {
             guard branchLeft.indices.contains(node.branch) else { continue }
-            var nodeState = states[node.id] ?? DSPGraphNodeState()
+            // Borrow the canonical slot. A temporary value copy retained by
+            // the dictionary would otherwise force both delay arrays to COW
+            // on every bar, even when the continuation is uniquely owned.
             processNode(left: &branchLeft[node.branch], right: &branchRight[node.branch],
-                        sampleRate: sampleRate, node: node, state: &nodeState)
-            states[node.id] = nodeState
+                        sampleRate: sampleRate, node: node,
+                        state: &states[node.id, default: DSPGraphNodeState()])
+            storageObservation?.observe("node-return") { inventory in
+                inventory.register(left, owner: "branch.input-left")
+                inventory.register(right, owner: "branch.input-right")
+                for (ordinal, samples) in branchLeft.enumerated() {
+                    inventory.register(samples, owner: "branch.left.\(ordinal)")
+                }
+                for (ordinal, samples) in branchRight.enumerated() {
+                    inventory.register(samples, owner: "branch.right.\(ordinal)")
+                }
+                AutonomousTypedFingerprint.registerGraphNodeStorage(states,
+                    inventory: inventory, owner: "branch.states")
+                // The borrow is complete. This readonly projection aliases
+                // the canonical dictionary entry and expires before mutation.
+                if let nodeState = states[node.id] {
+                    AutonomousTypedFingerprint.registerGraphNodeStorage(nodeState,
+                        inventory: inventory, owner: "branch.node-\(node.id)")
+                    withExtendedLifetime(nodeState) {}
+                }
+                withExtendedLifetime((left, right, branchLeft, branchRight, states)) {}
+            }
+            storageObservation?.observe("branches") { inventory in
+                inventory.register(left, owner: "branch.input-left")
+                inventory.register(right, owner: "branch.input-right")
+                for (ordinal, samples) in branchLeft.enumerated() {
+                    inventory.register(samples, owner: "branch.left.\(ordinal)")
+                }
+                for (ordinal, samples) in branchRight.enumerated() {
+                    inventory.register(samples, owner: "branch.right.\(ordinal)")
+                }
+                AutonomousTypedFingerprint.registerGraphNodeStorage(states,
+                    inventory: inventory, owner: "branch.states")
+                withExtendedLifetime((left, right, branchLeft, branchRight, states)) {}
+            }
         }
         let gain = 1.0 / Double(branchCount)
         for index in 0..<count {
             left[index] = Float(branchLeft.reduce(0.0) { $0 + Double($1[index]) } * gain)
             right[index] = Float(branchRight.reduce(0.0) { $0 + Double($1[index]) } * gain)
+        }
+        storageObservation?.observe("mixed") { inventory in
+            inventory.register(left, owner: "branch.output-left")
+            inventory.register(right, owner: "branch.output-right")
+            for (ordinal, samples) in branchLeft.enumerated() {
+                inventory.register(samples, owner: "branch.left.\(ordinal)")
+            }
+            for (ordinal, samples) in branchRight.enumerated() {
+                inventory.register(samples, owner: "branch.right.\(ordinal)")
+            }
+            AutonomousTypedFingerprint.registerGraphNodeStorage(states,
+                inventory: inventory, owner: "branch.states")
+            withExtendedLifetime((left, right, branchLeft, branchRight, states)) {}
         }
     }
 
@@ -771,21 +886,25 @@ package struct PhraseAudioPreflight: Equatable, Sendable {
         blocks: [RenderBlock],
         sampleRate: Double,
         precedingFrame: UpperTimbreStereoFrame? = nil,
+        storageObservation: PreparationStorageObservation? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) {
         guard let report = AudioQualityReport(
             blocks: blocks,
             sampleRate: sampleRate,
             precedingFrame: precedingFrame,
+            storageObservation: storageObservation,
             cancellationRequested: cancellationRequested
         ) else { return nil }
         var barEvidence: [PhraseBarAudioEvidence] = []
         barEvidence.reserveCapacity(blocks.count)
         for block in blocks {
+            let barObservation = storageObservation?.atBar(block.bar)
             guard !cancellationRequested(), let barMetrics = MusicalQualityMetrics(
                 left: block.left,
                 right: block.right,
                 sampleRate: sampleRate,
+                storageObservation: barObservation,
                 cancellationRequested: cancellationRequested
             ) else { return nil }
             let count = min(block.left.count, block.right.count)
@@ -818,6 +937,12 @@ package struct PhraseAudioPreflight: Equatable, Sendable {
         let spectralValues = barEvidence.map { $0.spectralCentroid }
         let transientValues = barEvidence.map { $0.transientDensity }
         let crestValues = barEvidence.map { $0.crestFactor }
+        storageObservation?.observe("preflight.movement") { inventory in
+            inventory.register(loudnessValues, owner: "preflight.loudness-values")
+            inventory.register(spectralValues, owner: "preflight.spectral-values")
+            inventory.register(transientValues, owner: "preflight.transient-values")
+            inventory.register(crestValues, owner: "preflight.crest-values")
+        }
         let loudnessMovement = min(1, ((loudnessValues.max() ?? -120) - (loudnessValues.min() ?? -120)) / 8)
         let spectralMovement = min(1, ((spectralValues.max() ?? 0) - (spectralValues.min() ?? 0)) / 800)
         let transientMovement = min(1, ((transientValues.max() ?? 0) - (transientValues.min() ?? 0)) / 2.5)
@@ -879,6 +1004,16 @@ package final class PreparedAutonomousPhrase: Sendable {
     /// Bounded, non-PCM evaluator context retained only for read-only runtime
     /// diagnostics. It never participates in candidate selection or commit.
     package let qualityDiagnosticDetails: [String]
+    /// Detached validation is mandatory only for evaluators that request it.
+    /// A prospective product with no proof cannot enter transport.
+    /// Exact shared request origin; omitted by callers outside that owner.
+    package let preparationReplayFingerprint: String?
+    package let preparedValidationRequired: Bool
+    package let preparedValidation: AutonomousCandidatePreparedValidation?
+    /// Cached once by the private initializer. The legacy path incurs no new
+    /// full-product hash; required-validation admission compares bounded IDs.
+    package let preparedValidationSourceIdentityFingerprint: String?
+
     package let incomingQualityState: QualityContinuationState
     package let qualityContinuationState: QualityContinuationState
     package let incomingLiveMasterHeadroomState:
@@ -916,7 +1051,10 @@ package final class PreparedAutonomousPhrase: Sendable {
             LiveMasterHeadroomContinuationState,
         liveTargetStartSample: Int64?,
         correctionRenderCount: Int,
-        usedHomeTimbreCorrection: Bool
+        usedHomeTimbreCorrection: Bool,
+        preparationReplayFingerprint: String? = nil,
+        preparedValidationRequired: Bool = false,
+        preparedValidation: AutonomousCandidatePreparedValidation? = nil
     ) {
         self.plan = plan
         self.graph = graph
@@ -945,6 +1083,16 @@ package final class PreparedAutonomousPhrase: Sendable {
         self.liveTargetStartSample = liveTargetStartSample
         self.correctionRenderCount = correctionRenderCount
         self.usedHomeTimbreCorrection = usedHomeTimbreCorrection
+        self.preparationReplayFingerprint = preparationReplayFingerprint
+        self.preparedValidationRequired = preparedValidationRequired
+        self.preparedValidation = preparedValidation
+        preparedValidationSourceIdentityFingerprint = preparedValidationRequired
+            ? ProfessionalQualityModalSuccessorEvidence.preparedValidationIdentity(
+                planFingerprint: selectedCandidateEvidence.planFingerprint,
+                transaction: boundCandidateEvaluation.transaction, commit: commitProvenance,
+                incomingQuality: incomingQualityState, outgoingQuality: qualityContinuationState,
+                preparationReplayFingerprint: preparationReplayFingerprint)
+            : nil
     }
 
     package var qualifiedRepeatHoldPatternFamilies:
@@ -1016,6 +1164,28 @@ package final class PreparedAutonomousPhrase: Sendable {
             qualityDecision.evidenceFingerprint == candidateEvaluationFingerprint
                 ? nil : "quality-evidence-fingerprint",
         ].compactMap { $0 }
+        if preparedValidationRequired {
+            if let preparedValidation {
+                if preparedValidation.sourceIdentityFingerprint !=
+                    preparedValidationSourceIdentityFingerprint {
+                    failures.append("prepared-validation-source")
+                }
+                if !preparedValidation.hasRequiredMeasurements {
+                    failures.append("prepared-validation-measurements")
+                }
+                if !preparedValidation.hasQualifiedContinuation {
+                    failures.append("prepared-validation-continuation")
+                }
+                if preparedValidation.verdict.outcome != qualityDecision.outcome ||
+                    !qualityDecision.isAcceptanceOutcome {
+                    failures.append("prepared-validation-outcome")
+                }
+            } else {
+                failures.append("prepared-validation-missing")
+            }
+        } else if preparedValidation != nil {
+            failures.append("prepared-validation-unrequested")
+        }
         if let liveTargetStart,
            !commitProvenance.matches(
                 candidateEvaluationFingerprint: candidateEvaluationFingerprint,
@@ -1062,6 +1232,7 @@ package struct AutonomousPhrasePreparationFailure: Error, Equatable, Sendable {
     }
 
     package enum Code: String, Equatable, Sendable {
+        case preparedValidationMismatch = "prepared-validation-mismatch"
         case cancelled
         case invalidInput = "invalid-input"
         case continuationUnavailable = "continuation-unavailable"
@@ -1091,6 +1262,7 @@ package struct AutonomousPhrasePreparationFailure: Error, Equatable, Sendable {
 
 package enum AutonomousPhrasePreparationOutcome: Sendable {
     case prepared(PreparedAutonomousPhrase)
+    case awaitingPreparedValidation(AutonomousPendingPreparedValidation)
     case failed(AutonomousPhrasePreparationFailure)
 
     package var preparedPhrase: PreparedAutonomousPhrase? {
@@ -1317,15 +1489,202 @@ package struct AutonomousCandidatePolicyVerdict: Equatable, Sendable,
 package protocol AutonomousCandidateEvaluating: Sendable {
     var policyVersion: String { get }
     var evaluatorVersion: String { get }
+    var requiresPreparedValidation: Bool { get }
+    var preparationReplayFingerprint: String? { get }
+
+    /// Iterative detached preparation supplies an actual admitted child.
+    /// Implementations without successor ownership must refuse that context.
+    func preparedValidation(for preview: AutonomousCandidatePreparedPreview,
+        successor: PreparedAutonomousPhrase?) -> AutonomousCandidatePreparedValidation?
+
+    /// Invoked once off the callback, before a required-validation source can
+    /// escape preparation. Nil preserves unavailable qualification.
+    func preparedValidation(
+        for preview: AutonomousCandidatePreparedPreview
+    ) -> AutonomousCandidatePreparedValidation?
 
     func requestsHomeUpperTimbreCorrection(
         for candidate: AutonomousCandidateEvaluationVector
     ) -> Bool
 
+    /// Accepting results remain prospective when prepared validation is
+    /// required. Only the canonical finalizer may admit the bound final product.
     func terminalVerdict(
         selected: AutonomousCandidateEvaluationVector,
         transaction: AutonomousCandidateEvaluationTransaction
     ) -> AutonomousCandidatePolicyVerdict
+}
+
+package extension AutonomousCandidateEvaluating {
+    var preparationReplayFingerprint: String? { nil }
+    var requiresPreparedValidation: Bool { false }
+
+    func preparedValidation(for preview: AutonomousCandidatePreparedPreview,
+        successor: PreparedAutonomousPhrase?) -> AutonomousCandidatePreparedValidation? {
+        guard successor == nil else { return nil }
+        return preparedValidation(for: preview)
+    }
+
+    func preparedValidation(
+        for preview: AutonomousCandidatePreparedPreview
+    ) -> AutonomousCandidatePreparedValidation? { nil }
+}
+
+/// Immutable detached view of the sole source render. Its underlying prepared
+/// product remains private and commit-ineligible until actual validation. This
+/// is prospective continuation for an evidence probe, not accepted session state.
+package final class AutonomousCandidatePreparedPreview: Sendable {
+    fileprivate let source: PreparedAutonomousPhrase
+    fileprivate init(_ source: PreparedAutonomousPhrase) { self.source = source }
+
+    /// Numeric owners only, through the same inventory as finalized products.
+    /// Does not expose PCM or make this prospective source playable.
+    package func registerWorkingStorage(inventory: NumericStorageInventory, owner: String) {
+        inventory.register(source, owner: owner)
+        withExtendedLifetime(source) {}
+    }
+
+    package var plan: AutonomousPhrasePlan { source.plan }
+    package var graph: DSPGraphPlan { source.graph }
+    package var endingRenderState: RenderState { source.endingRenderState }
+    package var endingGraphState: GeneratedDSPContinuationState { source.endingGraphState }
+    package var prospectiveQualityState: QualityContinuationState { source.qualityContinuationState }
+    package var prospectiveLiveMasterState: LiveMasterHeadroomContinuationState {
+        source.liveMasterHeadroomContinuationState
+    }
+    package var selectedCandidateEvidence: AutonomousCandidateEvaluationVector {
+        source.selectedCandidateEvidence
+    }
+    package var transaction: AutonomousCandidateEvaluationTransaction { source.candidateEvaluation }
+    package var liveTargetStartSample: Int64? { source.liveTargetStartSample }
+    package var preparationReplayFingerprint: String? { source.preparationReplayFingerprint }
+    package var candidateEvaluationFingerprint: String { source.candidateEvaluationFingerprint }
+    package var audioPreflight: PhraseAudioPreflight { source.audioPreflight }
+    package var longHorizonEffectDoseEvidence: LongHorizonEffectDosePhraseEvidence? {
+        source.longHorizonEffectDoseEvidence
+    }
+    /// Only the private accepting product missing this one validation phase can
+    /// project future evidence. Other missing admission requirements fail closed.
+    package var hasProspectiveAcceptanceBinding: Bool {
+        source.commitFailureDiagnostics == ["prepared-validation-missing"]
+    }
+    package var sourceIdentityFingerprint: String {
+        ProfessionalQualityModalSuccessorEvidence.identity(source)
+    }
+
+    /// Detached physical demand, before the owner spends a successor render.
+    /// Undefined body energy does not request a fabricated continuation.
+    package func requiresQualifiedSuccessorSupport() throws -> Bool {
+        let windows = try ProfessionalQualityContinuousModalWindowEvidence(prepared: source)
+        return Self.requiresSuccessor(windows)
+    }
+
+    private static func requiresSuccessor(
+        _ windows: ProfessionalQualityContinuousModalWindowEvidence
+    ) -> Bool {
+        windows.attackBodySupport.partialWindowEventCount > 0 ||
+        windows.attackBodySupport.missingWindowEventCount > 0 ||
+        windows.tailBodySupport.partialWindowEventCount > 0 ||
+        windows.tailBodySupport.missingWindowEventCount > 0
+    }
+
+    /// Only actual products can construct this proof. An unfinished source
+    /// window requires an accepted successor retained by the proof; discarded
+    /// or unaccepted probe PCM cannot support source admission.
+    package func assessingContinuous(
+        successor: PreparedAutonomousPhrase? = nil,
+        using assess: (ProfessionalQualityObservation) -> AutonomousCandidatePolicyVerdict
+    ) throws -> AutonomousCandidatePreparedValidation {
+        let sourceObservation = try ProfessionalQualityObservation(continuousPrepared: source)
+        guard let sourceWindows = sourceObservation.continuousModalSource?.projection else {
+            throw ProfessionalEvidenceReportBankError.incompleteEvidence
+        }
+        let requiresQualifiedSuccessor = Self.requiresSuccessor(sourceWindows)
+        let observation = try successor.map {
+            try ProfessionalQualityObservation(continuousPrepared: source, successor: $0)
+        } ?? sourceObservation
+        let measured = observation.isComplete &&
+            ProfessionalQualityMeasurementContract.modalMetrics.allSatisfy {
+                observation.measurementApplicability($0) != .unavailable
+            }
+        let qualifiedSuccessor = requiresQualifiedSuccessor && successor?.commitEligible == true
+            ? successor : nil
+        let hasQualifiedContinuation = !requiresQualifiedSuccessor || qualifiedSuccessor != nil
+        let verdict: AutonomousCandidatePolicyVerdict
+        if !measured {
+            verdict = AutonomousCandidatePolicyVerdict(
+                outcome: .qualificationUnavailable, decisionBasis: .unavailable,
+                reasonCodes: [.evaluatorUnavailableV1],
+                diagnosticDetails: ["prepared-validation=required-windows-unavailable"])
+        } else if !hasQualifiedContinuation {
+            verdict = AutonomousCandidatePolicyVerdict(
+                outcome: .qualificationUnavailable, decisionBasis: .unavailable,
+                reasonCodes: [.evaluatorUnavailableV1],
+                diagnosticDetails: ["prepared-validation=qualified-continuation-unavailable"])
+        } else {
+            verdict = assess(observation)
+        }
+        return AutonomousCandidatePreparedValidation(
+            sourceIdentityFingerprint: sourceIdentityFingerprint,
+            observation: observation, verdict: verdict,
+            requiresQualifiedSuccessor: requiresQualifiedSuccessor,
+            qualifiedSuccessor: qualifiedSuccessor)
+    }
+}
+
+/// Source-bound typed evidence attached only by the canonical finalizer. There
+/// is no decoded, memberwise, or arbitrary-fingerprint construction path.
+package final class AutonomousCandidatePreparedValidation: Sendable {
+    package let sourceIdentityFingerprint: String
+    package let observation: ProfessionalQualityObservation
+    package let verdict: AutonomousCandidatePolicyVerdict
+    package let hasRequiredMeasurements: Bool
+    package let requiresQualifiedSuccessor: Bool
+    /// The exact accepted continuation that completed the source windows.
+    /// Retention is detached; transport consumption still requires activation.
+    package let qualifiedSuccessor: PreparedAutonomousPhrase?
+    package let hasQualifiedContinuation: Bool
+
+    fileprivate init(sourceIdentityFingerprint: String,
+        observation: ProfessionalQualityObservation,
+        verdict: AutonomousCandidatePolicyVerdict,
+        requiresQualifiedSuccessor: Bool,
+        qualifiedSuccessor: PreparedAutonomousPhrase?) {
+        self.sourceIdentityFingerprint = sourceIdentityFingerprint
+        self.observation = observation
+        self.verdict = verdict
+        self.requiresQualifiedSuccessor = requiresQualifiedSuccessor
+        self.qualifiedSuccessor = qualifiedSuccessor
+        hasQualifiedContinuation = !requiresQualifiedSuccessor || qualifiedSuccessor != nil
+        hasRequiredMeasurements = observation.isComplete && observation.hardGatesPassed &&
+            observation.measurementScope == .continuousModalWindow &&
+            observation.continuousModalSource?.sourceIdentityFingerprint == sourceIdentityFingerprint &&
+            ProfessionalQualityMeasurementContract.modalMetrics.allSatisfy {
+                observation.measurementApplicability($0) != .unavailable
+            }
+    }
+}
+
+/// Private detached source awaiting physical continuation. Construction and
+/// resolution remain inside the canonical finalizer; this is never a playable
+/// phrase, a permissive evaluator, or authority to advance accepted state.
+package final class AutonomousPendingPreparedValidation: Sendable {
+    package let preview: AutonomousCandidatePreparedPreview
+    private let resolve: @Sendable (AutonomousCandidatePreparedValidation?,
+        @escaping @Sendable () -> Bool) -> AutonomousPhrasePreparationOutcome
+
+    fileprivate init(preview: AutonomousCandidatePreparedPreview,
+        resolve: @escaping @Sendable (AutonomousCandidatePreparedValidation?,
+            @escaping @Sendable () -> Bool) -> AutonomousPhrasePreparationOutcome) {
+        self.preview = preview
+        self.resolve = resolve
+    }
+
+    package func resolving(_ proof: AutonomousCandidatePreparedValidation?,
+        cancellationRequested: @escaping @Sendable () -> Bool
+    ) -> AutonomousPhrasePreparationOutcome {
+        resolve(proof, cancellationRequested)
+    }
 }
 
 /// Explicit offline evidence collector used to build a profile. The shipping
@@ -1388,6 +1747,7 @@ package enum AutonomousPhrasePreparer {
         let routeGeneration: Int
         let liveTargetStartSample: Int64?
         let diagnosticRoleStemCapture: Bool
+        let diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession?
         let cancellationRequested: @Sendable () -> Bool
 
         init(
@@ -1412,6 +1772,7 @@ package enum AutonomousPhrasePreparer {
             routeGeneration: Int,
             liveTargetStartSample: Int64?,
             diagnosticRoleStemCapture: Bool,
+            diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession?,
             cancellationRequested: @escaping @Sendable () -> Bool
         ) {
             self.sessionSeed = sessionSeed
@@ -1435,6 +1796,7 @@ package enum AutonomousPhrasePreparer {
             self.routeGeneration = routeGeneration
             self.liveTargetStartSample = liveTargetStartSample
             self.diagnosticRoleStemCapture = diagnosticRoleStemCapture
+            self.diagnosticRoleStemSession = diagnosticRoleStemSession
             self.cancellationRequested = cancellationRequested
         }
     }
@@ -1471,6 +1833,7 @@ package enum AutonomousPhrasePreparer {
             liveTargetStartSample: liveTargetStartSample,
             diagnosticRoleStemCapture: false,
             evaluator: evaluator,
+            deferPreparedValidation: false,
             cancellationRequested: { false }
         ).preparedPhrase else {
             preconditionFailure("Non-cancellable preparation stopped unexpectedly")
@@ -1533,7 +1896,11 @@ package enum AutonomousPhrasePreparer {
         pendingLiveMasterBinding: PendingLiveMasterHeadroomBinding? = nil,
         liveTargetStartSample: Int64? = nil,
         diagnosticRoleStemCapture: Bool = false,
+        diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession? = nil,
+        workingStorageObservation: PreparationStorageObservation? = nil,
         evaluator: E,
+        deferPreparedValidation: Bool = false,
+        renderPassReservation: @escaping @Sendable (Int) -> Bool = { _ in true },
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> AutonomousPhrasePreparationOutcome {
         prepareTransaction(
@@ -1551,7 +1918,11 @@ package enum AutonomousPhrasePreparer {
             pendingLiveMasterBinding: pendingLiveMasterBinding,
             liveTargetStartSample: liveTargetStartSample,
             diagnosticRoleStemCapture: diagnosticRoleStemCapture,
+            diagnosticRoleStemSession: diagnosticRoleStemSession,
+            workingStorageObservation: workingStorageObservation,
             evaluator: evaluator,
+            deferPreparedValidation: deferPreparedValidation,
+            renderPassReservation: renderPassReservation,
             cancellationRequested: cancellationRequested
         )
     }
@@ -1571,9 +1942,17 @@ package enum AutonomousPhrasePreparer {
         pendingLiveMasterBinding: PendingLiveMasterHeadroomBinding?,
         liveTargetStartSample: Int64?,
         diagnosticRoleStemCapture: Bool,
+        diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession? = nil,
+        workingStorageObservation: PreparationStorageObservation? = nil,
         evaluator: E,
+        deferPreparedValidation: Bool,
+        renderPassReservation: @escaping @Sendable (Int) -> Bool = { _ in true },
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> AutonomousPhrasePreparationOutcome {
+        guard !(diagnosticRoleStemCapture && diagnosticRoleStemSession != nil) else {
+            return .failed(.init(stage: .inputValidation, code: .invalidInput,
+                details: ["conflicting-diagnostic-capture-delivery"]))
+        }
         let incomingControllerFingerprint = combinedControllerFingerprint(
             incomingRenderState,
             liveMasterHeadroomState:
@@ -1623,7 +2002,8 @@ package enum AutonomousPhrasePreparer {
                 ? nil : "dramatic-debts",
             (!memory.longHorizon.isBound && plan.materialWorld == .neutral) ||
                 plan.materialWorld.isConsistent(
-                    with: memory.longHorizon.currentEpisode
+                    with: memory.longHorizon.currentEpisode,
+                    atPresentationBar: plan.presentationStartBar
                 ) ? nil : "material-world",
             candidateInputIsBounded(plan) ? nil : "candidate-bounds",
             candidateCharacterMatchesSession(
@@ -1711,24 +2091,36 @@ package enum AutonomousPhrasePreparer {
             routeGeneration: routeGeneration,
             liveTargetStartSample: liveTargetStartSample,
             diagnosticRoleStemCapture: diagnosticRoleStemCapture,
+            diagnosticRoleStemSession: diagnosticRoleStemSession,
             cancellationRequested: cancellationRequested
         )
 
         func product(
             plan: AutonomousPhrasePlan,
             kind: AutonomousCandidateAttemptKind = .initialRender,
-            forceHomeUpperTimbre: Bool = false
+            forceHomeUpperTimbre: Bool = false,
+            retainedInitial: CandidateRenderProduct? = nil
         ) -> Result<CandidateRenderProduct, AutonomousPhrasePreparationFailure> {
             let stage: AutonomousPhrasePreparationFailure.Stage =
                 kind == .initialRender ? .initialRender : .correctionRender
             guard !renderContext.cancellationRequested() else {
                 return .failure(.init(stage: stage, code: .cancelled))
             }
-            guard renderPassBudget.claim() else {
+            guard renderPassReservation(renderPassBudget.used + 1), renderPassBudget.claim() else {
                 return .failure(.init(
                     stage: stage,
                     code: .renderBudgetUnavailable
                 ))
+            }
+            let observation = workingStorageObservation.map { outer in
+                outer.extending("render") { inventory in
+                    AutonomousTypedFingerprint.registerContinuationStorage(
+                        renderState: renderContext.incomingRenderState,
+                        generatedDSPState: renderContext.incomingGraphState,
+                        inventory: inventory, owner: "attempt.incoming")
+                    retainedInitial?.registerWorkingStorage(inventory, owner: "attempt.retained-initial")
+                    withExtendedLifetime((renderContext, retainedInitial)) {}
+                }.retainingMaximum(retainedInitial == nil ? nil : outer.prefix + ".corrective-overlap")
             }
             let result = renderAttempt(
                 plan: plan,
@@ -1765,6 +2157,8 @@ package enum AutonomousPhrasePreparer {
                 forceHomeUpperTimbre: forceHomeUpperTimbre,
                 diagnosticRoleStemCapture:
                     renderContext.diagnosticRoleStemCapture,
+                diagnosticRoleStemSession: renderContext.diagnosticRoleStemSession,
+                workingStorageObservation: observation,
                 cancellationRequested: renderContext.cancellationRequested
             )
             guard !renderContext.cancellationRequested() else {
@@ -1792,11 +2186,24 @@ package enum AutonomousPhrasePreparer {
             // Release the superseded initial sidecar before the corrective
             // render claims its bounded PCM storage.
             initialPrimary.releaseRepeatHoldEvolution()
-            initialPrimary.releaseDiagnosticRoleStemCaptures()
+            guard initialPrimary.releaseDiagnosticRoleStemCaptures() else {
+                return .failed(.init(stage: .correctionRender, code: .invalidInput,
+                    details: ["diagnostic-superseded-capture-cleanup-failed"]))
+            }
+            workingStorageObservation?.observe("before-correction") { inventory in
+                initialPrimary.registerWorkingStorage(inventory, owner: "attempt.retained-initial")
+                withExtendedLifetime(initialPrimary) {}
+            }
+            initialPrimary.releaseSupersededSynthesisStorage()
+            workingStorageObservation?.observe("superseded-release") { inventory in
+                initialPrimary.registerWorkingStorage(inventory, owner: "attempt.retained-initial")
+                withExtendedLifetime(initialPrimary) {}
+            }
             let correctedResult = product(
                 plan: plan,
                 kind: .correctionRender,
-                forceHomeUpperTimbre: true
+                forceHomeUpperTimbre: true,
+                retainedInitial: initialPrimary
             )
             guard case let .success(corrected) = correctedResult else {
                 guard case let .failure(failure) = correctedResult else {
@@ -1831,13 +2238,20 @@ package enum AutonomousPhrasePreparer {
             selectedAttemptIndex: selectedAttemptIndex,
             correctionCount: correctionBudget.used
         )
+        workingStorageObservation?.observe("selected") { inventory in
+            initialPrimary.registerWorkingStorage(inventory, owner: "attempt.initial")
+            selected.registerWorkingStorage(inventory, owner: "attempt.selected")
+            withExtendedLifetime((initialPrimary, selected)) {}
+        }
         return finalize(
             selected: selected,
             transaction: transaction,
             incomingQualityState: incomingQualityState,
             incomingLiveMasterState: liveBinding.incoming,
             outgoingLiveMasterState: liveBinding.outgoing,
-            evaluator: evaluator
+            evaluator: evaluator,
+            deferPreparedValidation: deferPreparedValidation,
+            cancellationRequested: cancellationRequested
         )
     }
 
@@ -2220,7 +2634,7 @@ package enum AutonomousPhrasePreparer {
     /// Every continuation collection is owned by a fixed-delay DSP primitive.
     /// Reject package callers that bypass those owners before typed hashing or
     /// rendering can turn an arbitrary collection into unbounded work.
-    private static func continuationInputsAreBounded(
+    package static func continuationInputsAreBounded(
         renderState: RenderState,
         graphState: GeneratedDSPContinuationState,
         previousGraph: DSPGraphPlan?,
@@ -2513,20 +2927,63 @@ package enum AutonomousPhrasePreparer {
             graphsBelongToSession && graphBoundaryIsCoherent
     }
 
-    /// Confined to one detached preparation transaction. The only mutation
-    /// releases a superseded sidecar before a corrective render; no instance
-    /// is shared across tasks or crosses the commit boundary.
+    /// Confined to detached preparation. Sidecars are released before a
+    /// corrective render or pending-validation publication; after publication
+    /// all reads are immutable and no product crosses the commit boundary.
+    private final class AnalysisStorageOwners {
+        let product: AutonomousPhraseRenderProduct
+        let renderState: RenderState
+        let graphState: GeneratedDSPContinuationState
+        init(product: AutonomousPhraseRenderProduct, renderState: RenderState,
+            graphState: GeneratedDSPContinuationState) {
+            self.product = product; self.renderState = renderState; self.graphState = graphState
+        }
+        @inline(never) func register(_ inventory: NumericStorageInventory) {
+            inventory.register(product, owner: "attempt.analysis-product")
+            AutonomousTypedFingerprint.registerContinuationStorage(renderState: renderState,
+                generatedDSPState: graphState, inventory: inventory, owner: "attempt.analysis-ending")
+            withExtendedLifetime(self) {}
+        }
+    }
+
+    /// The initial attempt's immutable evidence remains in the transaction,
+    /// while its superseded audio leaves ownership before corrective rendering.
+    /// Accessing released audio is an internal ownership error, never a fallback.
+    /// Reference ownership keeps getters and observation scopes from copying the
+    /// complete large state aggregate onto a cooperative worker stack.
+    private final class CandidateSynthesisStorage {
+        let blocks: [RenderBlock]
+        let endingRenderState: RenderState
+        let endingGraphState: GeneratedDSPContinuationState
+
+        init(blocks: [RenderBlock], endingRenderState: RenderState,
+            endingGraphState: GeneratedDSPContinuationState) {
+            self.blocks = blocks
+            self.endingRenderState = endingRenderState
+            self.endingGraphState = endingGraphState
+        }
+    }
+
     private final class CandidateRenderProduct: @unchecked Sendable {
         let plan: AutonomousPhrasePlan
         let graph: DSPGraphPlan
-        let blocks: [RenderBlock]
+        private var synthesisStorage: CandidateSynthesisStorage?
+        private var ownedSynthesisStorage: CandidateSynthesisStorage {
+            guard let storage = synthesisStorage else {
+                preconditionFailure("Superseded candidate has no audio ownership")
+            }
+            return storage
+        }
+        var blocks: [RenderBlock] { ownedSynthesisStorage.blocks }
         private(set) var repeatHoldEvolutionCandidates:
             [RepeatHoldEvolutionRenderCandidate]
         private(set) var diagnosticRoleStemCaptures:
             [AutonomousBarRoleStemCapture]
+        private(set) var diagnosticRoleStemDraft: DiagnosticRoleStemCaptureDraft?
+        let diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession?
         let sampleRate: Double
-        let endingRenderState: RenderState
-        let endingGraphState: GeneratedDSPContinuationState
+        var endingRenderState: RenderState { ownedSynthesisStorage.endingRenderState }
+        var endingGraphState: GeneratedDSPContinuationState { ownedSynthesisStorage.endingGraphState }
         let audioPreflight: PhraseAudioPreflight
         let vector: AutonomousCandidateEvaluationVector
         let attempt: AutonomousCandidateAttempt
@@ -2538,6 +2995,8 @@ package enum AutonomousPhrasePreparer {
             repeatHoldEvolutionCandidates:
                 [RepeatHoldEvolutionRenderCandidate],
             diagnosticRoleStemCaptures: [AutonomousBarRoleStemCapture],
+            diagnosticRoleStemDraft: DiagnosticRoleStemCaptureDraft?,
+            diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession?,
             sampleRate: Double,
             endingRenderState: RenderState,
             endingGraphState: GeneratedDSPContinuationState,
@@ -2547,24 +3006,65 @@ package enum AutonomousPhrasePreparer {
         ) {
             self.plan = plan
             self.graph = graph
-            self.blocks = blocks
+            self.synthesisStorage = CandidateSynthesisStorage(blocks: blocks,
+                endingRenderState: endingRenderState, endingGraphState: endingGraphState)
             self.repeatHoldEvolutionCandidates =
                 repeatHoldEvolutionCandidates
             self.diagnosticRoleStemCaptures = diagnosticRoleStemCaptures
+            self.diagnosticRoleStemDraft = diagnosticRoleStemDraft
+            self.diagnosticRoleStemSession = diagnosticRoleStemSession
             self.sampleRate = sampleRate
-            self.endingRenderState = endingRenderState
-            self.endingGraphState = endingGraphState
             self.audioPreflight = audioPreflight
             self.vector = vector
             self.attempt = attempt
+        }
+
+        func registerWorkingStorage(_ inventory: NumericStorageInventory, owner: String) {
+            if let storage = synthesisStorage {
+                inventory.registerBlocks(storage.blocks, owner: owner + ".primary")
+                AutonomousTypedFingerprint.registerContinuationStorage(
+                    renderState: storage.endingRenderState,
+                    generatedDSPState: storage.endingGraphState,
+                    inventory: inventory, owner: owner + ".continuation")
+                withExtendedLifetime(storage) {}
+            }
+            for (ordinal, hold) in repeatHoldEvolutionCandidates.enumerated() {
+                inventory.registerHoldBlocks(hold.blocks, owner: "\(owner).hold.\(ordinal)")
+            }
+            for (ordinal, capture) in diagnosticRoleStemCaptures.enumerated() {
+                inventory.register(capture, owner: "\(owner).capture.\(ordinal)")
+            }
+            withExtendedLifetime(self) {}
+        }
+
+        /// Called only after correction has been selected and its diagnostic
+        /// draft has been discarded. No initial PCM/state is read afterwards;
+        /// failure or cancellation refuses the transaction instead of replaying
+        /// a released candidate. Evidence, plan and graph identity remain exact.
+        func releaseSupersededSynthesisStorage() {
+            precondition(repeatHoldEvolutionCandidates.isEmpty &&
+                diagnosticRoleStemCaptures.isEmpty && diagnosticRoleStemDraft == nil)
+            synthesisStorage = nil
         }
 
         func releaseRepeatHoldEvolution() {
             repeatHoldEvolutionCandidates.removeAll(keepingCapacity: false)
         }
 
-        func releaseDiagnosticRoleStemCaptures() {
+        @discardableResult func releaseDiagnosticRoleStemCaptures(keepStreamDraft: Bool = false) -> Bool {
             diagnosticRoleStemCaptures.removeAll(keepingCapacity: false)
+            if !keepStreamDraft, let draft = diagnosticRoleStemDraft {
+                guard diagnosticRoleStemSession?.discardDraft(draft) == true else { return false }
+                diagnosticRoleStemDraft = nil
+            }
+            return true
+        }
+
+        func stageSelectedDraft(for source: PreparedAutonomousPhrase) -> Bool {
+            guard let session = diagnosticRoleStemSession else { return true }
+            guard let draft = diagnosticRoleStemDraft, session.stage(draft, source: source) else { return false }
+            diagnosticRoleStemDraft = nil
+            return true
         }
     }
 
@@ -2595,6 +3095,8 @@ package enum AutonomousPhrasePreparer {
         liveTargetStartSample: Int64?,
         forceHomeUpperTimbre: Bool = false,
         diagnosticRoleStemCapture: Bool = false,
+        diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession? = nil,
+        workingStorageObservation: PreparationStorageObservation? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> Result<CandidateRenderProduct, AutonomousPhrasePreparationFailure> {
         let stage: AutonomousPhrasePreparationFailure.Stage =
@@ -2620,18 +3122,40 @@ package enum AutonomousPhrasePreparer {
         var renderState = incomingRenderState
         renderState.liveMasterHeadroomState = outgoingLiveMasterState
         var graphState = incomingGraphState
+        let spool: DiagnosticRoleStemCaptureSpool?
+        do { spool = try diagnosticRoleStemSession?.makeSpool(plan: plan, sampleRate: sampleRate) }
+        catch {
+            return .failure(.init(stage: stage, code: .rendererUnavailable,
+                details: ["diagnostic-capture-spool-unavailable"]))
+        }
+        var draftTransferred = false
+        defer { if !draftTransferred { spool?.discard() } }
+        let sink: (@Sendable (AutonomousBarRoleStemCapture, RenderBlock) -> Bool)?
+        if let spool {
+            sink = { capture, block in
+                spool.append(capture, block: block, cancellationRequested: cancellationRequested)
+            }
+        } else { sink = nil }
         guard let renderProduct = AutonomousPhraseRenderer
             .renderProductIfNotCancelled(
             plan: plan, graph: graph, sampleRate: sampleRate,
             state: &renderState, graphState: &graphState,
             forceHomeUpperTimbre: forceHomeUpperTimbre,
             diagnosticRoleStemCapture: diagnosticRoleStemCapture,
+            diagnosticRoleStemSink: sink,
+            workingStorageObservation: workingStorageObservation,
             cancellationRequested: cancellationRequested
         ) else {
             return .failure(.init(
                 stage: stage,
                 code: cancellationRequested() ? .cancelled : .rendererUnavailable
             ))
+        }
+        workingStorageObservation?.observe("analysis-input") { inventory in
+            inventory.register(renderProduct, owner: "attempt.product")
+            AutonomousTypedFingerprint.registerContinuationStorage(renderState: renderState,
+                generatedDSPState: graphState, inventory: inventory, owner: "attempt.ending")
+            withExtendedLifetime((renderProduct, renderState, graphState)) {}
         }
         let blocks = renderProduct.blocks
         guard !cancellationRequested() else {
@@ -2652,10 +3176,15 @@ package enum AutonomousPhrasePreparer {
                 right: incomingOutputTransition.terminalRight
             )
         }()
+        let analysisObservation = workingStorageObservation.map { outer in
+            let owners = AnalysisStorageOwners(product: renderProduct, renderState: renderState, graphState: graphState)
+            return outer.extending("analysis") { inventory in owners.register(inventory) }
+        }
         guard let audioPreflight = PhraseAudioPreflight(
             blocks: blocks,
             sampleRate: sampleRate,
             precedingFrame: precedingFrame,
+            storageObservation: analysisObservation,
             cancellationRequested: cancellationRequested
         ) else {
             return .failure(.init(
@@ -2741,6 +3270,12 @@ package enum AutonomousPhrasePreparer {
             ),
             vector: vector
         )
+        let draft = spool?.finish()
+        guard spool == nil || draft != nil else {
+            return .failure(.init(stage: stage, code: .rendererUnavailable,
+                details: ["diagnostic-capture-incomplete"]))
+        }
+        draftTransferred = true
         return .success(CandidateRenderProduct(
             plan: plan,
             graph: graph,
@@ -2749,6 +3284,8 @@ package enum AutonomousPhrasePreparer {
                 renderProduct.repeatHoldEvolutionCandidates,
             diagnosticRoleStemCaptures:
                 renderProduct.diagnosticRoleStemCaptures,
+            diagnosticRoleStemDraft: draft,
+            diagnosticRoleStemSession: diagnosticRoleStemSession,
             sampleRate: sampleRate,
             endingRenderState: renderState,
             endingGraphState: graphState,
@@ -2974,12 +3511,131 @@ package enum AutonomousPhrasePreparer {
         incomingQualityState: QualityContinuationState,
         incomingLiveMasterState: LiveMasterHeadroomContinuationState,
         outgoingLiveMasterState: LiveMasterHeadroomContinuationState,
-        evaluator: E
+        evaluator: E,
+        deferPreparedValidation: Bool,
+        cancellationRequested: @escaping @Sendable () -> Bool
     ) -> AutonomousPhrasePreparationOutcome {
-        let verdict = evaluator.terminalVerdict(
-            selected: selected.vector,
-            transaction: transaction
-        )
+        let replayFingerprint = evaluator.preparationReplayFingerprint
+        guard replayFingerprint.map(fingerprintIsCanonical) ?? true else {
+            return .failed(.init(stage: .finalization, code: .invalidInput,
+                details: ["preparation-replay-fingerprint"]))
+        }
+        let prospectiveVerdict = evaluator.terminalVerdict(
+            selected: selected.vector, transaction: transaction)
+        let required = evaluator.requiresPreparedValidation
+        let prospective = assemblePrepared(
+            selected: selected, transaction: transaction,
+            incomingQualityState: incomingQualityState,
+            incomingLiveMasterState: incomingLiveMasterState,
+            outgoingLiveMasterState: outgoingLiveMasterState,
+            policyVersion: evaluator.policyVersion, verdict: prospectiveVerdict,
+            preparedValidationRequired: required, preparationReplayFingerprint: replayFingerprint)
+        guard required, let source = prospective.preparedPhrase,
+              source.qualityDecision.isAcceptanceOutcome,
+              source.hardGatesPassed, transaction.isComplete else { return prospective }
+        guard !cancellationRequested() else {
+            return .failed(.init(stage: .finalization, code: .cancelled))
+        }
+        let preview = AutonomousCandidatePreparedPreview(source)
+        if deferPreparedValidation {
+            let pendingSource: PreparedAutonomousPhrase
+            if (try? preview.requiresQualifiedSuccessorSupport()) == true {
+                guard let protectedSource = assemblePrepared(selected: selected, transaction: transaction,
+                    incomingQualityState: incomingQualityState,
+                    incomingLiveMasterState: incomingLiveMasterState,
+                    outgoingLiveMasterState: outgoingLiveMasterState,
+                    policyVersion: evaluator.policyVersion, verdict: prospectiveVerdict,
+                    preparedValidationRequired: true, preparationReplayFingerprint: replayFingerprint,
+                    presentation: source, retainRepeatHoldVariants: false).preparedPhrase else { return prospective }
+                pendingSource = protectedSource
+            } else { pendingSource = source }
+            // After publication only selected immutable source storage survives.
+            // A parent must consume its measured child; only a closed leaf owns
+            // coherent repeat variants. No selected scheduled PCM is changed.
+            selected.releaseRepeatHoldEvolution()
+            selected.releaseDiagnosticRoleStemCaptures(keepStreamDraft: true)
+            return .awaitingPreparedValidation(AutonomousPendingPreparedValidation(
+                preview: AutonomousCandidatePreparedPreview(pendingSource)) { proof, cancelled in
+                completePreparedValidation(selected: selected, transaction: transaction,
+                    incomingQualityState: incomingQualityState,
+                    incomingLiveMasterState: incomingLiveMasterState,
+                    outgoingLiveMasterState: outgoingLiveMasterState,
+                    policyVersion: evaluator.policyVersion, replayFingerprint: replayFingerprint,
+                    source: pendingSource, proof: proof, cancellationRequested: cancelled)
+            })
+        }
+        return completePreparedValidation(selected: selected, transaction: transaction,
+            incomingQualityState: incomingQualityState,
+            incomingLiveMasterState: incomingLiveMasterState,
+            outgoingLiveMasterState: outgoingLiveMasterState,
+            policyVersion: evaluator.policyVersion, replayFingerprint: replayFingerprint,
+            source: source, proof: evaluator.preparedValidation(for: preview),
+            cancellationRequested: cancellationRequested)
+    }
+
+    private static func completePreparedValidation(
+        selected: CandidateRenderProduct,
+        transaction: AutonomousCandidateEvaluationTransaction,
+        incomingQualityState: QualityContinuationState,
+        incomingLiveMasterState: LiveMasterHeadroomContinuationState,
+        outgoingLiveMasterState: LiveMasterHeadroomContinuationState,
+        policyVersion: String, replayFingerprint: String?,
+        source: PreparedAutonomousPhrase, proof: AutonomousCandidatePreparedValidation?,
+        cancellationRequested: @escaping @Sendable () -> Bool
+    ) -> AutonomousPhrasePreparationOutcome {
+        let preview = AutonomousCandidatePreparedPreview(source)
+        guard !cancellationRequested() else {
+            return .failed(.init(stage: .finalization, code: .cancelled))
+        }
+        let boundProof = proof.flatMap {
+            $0.sourceIdentityFingerprint == preview.sourceIdentityFingerprint ? $0 : nil
+        }
+        let verdict: AutonomousCandidatePolicyVerdict
+        if let boundProof {
+            verdict = boundProof.verdict
+        } else {
+            verdict = AutonomousCandidatePolicyVerdict(
+                outcome: .qualificationUnavailable, decisionBasis: .unavailable,
+                reasonCodes: [.evaluatorUnavailableV1],
+                diagnosticDetails: [proof == nil
+                    ? "prepared-validation=missing" : "prepared-validation=source-mismatch"])
+        }
+        let final = assemblePrepared(
+            selected: selected, transaction: transaction,
+            incomingQualityState: incomingQualityState,
+            incomingLiveMasterState: incomingLiveMasterState,
+            outgoingLiveMasterState: outgoingLiveMasterState,
+            policyVersion: policyVersion, verdict: verdict,
+            preparedValidationRequired: true, preparationReplayFingerprint: replayFingerprint, preparedValidation: boundProof,
+            presentation: source)
+        if let prepared = final.preparedPhrase,
+           prepared.qualityDecision.isAcceptanceOutcome,
+           !prepared.commitEligible {
+            return .failed(.init(stage: .finalization, code: .preparedValidationMismatch,
+                details: prepared.commitFailureDiagnostics))
+        }
+        if let prepared = final.preparedPhrase, prepared.commitEligible,
+           !selected.stageSelectedDraft(for: prepared) {
+            return .failed(.init(stage: .finalization, code: .invalidInput,
+                details: ["diagnostic-selected-capture-mismatch"]))
+        }
+        return final
+    }
+
+    private static func assemblePrepared(
+        selected: CandidateRenderProduct,
+        transaction: AutonomousCandidateEvaluationTransaction,
+        incomingQualityState: QualityContinuationState,
+        incomingLiveMasterState: LiveMasterHeadroomContinuationState,
+        outgoingLiveMasterState: LiveMasterHeadroomContinuationState,
+        policyVersion: String,
+        verdict: AutonomousCandidatePolicyVerdict,
+        preparedValidationRequired: Bool,
+        preparationReplayFingerprint: String? = nil,
+        preparedValidation: AutonomousCandidatePreparedValidation? = nil,
+        presentation: PreparedAutonomousPhrase? = nil,
+        retainRepeatHoldVariants: Bool = true
+    ) -> AutonomousPhrasePreparationOutcome {
         var reasonCodes = verdict.reasonCodes + selected.attempt.reasonCodes
         if selected.vector.routeContinuation.routeRecovery {
             // Fresh evidence from the replacement route is not stale. This
@@ -2996,7 +3652,7 @@ package enum AutonomousPhrasePreparer {
         let boundCandidateEvaluation = BoundCandidateEvaluation(transaction)
         let transactionFingerprint = boundCandidateEvaluation.fingerprint
         let proposedDecision = QualityDecision(
-            policyVersion: evaluator.policyVersion,
+            policyVersion: policyVersion,
             outcome: verdict.outcome,
             reasonCodes: reasonCodes,
             candidateFingerprint: selected.vector.fullMix.sampleHash,
@@ -3031,27 +3687,25 @@ package enum AutonomousPhrasePreparer {
                     selected.vector.incomingLiveMasterRevision,
             liveTargetStart: liveTargetStart
         )
-        let repeatHoldEvolutionOutcomes =
-            selected.repeatHoldEvolutionCandidates.map { candidate in
+        let repeatHoldEvolutionOutcomes = presentation == nil
+            ? selected.repeatHoldEvolutionCandidates.map { candidate in
                 RepeatHoldEvolutionQualifier.qualify(
                     patternFamily: candidate.patternFamily,
                     primaryBlocks: selected.blocks,
                     candidateBlocks: candidate.blocks,
                     sampleRate: selected.sampleRate
                 )
-            }
+            } : []
         return .prepared(PreparedAutonomousPhrase(
             plan: selected.plan,
             graph: selected.graph,
             blocks: selected.blocks,
             diagnosticRoleStemCaptures:
-                selected.diagnosticRoleStemCaptures,
-            repeatHoldEvolutions: repeatHoldEvolutionOutcomes.compactMap {
-                $0.prepared
-            },
-            repeatHoldEvolutionEvidence: repeatHoldEvolutionOutcomes.map {
-                $0.evidence
-            },
+                presentation?.diagnosticRoleStemCaptures ?? selected.diagnosticRoleStemCaptures,
+            repeatHoldEvolutions: retainRepeatHoldVariants
+                ? (presentation?.repeatHoldEvolutions ?? repeatHoldEvolutionOutcomes.compactMap { $0.prepared }) : [],
+            repeatHoldEvolutionEvidence: presentation?.repeatHoldEvolutionEvidence ??
+                repeatHoldEvolutionOutcomes.map { $0.evidence },
             endingRenderState: selected.endingRenderState,
             endingGraphState: selected.endingGraphState,
             audioPreflight: selected.audioPreflight,
@@ -3067,7 +3721,10 @@ package enum AutonomousPhrasePreparer {
             liveMasterHeadroomContinuationState: outgoingLiveMasterState,
             liveTargetStartSample: selected.vector.liveAppliedFutureSample,
             correctionRenderCount: transaction.correctionCount,
-            usedHomeTimbreCorrection: selected.attempt.forceHomeUpperTimbre
+            usedHomeTimbreCorrection: selected.attempt.forceHomeUpperTimbre,
+            preparationReplayFingerprint: preparationReplayFingerprint,
+            preparedValidationRequired: preparedValidationRequired,
+            preparedValidation: preparedValidation
         ))
     }
 }

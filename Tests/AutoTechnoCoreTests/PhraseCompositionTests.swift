@@ -5,6 +5,47 @@ import Testing
 
 @Suite("Unified phrase composition")
 struct PhraseCompositionTests {
+    @Test("Granular source cells preserve exact unsigned quantiles and endpoints")
+    func granularSourceCellsHaveExactEndpoints() {
+        for maximum in [0, 1, 2, 7, 5_512, 5_999, Int.max] {
+            let cells = UInt64(maximum) + 1
+            #expect(AudioSliceRenderer.grainSourceStart(
+                entropy: 0, maximumSourceStart: maximum) == 0)
+            #expect(AudioSliceRenderer.grainSourceStart(
+                entropy: .max, maximumSourceStart: maximum) == maximum)
+            #expect(AudioSliceRenderer.grainSourceStart(
+                entropy: 0x8000_0000_0000_0000,
+                maximumSourceStart: maximum) == Int(cells / 2))
+            #expect(AudioSliceRenderer.grainSourceStart(
+                entropy: 0x4000_0000_0000_0000,
+                maximumSourceStart: maximum) == Int(cells / 4))
+        }
+        #expect(AudioSliceRenderer.grainSourceStart(
+            entropy: .max, maximumSourceStart: -1) == 0)
+    }
+
+    @Test("Granular source position remains in one normalized cell across rates")
+    func granularSourceCellsPreserveRateGeometry() {
+        let availableCells = [3_183, 3_465]
+        let entropies: [UInt64] = [
+            0, 1, 0x1234_5678_9ABC_DEF0, 0x4000_0000_0000_0000,
+            0x8000_0000_0000_0000, 0xCAFE_BABE_0123_4567, .max
+        ]
+        for entropy in entropies {
+            let normalized = availableCells.map { cells in
+                Double(AudioSliceRenderer.grainSourceStart(
+                    entropy: entropy, maximumSourceStart: cells - 1)) /
+                    Double(cells)
+            }
+            // Each integer result differs from the same continuous quantile
+            // by less than its own one-cell width. This bound is algebraic.
+            let quantizationBound = availableCells.reduce(0.0) {
+                $0 + 1 / Double($1)
+            }
+            #expect(abs(normalized[0] - normalized[1]) < quantizationBound)
+        }
+    }
+
     @Test("Band-limited slicing rejects rate-induced alias energy")
     func bandLimitedSliceRejectsAliasEnergy() {
         let sampleRate = 48_000.0
@@ -783,6 +824,83 @@ struct PhraseCompositionTests {
         Issue.record("Expected a naturally reachable rhythmic pad phrase")
     }
 
+    @Test("Ordinary minimalization reduces composition and retains harmonic continuation")
+    func ordinaryMinimalizationOwnsComposition() throws {
+        let scene = fixtureScene()
+        let dna = SceneDNA(scene: scene)
+        let events = [
+            EnsembleResolvedEvent(voice: .motif, step: 2,
+                                  intensity: 0.72, relocated: false),
+            EnsembleResolvedEvent(voice: .atmosphere, step: 0,
+                                  intensity: 0.54, relocated: false),
+        ]
+        func resolved(_ bar: Int, _ gesture: ArrangementGesture) -> ResolvedPerformanceBar {
+            fixtureResolved(bar: bar, section: .groove, character: .melodicGlow,
+                roles: [.foundation, .motif, .atmosphere], events: events,
+                arrangementGesture: gesture, interlockChapter: .breath)
+        }
+        for kind in [AutonomousPhraseKind.lock, .contrast] {
+            let input = [resolved(0, .steady), resolved(1, .minimalize), resolved(2, .steady)]
+            let actual = PhraseCompositionResolver.resolve(
+                scene: scene, dna: dna, kind: kind, resolvedBars: input)
+            let reference = PhraseCompositionResolver.resolve(
+                scene: scene, dna: dna, kind: kind, resolvedBars: [input[0], input[2]])
+            #expect(actual.count == input.count && actual.map(\.bar) == [0, 1, 2])
+            #expect(actual[1] == .neutral(bar: 1))
+            #expect(actual[0].padVoicing != nil && actual[0].arpeggiator != nil)
+            #expect(actual[2] == reference[1])
+            #expect(actual[0] == reference[0])
+            #expect(actual == PhraseCompositionResolver.resolve(
+                scene: scene, dna: dna, kind: kind, resolvedBars: input))
+            for gesture in [ArrangementGesture.steady, .gearShift, .turnaround] {
+                let composition = PhraseCompositionResolver.resolve(scene: scene,
+                    dna: dna, kind: kind, resolvedBars: [resolved(2, gesture)])
+                #expect(composition.first?.padVoicing != nil)
+                #expect(composition.first?.arpeggiator != nil)
+            }
+        }
+        // Structural phrase composition keeps its preexisting semantics.
+        // At bar2 the major-break pad rhythm is neutral for both gestures.
+        for kind in [AutonomousPhraseKind.majorBreak, .energyRelease, .identityReturn] {
+            let minimal = PhraseCompositionResolver.resolve(scene: scene, dna: dna,
+                kind: kind, resolvedBars: [resolved(2, .minimalize)])
+            let steady = PhraseCompositionResolver.resolve(scene: scene, dna: dna,
+                kind: kind, resolvedBars: [resolved(2, .steady)])
+            #expect(minimal == steady)
+            if kind != .identityReturn { #expect(minimal.first?.padVoicing != nil) }
+        }
+
+        // A whole reduced retry must carry the incoming realized harmony.
+        // This is a fresh score-only state fixture, not accepted prior PCM.
+        let director = AutonomousSessionDirector(rootSeed: 283)
+        var state = director.initialState()
+        var checkedWholePhrase = false
+        for _ in 0..<128 {
+            let natural = director.plan(from: state)
+            if natural.kind == .lock && !state.memory.harmonicContinuation.voices.isEmpty {
+                let incoming = state
+                let retry = director.plan(from: state, qualityRecoveryContext:
+                    AutonomousQualityRecoveryContext(
+                        ordinal: AutonomousSessionDirector.maximumQualityRetryOrdinal,
+                        intent: AutonomousQualityRecoveryIntent(symbolicDensity: .decrease)))
+                #expect(state == incoming)
+                #expect(retry.kind == .lock)
+                #expect(retry.resolvedBars.allSatisfy { $0.arrangementGesture == .minimalize })
+                #expect(retry.phraseComposition.allSatisfy { $0 == .neutral(bar: $0.bar) })
+                #expect(retry.endingHarmonicContinuation == incoming.memory.harmonicContinuation)
+                var advanced = incoming
+                advanced.advancePlanning(using: retry)
+                #expect(advanced.memory.totalBars == incoming.memory.totalBars + retry.barCount)
+                #expect(advanced.memory.harmonicContinuation == incoming.memory.harmonicContinuation)
+                #expect(advanced.phraseIndex == incoming.phraseIndex + 1)
+                checkedWholePhrase = true
+                break
+            }
+            state.advancePlanning(using: natural)
+        }
+        #expect(checkedWholePhrase)
+    }
+
     @Test("Arpeggiation and pad harmony share modal pitches and minimal motion")
     func harmonicComposition() throws {
         let scene = fixtureScene()
@@ -800,7 +918,8 @@ struct PhraseCompositionTests {
                                           intensity: 0.54, relocated: false),
                     EnsembleResolvedEvent(voice: .percussion, step: 1,
                                           intensity: 0.64, relocated: false),
-                ]
+                ],
+                arrangementGesture: .steady
             )
         }
         let composition = PhraseCompositionResolver.resolve(
@@ -1448,8 +1567,9 @@ struct PhraseCompositionTests {
         ) == nil)
     }
 
-    @Test("Earlier accepted kick recipes return as cut and granular memory")
-    func crossPhraseResampledMemoryPlanningAndRendering() throws {
+    @Test("Earlier accepted kick recipes return as cut and granular memory",
+          arguments: [8_000.0, 44_100.0, 48_000.0])
+    func crossPhraseResampledMemoryPlanningAndRendering(sampleRate: Double) throws {
         let scene = fixtureScene()
         let dna = SceneDNA(scene: scene)
         let sourceBar = fixtureResolved(
@@ -1504,43 +1624,85 @@ struct PhraseCompositionTests {
         #expect(granular.composition.audioSlice?.resampledMemorySource == source)
         #expect(cut.resolved.ensemble.events.allSatisfy { $0.voice != .kick })
 
-        let synth = SynthPerformancePlan(
-            scene: scene,
-            dna: dna,
-            kind: .majorBreak,
-            resolvedBars: [granular.resolved],
-            compositionBars: [granular.composition]
-        )
-        let synthBar = try #require(synth.bars.first)
-        func render() -> RenderedBar {
-            var renderState = RenderState()
-            var workspace = RenderWorkspace()
-            return VoiceRenderer.renderBar(
-                scene: scene,
-                sampleRate: 8_000,
-                state: &renderState,
-                dna: dna,
-                resolved: granular.resolved,
-                synthWorld: synth.world,
-                synthPerformance: synthBar,
-                workspace: &workspace,
-                layer: .full,
-                phraseKind: .majorBreak
+        for recall in [cut, granular] {
+            let synth = SynthPerformancePlan(
+                scene: scene, dna: dna, kind: .majorBreak,
+                resolvedBars: [recall.resolved], compositionBars: [recall.composition]
             )
+            let synthBar = try #require(synth.bars.first)
+            @inline(never)
+            func render(probe: PreparationWorkingStorageProbe? = nil) -> (RenderedBar, String) {
+                var renderState = RenderState()
+                var workspace = RenderWorkspace()
+                let observation = probe.map {
+                    PreparationStorageObservation(probe: $0, prefix: "memory", bar: recall.resolved.performance.bar)
+                }
+                let bar = VoiceRenderer.renderBar(
+                    scene: scene, sampleRate: sampleRate, state: &renderState,
+                    dna: dna, resolved: recall.resolved, synthWorld: synth.world,
+                    synthPerformance: synthBar, workspace: &workspace, layer: .full,
+                    phraseKind: .majorBreak, storageObservation: observation
+                )
+                return (bar, AutonomousCandidateFingerprint.renderState(renderState))
+            }
+            let first = render()
+            let replay = render()
+            let probe = PreparationWorkingStorageProbe()
+            let observed = render(probe: probe)
+            #expect(first.0 == replay.0 && first.1 == replay.1)
+            #expect(first.0 == observed.0 && first.1 == observed.1)
+            let evidence = first.0.audioSliceRenderEvidence
+            #expect(evidence.active && evidence.finite)
+            #expect(synthBar.composition.audioSlice?.resampledMemorySource == source)
+            #expect(source.fingerprint != 0)
+            #expect(evidence.sourceSampleHash.count == 16 && evidence.outputSampleHash.count == 16)
+            #expect(evidence.sourceSampleHash != evidence.outputSampleHash)
+            if recall.composition.audioSlice?.texture == .granularMemory { #expect(evidence.grainCount > 0) }
+            #expect(first.0.kickMix.renderedKickEventCount == 0)
+            let activeEchoOrDust = (first.0.percussionEchoTextureRenderEvidence.active ? 1 : 0) +
+                (first.0.spatialDustRenderEvidence.active ? 1 : 0)
+            #expect(probe.valid && probe.phaseObservationCounts == [
+                "memory.helper-working": 4 + activeEchoOrDust, "memory.product": 1
+            ])
+            let helper = try #require(probe.snapshots.first { $0.phase == "memory.helper-working" })
+            let input = try #require(helper.ownerRecords.first { $0.owner == "slice.source" })
+            let window = try #require(helper.ownerRecords.first { $0.owner == "slice.sourceWindow" })
+            let destination = try #require(helper.ownerRecords.first { $0.owner == "slice.output" })
+            #expect(input.elementCount == first.0.samples.count && input.elementStride == 4)
+            #expect(window.elementCount == evidence.sourceFrameCount && window.elementStride == 4)
+            #expect(window.elementCapacity >= window.elementCount && window.aliasOf == nil)
+            #expect(input.aliasOf == nil && destination.aliasOf == nil)
+            #expect(destination.elementCount == first.0.samples.count)
+            #expect(!helper.ownerRecords.contains { $0.owner == "voice.audioSliceStem" })
+            #expect(helper.ownerRecords.contains { $0.owner == "voice.checked-out.output" })
+            #expect(helper.ownerRecords.contains { $0.owner.hasPrefix("voice.state.") })
+            let exhausted = PreparationWorkingStorageProbe()
+            for index in 0..<PreparationWorkingStorageProbe.maximumPhaseCount {
+                exhausted.observe(phase: "occupied-\(index)", bar: 0) { _ in }
+            }
+            let exhaustedResult = render(probe: exhausted)
+            #expect(!exhausted.valid && exhausted.observationCount == PreparationWorkingStorageProbe.maximumPhaseCount)
+            #expect(first.0 == exhaustedResult.0 && first.1 == exhaustedResult.1)
+            let control: [String: Any] = [
+                "schema": "autotechno-recalled-memory-storage-control.v1",
+                "sampleRate": sampleRate,
+                "texture": recall.composition.audioSlice?.texture == .cut ? "cut" : "granular-memory",
+                "regeneratedSourceFrames": input.elementCount,
+                "sourceWindowFrames": evidence.sourceFrameCount,
+                "sourceSampleHash": evidence.sourceSampleHash,
+                "outputSampleHash": evidence.outputSampleHash,
+                "observations": probe.observationCount,
+                "phaseObservationCounts": probe.phaseObservationCounts,
+                "activeEchoOrDust": activeEchoOrDust,
+                "snapshots": try JSONSerialization.jsonObject(with: JSONEncoder().encode(probe.snapshots)),
+                "exactWholeRenderedBarAndTypedState": true,
+                "exhaustedObserverPreservesWholeBarAndState": true,
+                "completeWorkingSetQualification": false,
+                "instrumentationMayExtendObservedLifetimes": true
+            ]
+            let data = try JSONSerialization.data(withJSONObject: control, options: [.sortedKeys])
+            print("AUTOTECHNO_RECALLED_MEMORY_STORAGE_CONTROL " + String(decoding: data, as: UTF8.self))
         }
-        let first = render()
-        let replay = render()
-        let evidence = first.audioSliceRenderEvidence
-        #expect(first.samples == replay.samples)
-        #expect(evidence == replay.audioSliceRenderEvidence)
-        #expect(evidence.active && evidence.finite)
-        #expect(synthBar.composition.audioSlice?.resampledMemorySource == source)
-        #expect(source.fingerprint != 0)
-        #expect(evidence.sourceSampleHash.count == 16)
-        #expect(evidence.outputSampleHash.count == 16)
-        #expect(evidence.sourceSampleHash != evidence.outputSampleHash)
-        #expect(evidence.grainCount > 0)
-        #expect(first.kickMix.renderedKickEventCount == 0)
     }
 
     @Test("Session memory changes only when a phrase plan is committed")

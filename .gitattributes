@@ -3,3 +3,7 @@ docs/AUTHORITY_SURFACE_INVENTORY.md whitespace=-blank-at-eol
 docs/BASELINE_CORPUS.md whitespace=-blank-at-eol
 docs/COMPONENT_LICENSE_ASSET_MANIFEST.md whitespace=-blank-at-eol
 docs/PARAMETER_REACHABILITY_AUDIT.md whitespace=-blank-at-eol
+
+# Sealed calibration JSON is byte-bound. Windows checkout conversion must not
+# add CR bytes before the single packaging LF accepted by the strict decoder.
+Sources/AutoTechnoDSP/Resources/*.json text eol=lf

@@ -17,13 +17,13 @@ jobs:
   swift-gates:
     name: swift-gates (${{ matrix.bank }})
     runs-on: macos-15
-    # The unchanged serial bank exceeded the hosted six-hour job ceiling.
-    # Each bank retains serial test execution and builds its own exact source.
+    # The original combined core/evidence bank exceeded the six-hour ceiling.
+    # Partition execution only; each job keeps serial tests and the same limit.
     timeout-minutes: 360
     strategy:
       fail-fast: false
       matrix:
-        bank: [foundation, primary, modal, remaining]
+        bank: [foundation, primary, modal, remaining, core-evidence, core-foundation, core-phrase-bass, core-phrase-companion]
     steps:
       - name: Check out source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -52,6 +52,66 @@ jobs:
           test_baseline_render_manifest
           test_stem_capture_manifest
           test_authority_surface_inventory
+
+      # Swift Testing retains substantial render fixtures for the lifetime of
+      # one test process on the hosted macOS runner. Keep execution serial and
+      # restart the process at every prepared-product boundary so the complete
+      # upper bank stays bounded without skipping or weakening any case. The
+      # first group compiles the test binary; every later group reuses it.
+      # The original remaining job reached the six-hour cap inside the unchanged
+      # core/evidence group. Give that group its own build-only bootstrap so it
+      # retains its full selector/skip scope without duplicating upper slices.
+      - name: Build core and evidence test modules
+        if: startsWith(matrix.bank, 'core-')
+        run: >-
+          swift build --build-tests
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+
+      - name: Build tests and run upper score slices
+        if: ${{ !startsWith(matrix.bank, 'core-') }}
+        run: >-
+          swift test --no-parallel
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter '(localizedVerticalSlicePCM|upperTimingCascadeVerticalSlice|scoreVelocityVerticalSlice)'
+
+      - name: Run App live-feedback coordination
+        if: matrix.bank == 'foundation'
+        timeout-minutes: 20
+        run: |
+          # Capture the ordinary failure first; replay only an actual signal
+          # crash. Debugger success never replaces the original gate result.
+          set +e
+          swift test --no-parallel --skip-build \
+            --build-path "$RUNNER_TEMP/auto-techno-tests" \
+            --filter '(LiveFeedbackCoordinatorTests|TechnoEngineLiveFeedbackTests|AutonomousSessionIdentityTests|LiveRenderInspectorTests|PhrasePreparationReplayIdentityTests/detachedInstalledPreparationPreservesRequest)' \
+            2>&1 | tee "$RUNNER_TEMP/auto-techno-app-feedback-gate.log"
+          test_status=${PIPESTATUS[0]}
+          set -e
+          if [ "$test_status" -ne 0 ] && grep -q 'Exited with unexpected signal code' "$RUNNER_TEMP/auto-techno-app-feedback-gate.log"; then
+            test_binary_directory="$(swift build \
+              --build-path "$RUNNER_TEMP/auto-techno-tests" --show-bin-path)"
+            test_binary="$test_binary_directory/AutoTechnoPackageTests.xctest/Contents/MacOS/AutoTechnoPackageTests"
+            swift_compiler="$(xcrun --find swift)"
+            test_helper="$(dirname "$swift_compiler")/../libexec/swift/pm/swiftpm-testing-helper"
+            sdk_platform="$(xcrun --sdk macosx --show-sdk-platform-path)"
+            diagnostic_framework_path="${DYLD_FRAMEWORK_PATH:+$DYLD_FRAMEWORK_PATH:}$sdk_platform/Developer/Library/Frameworks:$sdk_platform/Developer/Library/PrivateFrameworks"
+            diagnostic_library_path="${DYLD_LIBRARY_PATH:+$DYLD_LIBRARY_PATH:}$sdk_platform/Developer/usr/lib"
+            # The original crash followed the session-start test. Replay that
+            # complete suite to retain its asynchronous preparation context.
+            xcrun lldb --batch --no-lldbinit \
+              -o "settings set target.env-vars 'DYLD_FRAMEWORK_PATH=$diagnostic_framework_path' 'DYLD_LIBRARY_PATH=$diagnostic_library_path'" \
+              -o 'process launch --shell-expand-args false' \
+              -k 'thread backtrace --count 40 all' \
+              -k 'register read sp fp pc x9' \
+              -k 'memory region $sp' \
+              -k 'disassemble --frame --count 12' \
+              -k 'frame select 1' \
+              -k 'disassemble --frame --count 24' \
+              -- "$test_helper" --test-bundle-path "$test_binary" \
+              --no-parallel --filter AutonomousSessionIdentityTests \
+              "$test_binary" --testing-library swift-testing || true
+          fi
+          exit "$test_status"
 
       - name: Verify Release producer witness and actual initialization
         if: matrix.bank == 'foundation'
@@ -87,16 +147,47 @@ jobs:
           print("Actual Release image and complete public initialization ledger verified; no capture currency or promotion.")
           PY
 
-      # Swift Testing retains substantial render fixtures for the lifetime of
-      # one test process on the hosted macOS runner. Keep execution serial and
-      # restart the process at every prepared-product boundary so the complete
-      # upper bank stays bounded without skipping or weakening any case. The
-      # first group compiles the test binary; every later group reuses it.
-      - name: Build tests and run upper score slices
+      - name: Verify native score-authorized foundation release
+        if: matrix.bank == 'remaining'
         run: >-
-          swift test --no-parallel
+          swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(localizedVerticalSlicePCM|upperTimingCascadeVerticalSlice|scoreVelocityVerticalSlice)'
+          --filter 'FoundationRhythmicRelationTests/algorithmicFoundationReleaseFaults'
+
+      - name: Verify native foundation bass score faults
+        if: matrix.bank == 'remaining'
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter 'FoundationRhythmicRelationTests/algorithmicFoundationBassFaults'
+
+      - name: Verify native rumble and modal companion faults
+        if: matrix.bank == 'remaining'
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter 'FoundationRhythmicRelationTests/algorithmicFoundationCompanionFaults'
+
+      - name: Verify closed-form collision source energy
+        if: matrix.bank == 'remaining'
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter PCMKickFoundationCollisionAnalyzerTests.algorithmicSourceEnergy
+
+      - name: Verify closed-form masking filter responses
+        if: matrix.bank == 'remaining'
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter SpectrumMaskingAnalyzerTests.algorithmicFilterResponse
+
+      - name: Run kick source dynamics tests
+        if: matrix.bank == 'remaining'
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter KickSourceDynamicsTests
 
       # Capture the known crashing fixtures before the long qualification bank.
       # Preflight also exited signal 10 after the percussion repairs passed.
@@ -170,6 +261,47 @@ jobs:
               "$test_binary" --testing-library swift-testing || true
           fi
           exit "$test_status"
+
+      - name: Verify shared desktop recovery and replay controls
+        if: matrix.bank == 'foundation'
+        timeout-minutes: 20
+        run: |
+          test_status=0
+          swift test --no-parallel --skip-build \
+            --build-path "$RUNNER_TEMP/auto-techno-tests" \
+            --filter '(AutonomousQualityRecoveryHostPolicyTests|AutonomousPhrasePreparationDiagnosticsTests.(retryContinuationRejectsInvalidAdaptationInputs|recoveryWavesYieldWithoutBecomingTerminal|recoveryContextIsDeterministicAndDirectional)|PhrasePreparationReplayIdentityTests.(canonicalSessionFingerprint|deterministicReplayIdentity|restoredBoundaryReplay)|desktopHostsUseSharedPreparation)' || test_status=$?
+          if [ "$test_status" -ne 0 ]; then
+            test_binary_directory="$(swift build \
+              --build-path "$RUNNER_TEMP/auto-techno-tests" --show-bin-path)"
+            test_binary="$test_binary_directory/AutoTechnoPackageTests.xctest/Contents/MacOS/AutoTechnoPackageTests"
+            swift_compiler="$(xcrun --find swift)"
+            test_helper="$(dirname "$swift_compiler")/../libexec/swift/pm/swiftpm-testing-helper"
+            sdk_platform="$(xcrun --sdk macosx --show-sdk-platform-path)"
+            diagnostic_framework_path="${DYLD_FRAMEWORK_PATH:+$DYLD_FRAMEWORK_PATH:}$sdk_platform/Developer/Library/Frameworks:$sdk_platform/Developer/Library/PrivateFrameworks"
+            diagnostic_library_path="${DYLD_LIBRARY_PATH:+$DYLD_LIBRARY_PATH:}$sdk_platform/Developer/usr/lib"
+            # Replay only the repeatable crash point for diagnostics. Preserve
+            # the full gate's failure even when this focused replay succeeds.
+            xcrun lldb --batch --no-lldbinit \
+              -o "settings set target.env-vars 'DYLD_FRAMEWORK_PATH=$diagnostic_framework_path' 'DYLD_LIBRARY_PATH=$diagnostic_library_path'" \
+              -o 'process launch --shell-expand-args false' \
+              -k 'thread backtrace --count 40 all' \
+              -k 'register read sp fp pc x9' \
+              -k 'memory region $sp' \
+              -k 'disassemble --frame --count 12' \
+              -k 'frame select 1' \
+              -k 'disassemble --frame --count 24' \
+              -- "$test_helper" --test-bundle-path "$test_binary" \
+              --no-parallel --filter PhrasePreparationReplayIdentityTests.deterministicReplayIdentity \
+              "$test_binary" --testing-library swift-testing || true
+          fi
+          exit "$test_status"
+
+      - name: Verify borrowed upper analysis exact evidence
+        if: matrix.bank == 'foundation'
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter UpperTimbreBorrowedAnalysisTests
 
       - name: Verify semantic codebase map
         if: matrix.bank == 'foundation'
@@ -276,13 +408,6 @@ jobs:
             --build-path "$RUNNER_TEMP/auto-techno-tests" \
             --filter LiveMasterTrimFingerprintTests
 
-      - name: Run App live-feedback coordination
-        if: matrix.bank == 'foundation'
-        run: >-
-          swift test --no-parallel --skip-build
-          --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(LiveFeedbackCoordinatorTests|TechnoEngineLiveFeedbackTests|AutonomousSessionIdentityTests|LiveRenderInspectorTests)'
-
       - name: Run persistent continuous journey controls
         if: matrix.bank == 'foundation'
         run: >-
@@ -329,7 +454,7 @@ jobs:
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(harmonicTailPrimaryIdentityContract|primaryResourcesAreV14Only|bundledV14ArtifactsAreReady|primaryArtifacts|legacyPolicyJSONIsRejected|serializedLiveObservationProvenanceIsRejected|generateRepresentativeProfile|calibrationCacheRejectsSwappedOrUnboundedBanks|RepositorySurfaceTests)'
+          --filter '(longCycleWorldPrimaryIdentityContract|primaryResourcesAreV30FailClosed|bundledV30ArtifactsAreIneligible|pendingCurrentPairStaysUnavailable|primaryEvaluatorAndLiveControllerAreCanonical|preFloorEvidenceArtifactsAreIneligible|legacyPrimaryArtifactsAreIneligible|primaryArtifacts|legacyPolicyJSONIsRejected|serializedLiveObservationProvenanceIsRejected|generateRepresentativeProfile|calibrationCacheRejectsSwappedOrUnboundedBanks|RepositorySurfaceTests)'
 
       - name: Run primary calibration adversarial challenge
         if: matrix.bank == 'primary'
@@ -343,7 +468,7 @@ jobs:
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(modalMetricContract|noAggregateCompensation|directionalSafetyBounds|descriptiveLoudnessRange|rmsTrajectoryRateConsistency|primaryCandidatePolicy|liveMasterProvenanceHardGates|diverseCorpusIdentity|preparationEvaluatorAvailability|invalidCalibrationInputs|modalEvidencePrecedesPrimaryPolicy)'
+          --filter '(modalMetricContract|noAggregateCompensation|directionalSafetyBounds|descriptiveLoudnessRange|rmsTrajectoryRateConsistency|legacyConstructedPrimaryPolicyIsIneligible|liveMasterProvenanceHardGates|diverseCorpusIdentity|preparationEvaluatorAvailability|invalidCalibrationInputs|modalEvidencePrecedesPrimaryPolicy)'
 
       - name: Run disjoint primary holdout qualification
         if: matrix.bank == 'primary'
@@ -364,21 +489,35 @@ jobs:
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(primaryCandidatePolicy|preparationEvaluatorAvailability|closedHatEvidenceContract|failedAttemptIsRetainable)'
+          --filter '(preparationEvaluatorAvailability|closedHatEvidenceContract|failedAttemptIsRetainable)'
 
-      - name: Run 8 kHz primary unavailability gate
+      - name: Verify current primary native and unsupported-rate readiness
         if: matrix.bank == 'primary'
-        run: >-
-          swift test --no-parallel --skip-build
-          --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter unsupported8KRouteStaysUnavailable
-
-      - name: Run 12 kHz primary unavailability gate
-        if: matrix.bank == 'primary'
-        run: >-
-          swift test --no-parallel --skip-build
-          --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter unsupported12KRouteStaysUnavailable
+        run: |
+          set -euo pipefail
+          swift test --no-parallel --skip-build \
+            --build-path "$RUNNER_TEMP/auto-techno-tests" \
+            --filter 'PrimaryEvaluatorReadinessTests/installedPrimaryRetainsUnavailableLongHorizonHost' \
+            2>&1 | tee "$RUNNER_TEMP/auto-techno-primary-rate-readiness.log"
+          python3 - "$RUNNER_TEMP/auto-techno-primary-rate-readiness.log" <<'PYTHON'
+          import re
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, str(Path("scripts").resolve()))
+          import hosted_macos_verification as native
+          raw = Path(sys.argv[1]).read_text(encoding="utf-8")
+          identity = "AutoTechnoCoreTests.PrimaryEvaluatorReadinessTests/installedPrimaryRetainsUnavailableLongHorizonHost()"
+          result = native.summarize_log(raw, "swift-testing", 1, [identity])
+          native.require(re.findall(r"Test run with (\d+) tests? passed", raw) == ["1"], "one complete native readiness execution")
+          name = "Current qualified artifact seals determine host readiness"
+          for marker in [r'◇ Test "' + re.escape(name) + r'" started\.',
+                         r'✔ Test "' + re.escape(name) + r'" passed after [0-9.]+ seconds\.']:
+              native.require(len(re.findall(marker, raw)) == 1, "one actual named primary readiness control")
+          native.require(result["executedTests"] == 1 and result["explicitlySkippedTests"] == 0,
+                         "primary native/8k/12k readiness matrix must actually execute")
+          native.require("✘" not in raw, "failed native readiness output")
+          print("One actual named current-artifact native/8k/12k readiness matrix verified; no full-platform or runtime qualification.")
+          PYTHON
 
       - name: Run closed-hat evidence tampering
         if: matrix.bank == 'primary'
@@ -464,39 +603,24 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter rendererContinuationReplay
 
+      # Assertion failures already have exact Swift Testing diagnostics. Do not
+      # rerun this multi-hour bank under LLDB: a replay can hide the original
+      # failure behind the hosted six-hour timeout. The final crash-summary
+      # step still collects any native crash report without rerendering.
       - name: Run modal-percussion core suites
         if: matrix.bank == 'modal'
-        run: |
-          test_status=0
-          swift test --no-parallel --skip-build \
-            --build-path "$RUNNER_TEMP/auto-techno-tests" \
-            --filter '(ModalPercussionDSPTests|ModalPercussionPlanningTests|ModalSuccessorReportJoinTests)' || test_status=$?
-          if [ "$test_status" -ne 0 ]; then
-            test_binary_directory="$(swift build \
-              --build-path "$RUNNER_TEMP/auto-techno-tests" --show-bin-path)"
-            test_binary="$test_binary_directory/AutoTechnoPackageTests.xctest/Contents/MacOS/AutoTechnoPackageTests"
-            swift_compiler="$(xcrun --find swift)"
-            test_helper="$(dirname "$swift_compiler")/../libexec/swift/pm/swiftpm-testing-helper"
-            sdk_platform="$(xcrun --sdk macosx --show-sdk-platform-path)"
-            diagnostic_framework_path="${DYLD_FRAMEWORK_PATH:+$DYLD_FRAMEWORK_PATH:}$sdk_platform/Developer/Library/Frameworks:$sdk_platform/Developer/Library/PrivateFrameworks"
-            diagnostic_library_path="${DYLD_LIBRARY_PATH:+$DYLD_LIBRARY_PATH:}$sdk_platform/Developer/usr/lib"
-            # One replay for crash evidence only; retain the normal gate's
-            # failure and never load debugger initialization or dump variables.
-            # Pass the literal filter directly; shell expansion invokes argdumper.
-            xcrun lldb --batch --no-lldbinit \
-              -o "settings set target.env-vars 'DYLD_FRAMEWORK_PATH=$diagnostic_framework_path' 'DYLD_LIBRARY_PATH=$diagnostic_library_path'" \
-              -o 'process launch --shell-expand-args false' \
-              -k 'thread backtrace --count 40 all' \
-              -k 'register read sp fp pc x9' \
-              -k 'memory region $sp' \
-              -k 'disassemble --frame --count 12' \
-              -k 'frame select 1' \
-              -k 'disassemble --frame --count 24' \
-              -- "$test_helper" --test-bundle-path "$test_binary" \
-              --no-parallel --filter '(ModalPercussionDSPTests|ModalPercussionPlanningTests|ModalSuccessorReportJoinTests)' \
-              "$test_binary" --testing-library swift-testing || true
-          fi
-          exit "$test_status"
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter '(ModalPercussionDSPTests|ModalPercussionPlanningTests|ModalSuccessorReportJoinTests)'
+          --skip '(nativePrepared(Admission|SuccessorBinding)FaultMatrix|nativeRenderedModalVoiceBoundary)'
+
+      - name: Run native-rate prepared admission fault matrix
+        if: matrix.bank == 'modal'
+        run: >-
+          swift test -c release --no-parallel
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter '(nativePrepared(Admission|SuccessorBinding)FaultMatrix|nativeRenderedModalVoiceBoundary)'
 
       - name: Run measurement fixture and provenance controls
         if: matrix.bank == 'remaining'
@@ -554,13 +678,6 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter InstrumentPalettePreparedEvidenceTests.testPreparedAcidRelationEvidence
 
-      - name: Run kick source dynamics tests
-        if: matrix.bank == 'remaining'
-        run: >-
-          swift test --no-parallel --skip-build
-          --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter KickSourceDynamicsTests
-
       - name: Run prepared percussion-echo evidence
         if: matrix.bank == 'remaining'
         run: >-
@@ -568,12 +685,45 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter PercussionEchoTexturePreparedEvidenceTests.testPreparedProductEvidence
 
-      - name: Run core and evidence tests
+      - name: Run full-phrase foundation fault matrices
         if: matrix.bank == 'remaining'
+        run: >-
+          swift test -c release --no-parallel
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter '(FoundationRhythmicRelationTests/algorithmicFullPhrase((Absent|Monotone|Point|Pump|SubPulse)Bass|OutputFrame)Faults|SourceTerminalDeclickTests)'
+
+      - name: Run core and evidence tests
+        if: matrix.bank == 'core-evidence'
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(ClimaxHangTests|FoundationRhythmicRelationTests|GeneratedDSPTopologyTests|FeedbackDelayNetworkTests|IdentityReturnContinuationTests|KickSyntaxTests|PercussionEchoTextureTests|PhraseCompositionTests|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|TPTAntialiasedNonlinearCoreTests|fixedSessionIdentity|currentPlanningIsDeterministic)'
+          --skip 'FoundationRhythmicRelationTests/(algorithmicFoundation(Bass|Companion|Release)Faults|algorithmicFullPhrase((Absent|Monotone|Point|Pump|SubPulse)Bass|OutputFrame)Faults)|FoundationRhythmicRelationTests'
+          --filter '(ClimaxHangTests|GeneratedDSPTopologyTests|FeedbackDelayNetworkTests|IdentityReturnContinuationTests|KickSyntaxTests|PercussionEchoTextureTests|PhraseCompositionTests|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|TPTAntialiasedNonlinearCoreTests|fixedSessionIdentity|currentPlanningIsDeterministic)'
+
+      # Preserve the original core/evidence selector union and exclusions.
+      # The two complete legacy full-phrase matrices get independent six-hour
+      # jobs; ordinary foundation methods retain a separate serial process.
+      - name: Run core foundation tests
+        if: matrix.bank == 'core-foundation'
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --skip 'FoundationRhythmicRelationTests/(algorithmicFoundation(Bass|Companion|Release)Faults|algorithmicFullPhrase((Absent|Monotone|Point|Pump|SubPulse)Bass|OutputFrame)Faults|algorithmicFullPhrase(Bass|Companion)Faults)'
+          --filter FoundationRhythmicRelationTests
+
+      - name: Run core full-phrase bass matrix
+        if: matrix.bank == 'core-phrase-bass'
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter 'FoundationRhythmicRelationTests/algorithmicFullPhraseBassFaults'
+
+      - name: Run core full-phrase companion matrices
+        if: matrix.bank == 'core-phrase-companion'
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter 'FoundationRhythmicRelationTests/algorithmicFullPhraseCompanionFaults'
 
       - name: Run upper-percussion tail DSP tests
         if: matrix.bank == 'remaining'

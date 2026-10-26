@@ -12,6 +12,9 @@ struct LongHorizonSemanticTrajectoryTests {
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         let firstData = try encoder.encode(first)
         let replayData = try encoder.encode(replay)
+        if ProcessInfo.processInfo.environment["AUTOTECHNO_TRACE_PLANNING_BASELINE"] == "1" {
+            print("LONG_HORIZON_SEMANTIC_REPORT_JSON " + String(decoding: firstData, as: UTF8.self))
+        }
         let decoded = try JSONDecoder().decode(
             LongHorizonSemanticTrajectoryReport.self,
             from: firstData
@@ -39,8 +42,21 @@ struct LongHorizonSemanticTrajectoryTests {
         #expect(first.qualificationReason == "no-calibrated-long-horizon-policy")
         #expect(first.observedBarCount == 7_802)
         #expect(first.observedPhraseCount == 725)
-        #expect(first.trajectoryFingerprint == "ba7251e9e8c9e144")
-        #expect(stableFingerprint(firstData) == "f94ec7d2d4931c75")
+        #expect(first.trajectoryFingerprint == "ed436c478a3e9b37")
+        #expect(first.engineVersion == "autotechno-canonical-engine.v58")
+        #if os(macOS)
+        // Observed engine58 macOS score-only JSON; independent FNV64 agrees.
+        // Substituting only engineVersion v54 reproduces the historical pin.
+        // Scalar, storage, replay and unavailable-qualification checks stay exact.
+        // This macOS JSON identity does not supply a Windows native observation.
+        #expect(stableFingerprint(firstData) == "0db247d16854d624")
+        #else
+        // Independently observed engine58 Windows JSON in native run40327441698.
+        // Its exact bytes and independent FNV64 agree; changing only engineVersion
+        // to v54 reproduces the historical Windows pin 4877a49bedd86628.
+        // This platform observation does not qualify macOS or a live study.
+        #expect(stableFingerprint(firstData) == "0db247d16854d624")
+        #endif
         #expect(first.phraseKindPhraseCounts.allSatisfy { $0.count > 0 })
         #expect(first.performanceCharacterPhraseCounts.allSatisfy { $0.count > 0 })
         #expect(first.tensionDwell.highBarCount == 629)

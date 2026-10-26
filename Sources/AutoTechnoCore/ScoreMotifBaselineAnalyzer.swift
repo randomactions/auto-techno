@@ -401,7 +401,8 @@ package enum ScoreMotifBaselineAnalyzer {
             kind: plan.kind,
             resolvedBars: plan.resolvedBars,
             materialWorld: plan.materialWorld,
-            compositionBars: plan.phraseComposition
+            compositionBars: plan.phraseComposition,
+            qualityRecoveryContext: plan.qualityRecoveryContext
         )
         guard synth.bars.count == plan.barCount else { return nil }
         return ScoreMotifPhraseInput(

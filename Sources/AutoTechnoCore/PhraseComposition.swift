@@ -329,6 +329,13 @@ package enum PhraseCompositionResolver {
         var previousVoices = harmonicContinuation.voices
         return resolvedBars.map { resolved in
             let bar = resolved.performance.bar
+            // Ordinary minimalization owns the optional composition layer too.
+            // Keep the existing ensemble and its identity/foundation intact;
+            // retain the last accepted harmony through this reduced bar.
+            if (kind == .lock || kind == .contrast) &&
+                resolved.arrangementGesture == .minimalize {
+                return .neutral(bar: bar)
+            }
             let pad = padVoicing(
                 scene: scene,
                 dna: dna,

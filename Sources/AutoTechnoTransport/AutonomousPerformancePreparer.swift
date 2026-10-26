@@ -317,7 +317,12 @@ package struct PhrasePreparationReplayIdentity:
     }
 }
 
-package struct PhrasePreparationRequest: Sendable {
+/// One immutable input snapshot shared by detached preparation, pending chain
+/// frames and admitted transport products. Keeping the typed continuation here
+/// avoids embedding and copying its large value representation into each worker
+/// frame. No mutable state, callback work or alternative preparation path is
+/// introduced; semantic identity is still the exact replay fingerprint.
+package final class PhrasePreparationRequest: Sendable {
     package let key: PhrasePreparationKey
     package let sourceState: AutonomousSessionState
     package let incomingLongHorizonState: LongHorizonFutureAdaptationState?
@@ -361,19 +366,180 @@ package struct PreparedPerformancePhrase: Sendable {
     package let outgoingLongHorizonState: LongHorizonFutureAdaptationState?
     package let longHorizonDecision: LongHorizonTrajectoryDecision?
     package let waveforms: [[Float]]
+    /// Flat ordered continuation ownership. Child entries contain no nested
+    /// list; their exact DSP proof still retains the measured immediate child.
+    package let retainedContinuations: [PreparedPerformancePhrase]
+    package let preparationChainResourceBudget: AutonomousPreparationChainResourceBudget?
+
+    package var requiresQualifiedContinuation: Bool {
+        prepared.preparedValidation?.requiresQualifiedSuccessor == true
+    }
+
+    /// Bounded immutable ownership checks on the transport owner, never the
+    /// render callback. Physical demand cannot fall back to a replacement or
+    /// repeat; every link must retain the exact child measured by its proof.
+    package var continuationOwnershipIsValid: Bool {
+        let nodes = [self] + retainedContinuations
+        for (index, node) in nodes.enumerated() {
+            guard node.prepared.commitEligible else { return false }
+            if node.prepared.preparedValidationRequired {
+                guard node.request.replayIdentity.isComplete,
+                    node.prepared.preparationReplayFingerprint == node.request.replayIdentity.fingerprint
+                else { return false }
+            }
+            if index > 0 && !node.retainedContinuations.isEmpty { return false }
+            if node.requiresQualifiedContinuation {
+                guard index + 1 < nodes.count else { return false }
+                let child = nodes[index + 1]
+                let advanced = node.request.sourceState.advance(using: node.prepared.plan,
+                    quality: node.prepared.qualityContinuationState,
+                    liveMasterHeadroom: node.prepared.liveMasterHeadroomContinuationState,
+                    longHorizonDecision: node.longHorizonDecision)
+                guard node.prepared.preparedValidation?.qualifiedSuccessor === child.prepared,
+                    child.request.sourceState == advanced,
+                    child.request.incomingLongHorizonState?.fingerprint == node.outgoingLongHorizonState?.fingerprint,
+                    child.prepared.preparationReplayFingerprint == child.request.replayIdentity.fingerprint,
+                    child.request.key.sampleRate == node.request.key.sampleRate,
+                    child.request.key.channelCount == node.request.key.channelCount,
+                    child.request.key.routeGeneration == node.request.key.routeGeneration,
+                    !child.request.key.routeRecovery,
+                    child.request.key.qualityRecoveryContext == .neutral,
+                    child.request.pendingLiveMasterBinding == nil,
+                    child.request.key.pendingLiveMasterProposalFingerprint == nil,
+                    child.request.key.liveTargetStartSample == nil
+                else { return false }
+            } else if index != nodes.count - 1 { return false }
+        }
+        return true
+    }
+
+    /// Nil means the naturally complete leaf may use ordinary preparation and
+    /// coherent-repeat policy. Failure means stop/rebuild; it never authorizes
+    /// repeating an incomplete source or substituting an independently rendered
+    /// child. Remaining children keep flat ownership after each promotion.
+    package func continuationAtBoundary(
+        sessionState: AutonomousSessionState,
+        longHorizonState: LongHorizonFutureAdaptationState?,
+        sampleRate: Double, channelCount: Int, routeGeneration: Int,
+        actualStartSample: Int64
+    ) -> Result<Self?, PhrasePreparationFailure> {
+        func refuse(_ code: String) -> Result<Self?, PhrasePreparationFailure> {
+            .failure(.init(stage: "continuation-boundary", code: code))
+        }
+        guard continuationOwnershipIsValid else { return refuse("ownership-mismatch") }
+        guard sampleRate == request.key.sampleRate, channelCount == request.key.channelCount,
+            routeGeneration == request.key.routeGeneration, actualStartSample >= 0
+        else { return refuse("route-mismatch") }
+        guard requiresQualifiedContinuation else { return .success(nil) }
+        guard let child = retainedContinuations.first,
+            child.request.sourceState == sessionState,
+            child.request.incomingLongHorizonState?.fingerprint == longHorizonState?.fingerprint
+        else { return refuse("state-mismatch") }
+        if let sourceStart = prepared.liveTargetStartSample {
+            guard let frames = Int64(exactly: prepared.audioPreflight.quality.analyzedFrameCount), frames > 0
+            else { return refuse("sample-boundary") }
+            let end = sourceStart.addingReportingOverflow(frames)
+            guard !end.overflow, end.partialValue == actualStartSample
+            else { return refuse("sample-boundary") }
+        }
+        return .success(Self(request: child.request, prepared: child.prepared,
+            outgoingLongHorizonState: child.outgoingLongHorizonState,
+            longHorizonDecision: child.longHorizonDecision, waveforms: child.waveforms,
+            retainedContinuations: Array(retainedContinuations.dropFirst()),
+            preparationChainResourceBudget: preparationChainResourceBudget))
+    }
 
     package init(
         request: PhrasePreparationRequest,
         prepared: PreparedAutonomousPhrase,
         outgoingLongHorizonState: LongHorizonFutureAdaptationState?,
         longHorizonDecision: LongHorizonTrajectoryDecision?,
-        waveforms: [[Float]]
+        waveforms: [[Float]],
+        retainedContinuations: [PreparedPerformancePhrase] = [],
+        preparationChainResourceBudget: AutonomousPreparationChainResourceBudget? = nil
     ) {
         self.request = request
         self.prepared = prepared
         self.outgoingLongHorizonState = outgoingLongHorizonState
         self.longHorizonDecision = longHorizonDecision
         self.waveforms = waveforms
+        self.retainedContinuations = retainedContinuations
+        self.preparationChainResourceBudget = preparationChainResourceBudget
+    }
+}
+
+/// A detached tentative successor request. Its source PCM stays private and
+/// neither this seal nor its request authorizes scheduling or state advancement.
+/// Only the canonical builder below can bind a preview to exact caller inputs.
+package struct ProspectivePerformanceContinuation: Sendable {
+    package let request: PhrasePreparationRequest
+    package let sourceIdentityFingerprint: String
+    /// Known only when the source has an app-owned live target boundary. Nil
+    /// does not claim an absolute player position for an ordinary source.
+    package let knownSuccessorStartSample: Int64?
+    private let sourceRequestFingerprint: String
+    private let incomingLongHorizonState: LongHorizonFutureAdaptationState?
+    private let projection: LongHorizonProspectiveAdaptation?
+
+    fileprivate init(request: PhrasePreparationRequest,
+        source: AutonomousCandidatePreparedPreview, sourceRequest: PhrasePreparationRequest,
+        knownSuccessorStartSample: Int64?,
+        incomingLongHorizonState: LongHorizonFutureAdaptationState?,
+        projection: LongHorizonProspectiveAdaptation?) {
+        self.request = request
+        sourceIdentityFingerprint = source.sourceIdentityFingerprint
+        sourceRequestFingerprint = sourceRequest.replayIdentity.fingerprint
+        self.knownSuccessorStartSample = knownSuccessorStartSample
+        self.incomingLongHorizonState = incomingLongHorizonState
+        self.projection = projection
+    }
+
+    /// Releases only request ownership after exact source admission. The
+    /// successor still needs its own qualified product and transport handoff.
+    package func admittedRequest(for prepared: PreparedAutonomousPhrase,
+        sourceRequest: PhrasePreparationRequest,
+        longHorizonPolicy: LongHorizonProfessionalPolicy?) -> PhrasePreparationRequest? {
+        guard prepared.commitEligible,
+            ProfessionalQualityModalSuccessorEvidence.identity(prepared) == sourceIdentityFingerprint,
+            sourceRequest.replayIdentity.isComplete,
+            sourceRequest.replayIdentity.matches(sourceRequest),
+            sourceRequest.replayIdentity.fingerprint == sourceRequestFingerprint,
+            request.replayIdentity.isComplete, request.replayIdentity.matches(request)
+        else { return nil }
+        if let projection {
+            guard let incomingLongHorizonState, let longHorizonPolicy,
+                let update = projection.admittedUpdate(for: prepared,
+                    incomingState: sourceRequest.sourceState,
+                    incomingAdaptation: incomingLongHorizonState, policy: longHorizonPolicy),
+                update.state.fingerprint == request.incomingLongHorizonState?.fingerprint
+            else { return nil }
+        } else if incomingLongHorizonState != nil ||
+                    sourceRequest.incomingLongHorizonState != nil || longHorizonPolicy != nil {
+            return nil
+        }
+        return request
+    }
+}
+
+/// An actual rejected descendant can invalidate a tentative root without
+/// publishing either product. Only its bounded decision and identities survive
+/// so the root's existing serial recovery can propose a different whole chain.
+package struct SuccessorCandidateRejection: Equatable, Sendable {
+    package let rootRequestFingerprint: String
+    package let rejectedRequestFingerprint: String
+    package let rejectedPhraseIndex: Int
+    package let candidateFingerprint: String
+    package let overdueDebtCount: Int
+    package let decision: QualityDecision
+
+    fileprivate init(root: PhrasePreparationRequest, rejected: PhrasePreparationRequest,
+        prepared: PreparedAutonomousPhrase) {
+        rootRequestFingerprint = root.replayIdentity.fingerprint
+        rejectedRequestFingerprint = rejected.replayIdentity.fingerprint
+        rejectedPhraseIndex = rejected.key.phraseIndex
+        candidateFingerprint = prepared.selectedCandidateEvidence.fingerprint
+        overdueDebtCount = prepared.plan.interest.overdueDebtCount
+        decision = prepared.qualityDecision
     }
 }
 
@@ -382,14 +548,52 @@ package struct PhrasePreparationFailure: Error, Equatable, Sendable {
     package let stage: String
     package let code: String
     package let details: [String]
+    private let successorRejection: SuccessorCandidateRejection?
 
     package init(stage: String, code: String, details: [String] = []) {
+        self.init(stage: stage, code: code, details: details, successorRejection: nil)
+    }
+
+    private init(stage: String, code: String, details: [String],
+        successorRejection: SuccessorCandidateRejection?) {
         self.stage = stage
         self.code = code
+        self.successorRejection = successorRejection
         var seen: Set<String> = []
         self.details = details.filter { seen.insert($0).inserted }
             .prefix(24)
             .map { $0 }
+    }
+
+    /// Diagnostic strings never authorize recovery. The shared reducer alone
+    /// creates this receipt from the actual rejected child; consumers must
+    /// match the entire original root request before using its Core decision.
+    package func recoveryRejection(for request: PhrasePreparationRequest) -> SuccessorCandidateRejection? {
+        guard stage == "successor-chain", code == "successor-rejected",
+            !request.key.routeRecovery, request.replayIdentity.isComplete,
+            request.replayIdentity.matches(request), let successorRejection,
+            successorRejection.rootRequestFingerprint == request.replayIdentity.fingerprint,
+            successorRejection.rejectedPhraseIndex > request.key.phraseIndex,
+            successorRejection.decision.isRetryableCandidateRejection else { return nil }
+        return successorRejection
+    }
+
+    fileprivate static func rejectedSuccessor(root: PhrasePreparationRequest,
+        rejected: PhrasePreparationRequest, prepared: PreparedAutonomousPhrase) -> Self {
+        let bound = !root.key.routeRecovery && !rejected.key.routeRecovery &&
+            root.replayIdentity.isComplete && root.replayIdentity.matches(root) &&
+            rejected.replayIdentity.isComplete && rejected.replayIdentity.matches(rejected) &&
+            rejected.key.sessionSeed == root.key.sessionSeed &&
+            rejected.key.sampleRate == root.key.sampleRate &&
+            rejected.key.channelCount == root.key.channelCount &&
+            rejected.key.routeGeneration == root.key.routeGeneration &&
+            rejected.key.phraseIndex > root.key.phraseIndex &&
+            prepared.preparationReplayFingerprint == rejected.replayIdentity.fingerprint &&
+            !prepared.commitEligible && prepared.qualityDecision.isRetryableCandidateRejection
+        return Self(stage: "successor-chain", code: "successor-rejected",
+            details: ["phrase=\(rejected.key.phraseIndex)"] + prepared.qualityDiagnosticDetails,
+            successorRejection: bound ? SuccessorCandidateRejection(root: root,
+                rejected: rejected, prepared: prepared) : nil)
     }
 }
 
@@ -408,24 +612,138 @@ package enum PerformancePreparationOutcome: Sendable {
     }
 }
 
+/// Immutable production artifact pair. Both hosts load it once off the callback;
+/// neither policy becomes available when its companion or exact binding fails.
+/// Explicit offline primary-only preparation remains the existing test contract.
+package struct AutonomousPerformanceArtifactSet: Sendable {
+    package let primary: ProfessionalQualityPrimaryArtifacts
+    package let longHorizon: LongHorizonProfessionalPolicyArtifacts
+
+    package init(
+        primary: ProfessionalQualityPrimaryArtifacts,
+        longHorizon: LongHorizonProfessionalPolicyArtifacts
+    ) throws {
+        guard longHorizon.profile.engineVersion == primary.profile.engineVersion,
+            longHorizon.profile.primaryPolicyVersion == primary.evaluator.policyVersion,
+            longHorizon.profile.sampleRates == primary.profile.sampleRates
+        else { throw LongHorizonProfessionalPolicyError.profileMismatch }
+        self.primary = primary
+        self.longHorizon = longHorizon
+    }
+
+    package static func load() throws -> Self {
+        let primary = try ProfessionalQualityPrimaryArtifacts.load()
+        let longHorizon = try LongHorizonProfessionalPolicyArtifacts.load()
+        return try Self(primary: primary, longHorizon: longHorizon)
+    }
+}
+
 /// The single platform-neutral preparation path. It never executes on an audio
 /// callback: it plans, renders immutable future audio, applies the installed
 /// deterministic quality policy, and derives cheap read-only waveform
 /// envelopes.
 package enum AutonomousPerformancePreparer {
+    /// Derives the only canonical future request from actual private source
+    /// facts. The caller must bound successor work separately before rendering.
+    package static func prospectiveContinuation(
+        for preview: AutonomousCandidatePreparedPreview,
+        request: PhrasePreparationRequest,
+        director: AutonomousSessionDirector,
+        longHorizonPolicy: LongHorizonProfessionalPolicy?,
+        cancellationRequested: @Sendable () -> Bool
+    ) -> Result<ProspectivePerformanceContinuation, PhrasePreparationFailure> {
+        func fail(_ code: String) -> Result<ProspectivePerformanceContinuation, PhrasePreparationFailure> {
+            .failure(PhrasePreparationFailure(stage: "successor-context", code: code))
+        }
+        guard !cancellationRequested() else { return fail("cancelled") }
+        guard preview.hasProspectiveAcceptanceBinding,
+            request.replayIdentity.isComplete, request.replayIdentity.matches(request),
+            preview.preparationReplayFingerprint == request.replayIdentity.fingerprint,
+            director.rootSeed == request.sourceState.rootSeed,
+            request.incomingRenderState.liveMasterHeadroomState == request.sourceState.liveMasterHeadroom
+        else { return fail("request-mismatch") }
+        let expectedPlan = director.plan(from: request.sourceState,
+            qualityRecoveryContext: request.key.routeRecovery ? .neutral : request.key.qualityRecoveryContext)
+        let route = preview.selectedCandidateEvidence.routeContinuation
+        let previousGraphFingerprint = request.previousGraph.map(AutonomousCandidateFingerprint.graph) ?? "none"
+        guard preview.plan == expectedPlan,
+            route.sampleRate == request.key.sampleRate,
+            route.channelCount == request.key.channelCount,
+            route.routeGeneration == request.key.routeGeneration,
+            route.routeRecovery == request.key.routeRecovery,
+            preview.liveTargetStartSample == request.key.liveTargetStartSample,
+            preview.selectedCandidateEvidence.liveProposalFingerprint == request.key.pendingLiveMasterProposalFingerprint,
+            let expectedInput = AutonomousCandidateContinuationFingerprint.make(
+                renderState: request.incomingRenderState, generatedDSPState: request.incomingGraphState,
+                qualityState: request.sourceState.quality,
+                topologyRevision: request.sourceState.memory.topologyRevision,
+                previousGraphFingerprint: previousGraphFingerprint,
+                routeRecovery: request.key.routeRecovery,
+                cancellationRequested: cancellationRequested),
+            route.incomingContinuationFingerprint == expectedInput.combined
+        else { return fail(cancellationRequested() ? "cancelled" : "source-mismatch") }
+        guard !cancellationRequested() else { return fail("cancelled") }
+        let incomingLongHorizon: LongHorizonFutureAdaptationState?
+        let projection: LongHorizonProspectiveAdaptation?
+        if let longHorizonPolicy {
+            guard longHorizonPolicy.profile.primaryPolicyVersion == preview.transaction.policyVersion,
+                let incoming = request.incomingLongHorizonState ?? LongHorizonFutureAdaptationState(
+                    startingState: request.sourceState, policy: longHorizonPolicy),
+                let projected = incoming.projecting(preview: preview,
+                    incomingState: request.sourceState, policy: longHorizonPolicy)
+            else { return fail("long-horizon-mismatch") }
+            incomingLongHorizon = incoming; projection = projected
+        } else {
+            guard request.incomingLongHorizonState == nil else { return fail("long-horizon-unavailable") }
+            incomingLongHorizon = nil; projection = nil
+        }
+        let knownStart: Int64?
+        if let start = preview.liveTargetStartSample {
+            let frames = preview.audioPreflight.quality.analyzedFrameCount
+            guard frames > 0, let frameCount = Int64(exactly: frames) else { return fail("sample-boundary") }
+            let end = start.addingReportingOverflow(frameCount)
+            guard !end.overflow, end.partialValue > start else { return fail("sample-boundary") }
+            knownStart = end.partialValue
+        } else { knownStart = nil }
+        let next = request.sourceState.advance(using: preview.plan,
+            quality: preview.prospectiveQualityState, liveMasterHeadroom: preview.prospectiveLiveMasterState,
+            longHorizonDecision: projection?.decision)
+        let key = PhrasePreparationKey(sessionSeed: next.rootSeed, phraseIndex: next.phraseIndex,
+            sampleRate: request.key.sampleRate, channelCount: request.key.channelCount,
+            routeRecovery: false, qualityRevision: next.quality.revision,
+            qualityPolicyVersion: next.quality.policyVersion,
+            qualityControllerFingerprint: next.quality.observedControllerStateFingerprint ?? next.quality.acceptedControllerStateFingerprint,
+            routeGeneration: request.key.routeGeneration,
+            incomingLiveMasterRevision: next.liveMasterHeadroom.revision,
+            incomingLiveMasterStateFingerprint: next.liveMasterHeadroom.fingerprint,
+            pendingLiveMasterProposalFingerprint: nil, liveEarliestEligibleFutureSample: nil,
+            liveTargetStartSample: nil)
+        let successor = PhrasePreparationRequest(key: key, sourceState: next,
+            incomingLongHorizonState: projection?.projectedState,
+            incomingRenderState: preview.endingRenderState, incomingGraphState: preview.endingGraphState,
+            previousGraph: preview.graph, pendingLiveMasterBinding: nil)
+        guard successor.replayIdentity.isComplete, successor.replayIdentity.matches(successor),
+            !cancellationRequested() else { return fail(cancellationRequested() ? "cancelled" : "successor-unavailable") }
+        return .success(ProspectivePerformanceContinuation(request: successor, source: preview,
+            sourceRequest: request, knownSuccessorStartSample: knownStart,
+            incomingLongHorizonState: incomingLongHorizon, projection: projection))
+    }
+
     package static func prepare(
         request: PhrasePreparationRequest,
         director: AutonomousSessionDirector,
         artifacts: ProfessionalQualityPrimaryArtifacts?,
         longHorizonArtifacts: LongHorizonProfessionalPolicyArtifacts?,
-        diagnosticRoleStemCapture: Bool = false
+        diagnosticRoleStemCapture: Bool = false,
+        diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession? = nil
     ) -> PreparedPerformancePhrase? {
         prepareDiagnosing(
             request: request,
             director: director,
             artifacts: artifacts,
             longHorizonArtifacts: longHorizonArtifacts,
-            diagnosticRoleStemCapture: diagnosticRoleStemCapture
+            diagnosticRoleStemCapture: diagnosticRoleStemCapture,
+            diagnosticRoleStemSession: diagnosticRoleStemSession
         ).preparedPhrase
     }
 
@@ -434,116 +752,354 @@ package enum AutonomousPerformancePreparer {
         director: AutonomousSessionDirector,
         artifacts: ProfessionalQualityPrimaryArtifacts?,
         longHorizonArtifacts: LongHorizonProfessionalPolicyArtifacts?,
-        diagnosticRoleStemCapture: Bool = false
+        diagnosticRoleStemCapture: Bool = false,
+        diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession? = nil
     ) -> PerformancePreparationOutcome {
-        let requestFailures = [
-            request.replayIdentity.isComplete
-                ? nil : "request-replay-identity",
-            request.replayIdentity.matches(request)
-                ? nil : "request-replay-mismatch",
-            request.key.sessionSeed == request.sourceState.rootSeed
-                ? nil : "request-source-root",
-            director.rootSeed == request.sourceState.rootSeed
-                ? nil : "director-source-root",
-        ].compactMap { $0 }
-        guard requestFailures.isEmpty else {
-            return .failed(PhrasePreparationFailure(
-                stage: "request-validation",
-                code: "identity-mismatch",
-                details: requestFailures
-            ))
+        // Reject malformed initial requests before entering the large detached
+        // candidate frame. This preserves child validation and failure priority
+        // while avoiding a Debug worker-stack allocation for known stale work.
+        guard !Task.isCancelled else {
+            return .failed(PhrasePreparationFailure(stage: "successor-chain", code: "cancelled"))
         }
-        let plan = director.plan(
-            from: request.sourceState,
-            qualityRecoveryContext: request.key.routeRecovery
-                ? .neutral : request.key.qualityRecoveryContext
-        )
-        let evaluator = ProfessionalQualityPreparationEvaluator(
-            sampleRate: request.key.sampleRate,
-            artifacts: artifacts
-        )
-        let outcome = AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(
-            plan: plan,
-            sessionSeed: request.sourceState.rootSeed,
-            memory: request.sourceState.memory,
-            sampleRate: request.key.sampleRate,
-            incomingRenderState: request.incomingRenderState,
-            incomingGraphState: request.incomingGraphState,
-            previousGraph: request.previousGraph,
-            incomingQualityState: request.sourceState.quality,
-            routeRecovery: request.key.routeRecovery,
-            routeChannelCount: request.key.channelCount,
-            routeGeneration: request.key.routeGeneration,
-            pendingLiveMasterBinding: request.pendingLiveMasterBinding,
-            liveTargetStartSample: request.key.liveTargetStartSample,
-            diagnosticRoleStemCapture: diagnosticRoleStemCapture,
-            evaluator: evaluator,
-            cancellationRequested: { Task.isCancelled }
-        )
-        guard case let .prepared(prepared) = outcome else {
-            let failure = outcome.failure.map {
-                PhrasePreparationFailure(
-                    stage: $0.stage.rawValue,
-                    code: $0.code.rawValue,
-                    details: $0.details
-                )
-            } ?? PhrasePreparationFailure(
-                stage: "transaction",
-                code: "unknown-failure"
-            )
+        if let failure = requestValidationFailure(request, director: director) {
             return .failed(failure)
         }
-        guard !Task.isCancelled else {
-            return .failed(PhrasePreparationFailure(
-                stage: "transaction",
-                code: "cancelled"
-            ))
-        }
+        return prepareChainDiagnosing(request: request, director: director,
+            longHorizonPolicy: longHorizonArtifacts?.policy,
+            diagnosticRoleStemCapture: diagnosticRoleStemCapture,
+            diagnosticRoleStemSession: diagnosticRoleStemSession,
+            makeEvaluator: { request in
+                ProfessionalQualityPreparationEvaluator(sampleRate: request.key.sampleRate,
+                    artifacts: artifacts, preparationReplayFingerprint: request.replayIdentity.fingerprint)
+            }, cancellationRequested: { Task.isCancelled })
+    }
 
-        let incomingLongHorizon = request.incomingLongHorizonState ??
-            longHorizonArtifacts.flatMap {
-                LongHorizonFutureAdaptationState(
-                    startingState: request.sourceState,
-                    policy: $0.policy
-                )
+    private static func requestValidationFailure(
+        _ request: PhrasePreparationRequest, director: AutonomousSessionDirector
+    ) -> PhrasePreparationFailure? {
+        let failures = [
+            request.replayIdentity.isComplete ? nil : "request-replay-identity",
+            request.replayIdentity.matches(request) ? nil : "request-replay-mismatch",
+            request.key.sessionSeed == request.sourceState.rootSeed ? nil : "request-source-root",
+            director.rootSeed == request.sourceState.rootSeed ? nil : "director-source-root",
+        ].compactMap { $0 }
+        guard !failures.isEmpty else { return nil }
+        return PhrasePreparationFailure(stage: "request-validation", code: "identity-mismatch", details: failures)
+    }
+
+    private struct PendingFrame: Sendable {
+        let request: PhrasePreparationRequest
+        let pending: AutonomousPendingPreparedValidation
+        let continuation: ProspectivePerformanceContinuation?
+    }
+
+    /// Immutable diagnostic borrows are held behind one reference. Keeping
+    /// large request values in a nested registration closure would copy them
+    /// onto the already-deep cooperative render stack. This owner expires when
+    /// the synchronous prepare call returns; it is never stored by the probe.
+    private final class ChainStorageOwners {
+        let root: PhrasePreparationRequest
+        let active: PhrasePreparationRequest
+        let frames: [PendingFrame]
+        init(root: PhrasePreparationRequest, active: PhrasePreparationRequest, frames: [PendingFrame]) {
+            self.root = root; self.active = active; self.frames = frames
+        }
+        @inline(never) func register(_ inventory: NumericStorageInventory) {
+            registerRequestStorage(root, inventory: inventory, owner: "chain.root-request")
+            registerRequestStorage(active, inventory: inventory, owner: "chain.active-request")
+            for ordinal in frames.indices {
+                registerRequestStorage(frames[ordinal].request, inventory: inventory,
+                    owner: "chain.parent-request.\(ordinal)")
+                frames[ordinal].pending.preview.registerWorkingStorage(inventory: inventory,
+                    owner: "chain.parent.\(ordinal)")
             }
-        let longHorizonUpdate: LongHorizonFutureAdaptationUpdate? =
-          if let incomingLongHorizon, let longHorizonArtifacts {
-            incomingLongHorizon.observing(
-                prepared: prepared,
-                incomingState: request.sourceState,
-                policy: longHorizonArtifacts.policy
-            )
-        } else {
-            nil
+            withExtendedLifetime(self) {}
         }
+    }
 
+    /// Single-writer synchronous reservation, confined to one render call.
+    /// It is never used by callbacks or shared concurrently between tasks.
+    private final class RenderReservation: @unchecked Sendable {
+        let incoming: AutonomousPreparationChainResourceBudget
+        let sampleRate: Double
+        let bars: Int
+        let capture: Bool
+        let streamedCapture: Bool
+        private(set) var value: AutonomousPreparationChainResourceBudget
+        private(set) var refused = false
+        init(incoming: AutonomousPreparationChainResourceBudget, sampleRate: Double, bars: Int, capture: Bool, streamedCapture: Bool) {
+            self.incoming = incoming; self.sampleRate = sampleRate; self.bars = bars; self.capture = capture
+            self.streamedCapture = streamedCapture
+            value = incoming
+        }
+        func claim(_ count: Int) -> Bool {
+            guard let next = incoming.reserving(sampleRate: sampleRate, barCount: bars,
+                renderPassCount: count, diagnosticRoleStemCapture: capture,
+                streamedDiagnosticRoleStemCapture: streamedCapture) else { refused = true; return false }
+            value = next
+            return true
+        }
+    }
+
+    /// One iterative transaction used by the installed route evaluator and
+    /// deterministic evaluator controls. No child bypasses its own validation.
+    /// Neither pending source nor a partially reduced chain can escape.
+    package static func prepareChainDiagnosing<E: AutonomousCandidateEvaluating>(
+        request: PhrasePreparationRequest, director: AutonomousSessionDirector,
+        longHorizonPolicy: LongHorizonProfessionalPolicy?,
+        diagnosticRoleStemCapture: Bool = false,
+        diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession? = nil,
+        workingStorageProbe: PreparationWorkingStorageProbe? = nil,
+        makeEvaluator: @Sendable (PhrasePreparationRequest) -> E,
+        cancellationRequested: @escaping @Sendable () -> Bool
+    ) -> PerformancePreparationOutcome {
+        func fail(_ code: String, _ details: [String] = []) -> PerformancePreparationOutcome {
+            .failed(PhrasePreparationFailure(stage: "successor-chain", code: code, details: details))
+        }
+        if let session = diagnosticRoleStemSession {
+            guard !diagnosticRoleStemCapture, session.begin() else {
+                return fail("diagnostic-session-unavailable")
+            }
+        }
+        defer { if diagnosticRoleStemSession?.isSealed == false { diagnosticRoleStemSession?.discard() } }
+        var current = request
+        var frames: [PendingFrame] = []
+        var resource = AutonomousPreparationChainResourceBudget()
+        while true {
+            guard !cancellationRequested() else { return fail("cancelled") }
+            if let failure = requestValidationFailure(current, director: director) {
+                return .failed(failure)
+            }
+            let plan = director.plan(from: current.sourceState,
+                qualityRecoveryContext: current.key.routeRecovery ? .neutral : current.key.qualityRecoveryContext)
+            if frames.isEmpty {
+                // Reuse the renderer's canonical structural guard before the
+                // typed inventory can visit arbitrary continuation collections.
+                guard AutonomousPhrasePreparer.continuationInputsAreBounded(
+                    renderState: current.incomingRenderState,
+                    graphState: current.incomingGraphState,
+                    previousGraph: current.previousGraph,
+                    sessionSeed: current.sourceState.rootSeed,
+                    routeRecovery: current.key.routeRecovery,
+                    phraseIndex: plan.phraseIndex) else {
+                    return .failed(PhrasePreparationFailure(
+                        stage: AutonomousPhrasePreparationFailure.Stage.inputValidation.rawValue,
+                        code: AutonomousPhrasePreparationFailure.Code.invalidInput.rawValue,
+                        details: ["continuation-inputs"]))
+                }
+                guard let incomingBytes = AutonomousTypedFingerprint.retainedContinuationNumericByteCount(
+                    renderState: current.incomingRenderState,
+                    generatedDSPState: current.incomingGraphState,
+                    cancellationRequested: cancellationRequested) else {
+                    return fail(cancellationRequested() ? "cancelled" : "resource-bound",
+                        ["scope=incoming-continuation"])
+                }
+                guard let incomingReservation = AutonomousPreparationChainResourceBudget(
+                    incomingContinuationNumericByteCount: incomingBytes) else {
+                    return fail("resource-bound", ["scope=incoming-continuation",
+                        "incoming-bytes=\(incomingBytes)"])
+                }
+                resource = incomingReservation
+            }
+            let evaluator = makeEvaluator(current)
+            let capture = frames.isEmpty && diagnosticRoleStemCapture
+            if diagnosticRoleStemSession != nil && !evaluator.requiresPreparedValidation {
+                return fail("diagnostic-prepared-validation-required")
+            }
+            // Streaming borrows one bar synchronously. Retained legacy captures
+            // still reserve all phrase/pass payloads. Neither mode changes the
+            // ordinary chain, continuation, scratch or analysis reservation.
+            let reservation = RenderReservation(incoming: resource, sampleRate: current.key.sampleRate,
+                bars: plan.barCount, capture: capture, streamedCapture: diagnosticRoleStemSession != nil)
+            if evaluator.requiresPreparedValidation && !reservation.claim(1) {
+                return fail("resource-bound", ["sources=\(resource.sourceCount)",
+                    "reserved-bytes=\(resource.reservedPeakWorkingByteCount)", "next-bars=\(plan.barCount)"])
+            }
+            let outcome = {
+                let observation = workingStorageProbe.map { probe in
+                    let owners = ChainStorageOwners(root: request, active: current, frames: frames)
+                    return PreparationStorageObservation(probe: probe, prefix: "chain",
+                        bar: plan.startBar) { inventory in owners.register(inventory) }
+                }
+                observation?.observe("incoming") { _ in }
+                return AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(
+                plan: plan, sessionSeed: current.sourceState.rootSeed, memory: current.sourceState.memory,
+                sampleRate: current.key.sampleRate, incomingRenderState: current.incomingRenderState,
+                incomingGraphState: current.incomingGraphState, previousGraph: current.previousGraph,
+                incomingQualityState: current.sourceState.quality, routeRecovery: current.key.routeRecovery,
+                routeChannelCount: current.key.channelCount, routeGeneration: current.key.routeGeneration,
+                pendingLiveMasterBinding: current.pendingLiveMasterBinding,
+                liveTargetStartSample: current.key.liveTargetStartSample,
+                diagnosticRoleStemCapture: capture,
+                diagnosticRoleStemSession: diagnosticRoleStemSession,
+                workingStorageObservation: observation, evaluator: evaluator,
+                deferPreparedValidation: true,
+                renderPassReservation: { count in
+                    !evaluator.requiresPreparedValidation || reservation.claim(count)
+                }, cancellationRequested: cancellationRequested)
+            }()
+            guard !cancellationRequested() else { return fail("cancelled") }
+            guard !reservation.refused else { return fail("resource-bound") }
+            resource = reservation.value
+            guard case let .awaitingPreparedValidation(pending) = outcome else {
+                if let failure = outcome.failure {
+                    return .failed(PhrasePreparationFailure(stage: failure.stage.rawValue,
+                        code: failure.code.rawValue, details: failure.details))
+                }
+                guard let prepared = outcome.preparedPhrase, frames.isEmpty else {
+                    return fail("successor-unavailable")
+                }
+                return packagePerformance(request: current, prepared: prepared,
+                    longHorizonPolicy: longHorizonPolicy, cancellationRequested: cancellationRequested)
+            }
+            guard pending.preview.preparationReplayFingerprint == current.replayIdentity.fingerprint,
+                pending.preview.hasProspectiveAcceptanceBinding else { return fail("source-mismatch") }
+            let needsChild: Bool
+            do { needsChild = try pending.preview.requiresQualifiedSuccessorSupport() }
+            catch { return fail("physical-support-unavailable") }
+            guard let numericStorage = AutonomousTypedFingerprint.retainedContinuationNumericByteCount(
+                renderState: pending.preview.endingRenderState,
+                generatedDSPState: pending.preview.endingGraphState,
+                cancellationRequested: cancellationRequested),
+                let retained = resource.retainingCompletedSource(sampleRate: current.key.sampleRate,
+                    barCount: plan.barCount, requiresQualifiedSuccessor: needsChild,
+                    diagnosticRoleStemCapture: capture,
+                    retainedContinuationNumericByteCount: numericStorage)
+            else { return fail(cancellationRequested() ? "cancelled" : "resource-retention-mismatch") }
+            resource = retained
+            if needsChild {
+                let continuation: ProspectivePerformanceContinuation
+                switch prospectiveContinuation(for: pending.preview, request: current,
+                    director: director, longHorizonPolicy: longHorizonPolicy,
+                    cancellationRequested: cancellationRequested) {
+                case let .success(value): continuation = value
+                case let .failure(failure): return .failed(failure)
+                }
+                frames.append(PendingFrame(request: current, pending: pending, continuation: continuation))
+                current = continuation.request
+            } else {
+                frames.append(PendingFrame(request: current, pending: pending, continuation: nil))
+                break
+            }
+        }
+        workingStorageProbe?.observe(phase: "chain.suspended", bar: request.sourceState.memory.totalBars) { inventory in
+            registerRequestStorage(request, inventory: inventory, owner: "chain.root-request")
+            registerRequestStorage(current, inventory: inventory, owner: "chain.active-request")
+            for (ordinal, frame) in frames.enumerated() {
+                registerRequestStorage(frame.request, inventory: inventory, owner: "chain.frame-request.\(ordinal)")
+                frame.pending.preview.registerWorkingStorage(inventory: inventory, owner: "chain.frame.\(ordinal)")
+            }
+            withExtendedLifetime((request, current, frames)) {}
+        }
+        var successor: PreparedAutonomousPhrase?
+        var reduced: [PreparedPerformancePhrase] = []
+        reduced.reserveCapacity(frames.count)
+        for frame in frames.reversed() {
+            guard !cancellationRequested() else { return fail("cancelled") }
+            let proof = makeEvaluator(frame.request).preparedValidation(for: frame.pending.preview,
+                successor: successor)
+            let outcome = frame.pending.resolving(proof, cancellationRequested: cancellationRequested)
+            guard !cancellationRequested() else { return fail("cancelled") }
+            if let failure = outcome.failure {
+                return .failed(PhrasePreparationFailure(stage: failure.stage.rawValue,
+                    code: failure.code.rawValue, details: failure.details))
+            }
+            guard let prepared = outcome.preparedPhrase else { return fail("validation-unavailable") }
+            guard prepared.commitEligible else {
+                // Preserve the ordinary root rejection for existing recovery,
+                // including a source measured with a child. A rejected child
+                // cannot produce any root or retained transport continuation.
+                if frame.request.replayIdentity.fingerprint == request.replayIdentity.fingerprint {
+                    return packagePerformance(request: frame.request, prepared: prepared,
+                        longHorizonPolicy: longHorizonPolicy, cancellationRequested: cancellationRequested)
+                }
+                return .failed(.rejectedSuccessor(root: request,
+                    rejected: frame.request, prepared: prepared))
+            }
+            if let continuation = frame.continuation {
+                guard let childRequest = continuation.admittedRequest(for: prepared,
+                    sourceRequest: frame.request, longHorizonPolicy: longHorizonPolicy),
+                    let child = reduced.last,
+                    childRequest.replayIdentity.fingerprint == child.request.replayIdentity.fingerprint,
+                    prepared.preparedValidation?.qualifiedSuccessor === child.prepared
+                else { return fail("continuation-mismatch") }
+            }
+            let packed = packagePerformance(request: frame.request, prepared: prepared,
+                longHorizonPolicy: longHorizonPolicy, cancellationRequested: cancellationRequested)
+            guard let node = packed.preparedPhrase else { return packed }
+            reduced.append(node)
+            successor = prepared
+            workingStorageProbe?.observe(phase: "chain.reduced", bar: prepared.plan.startBar) { inventory in
+                registerRequestStorage(request, inventory: inventory, owner: "chain.root-request")
+                registerRequestStorage(current, inventory: inventory, owner: "chain.active-request")
+                for (ordinal, suspended) in frames.enumerated() {
+                    registerRequestStorage(suspended.request, inventory: inventory,
+                        owner: "chain.frame-request.\(ordinal)")
+                    suspended.pending.preview.registerWorkingStorage(inventory: inventory,
+                        owner: "chain.frame.\(ordinal)")
+                }
+                for (ordinal, node) in reduced.enumerated() {
+                    inventory.register(node.prepared, owner: "chain.reduced.\(ordinal)")
+                }
+                withExtendedLifetime((request, current, frames, reduced, prepared)) {}
+            }
+        }
+        guard let root = reduced.popLast(), !cancellationRequested() else { return fail("cancelled") }
+        if let session = diagnosticRoleStemSession {
+            guard session.seal(admittedSources: [root.prepared] + reduced.reversed().map(\.prepared),
+                cancellationRequested: cancellationRequested) else {
+                return fail("diagnostic-chain-capture-mismatch", [session.failureCode ?? "capture-unavailable"])
+            }
+        }
+        return .prepared(PreparedPerformancePhrase(request: root.request, prepared: root.prepared,
+            outgoingLongHorizonState: root.outgoingLongHorizonState,
+            longHorizonDecision: root.longHorizonDecision, waveforms: root.waveforms,
+            retainedContinuations: Array(reduced.reversed()), preparationChainResourceBudget: resource))
+    }
+
+    /// Only primitive numeric owners; Core score/metadata and analysis heaps
+    /// remain separate unqualified allocations. No musical or admission choice.
+    @inline(never) private static func registerRequestStorage(_ request: borrowing PhrasePreparationRequest,
+        inventory: NumericStorageInventory, owner: String) {
+        AutonomousTypedFingerprint.registerContinuationStorage(renderState: request.incomingRenderState,
+            generatedDSPState: request.incomingGraphState, inventory: inventory, owner: owner + ".incoming")
+        withExtendedLifetime(request) {}
+    }
+
+    private static func packagePerformance(
+        request: PhrasePreparationRequest, prepared: PreparedAutonomousPhrase,
+        longHorizonPolicy: LongHorizonProfessionalPolicy?,
+        cancellationRequested: @escaping @Sendable () -> Bool
+    ) -> PerformancePreparationOutcome {
+        let incomingLongHorizon = request.incomingLongHorizonState ?? longHorizonPolicy.flatMap {
+            LongHorizonFutureAdaptationState(startingState: request.sourceState, policy: $0)
+        }
+        let longHorizonUpdate: LongHorizonFutureAdaptationUpdate?
+        if let incomingLongHorizon, let longHorizonPolicy {
+            longHorizonUpdate = incomingLongHorizon.observing(prepared: prepared,
+                incomingState: request.sourceState, policy: longHorizonPolicy)
+            guard !prepared.commitEligible || longHorizonUpdate != nil else {
+                return .failed(PhrasePreparationFailure(stage: "successor-chain", code: "long-horizon-unavailable"))
+            }
+        } else {
+            guard request.incomingLongHorizonState == nil || !prepared.commitEligible else {
+                return .failed(PhrasePreparationFailure(stage: "successor-chain", code: "long-horizon-unavailable"))
+            }
+            longHorizonUpdate = nil
+        }
         var waveforms: [[Float]] = []
         waveforms.reserveCapacity(prepared.blocks.count)
         for block in prepared.blocks {
-            guard !Task.isCancelled else {
-                return .failed(PhrasePreparationFailure(
-                    stage: "presentation",
-                    code: "cancelled"
-                ))
+            guard !cancellationRequested() else {
+                return .failed(PhrasePreparationFailure(stage: "presentation", code: "cancelled"))
             }
-            waveforms.append(WaveformEnvelope.fixedDB(
-                left: block.left,
-                right: block.right
-            ))
+            waveforms.append(WaveformEnvelope.fixedDB(left: block.left, right: block.right))
         }
-        guard !Task.isCancelled else {
-            return .failed(PhrasePreparationFailure(
-                stage: "presentation",
-                code: "cancelled"
-            ))
+        guard !cancellationRequested() else {
+            return .failed(PhrasePreparationFailure(stage: "presentation", code: "cancelled"))
         }
-        return .prepared(PreparedPerformancePhrase(
-            request: request,
-            prepared: prepared,
+        return .prepared(PreparedPerformancePhrase(request: request, prepared: prepared,
             outgoingLongHorizonState: longHorizonUpdate?.state,
-            longHorizonDecision: longHorizonUpdate?.decision,
-            waveforms: waveforms
-        ))
+            longHorizonDecision: longHorizonUpdate?.decision, waveforms: waveforms))
     }
 }

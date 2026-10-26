@@ -130,7 +130,7 @@ struct LiveRenderInspectorTests {
         #expect(inspector.contains("private let visibleAssignmentLimit = 4"))
         #expect(app.contains(".defaultSize(width: 740, height: 520)"))
         #expect(app.contains("window.contentMinSize = NSSize(width: 680, height: 480)"))
-        #expect(engine.contains("let inspectorSnapshots = LiveRenderSnapshot.make("))
+        #expect(engine.contains("let snapshots = LiveRenderSnapshot.make(prepared: node.prepared,"))
         #expect(engine.contains("Task.detached(priority: .userInitiated)"))
         #expect(engine.contains("liveRenderSnapshot = visual.inspectorSnapshot"))
     }

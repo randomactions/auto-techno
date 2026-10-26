@@ -1,20 +1,23 @@
 import Foundation
 
-/// Immutable qualification artifacts for the last calibrated canonical
-/// engine. Loading validates their identities and then rejects them when their
-/// engine no longer matches `QualityQualificationContract.engineVersion`.
+/// Sole continuous qualification identity. The v36 resource bundle binds the
+/// complete fresh engine-v52 primary study; v35 remains historical.
+/// Explicit offline construction validates the same profile/adversarial/holdout
+/// contract without activating transport or importing calibration banks.
 package struct ProfessionalQualityPrimaryArtifacts: Sendable {
     package static let profileResource =
-        "professional-quality-primary-profile-v30"
+        "professional-quality-primary-profile-v36"
     package static let adversarialResource =
-        "professional-quality-primary-adversarial-suite-v30"
+        "professional-quality-primary-adversarial-suite-v36"
     package static let holdoutResource =
-        "professional-quality-primary-holdout-v30"
-    package static let expectedProfileFingerprint = "45d94400c298892e"
-    package static let expectedAdversarialSuiteFingerprint =
-        "a5070b55dd992655"
-    package static let expectedHoldoutQualificationFingerprint =
-        "7169407cd746c0b6"
+        "professional-quality-primary-holdout-v36"
+    // Fresh frozen 0b8d8a7: 40 development / 6 disjoint holdout trajectories,
+    // 644 original reports and actual successors at both native rates,
+    // 34 adversarial cases and 84 holdout observations, independently audited.
+    // Primary calibration supplies neither Long Horizon nor host admission.
+    package static let expectedProfileFingerprint: String? = "4c033f30f7b23a6b"
+    package static let expectedAdversarialSuiteFingerprint: String? = "c0323ada2c13f030"
+    package static let expectedHoldoutQualificationFingerprint: String? = "df692b018c1d1c62"
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport
@@ -48,7 +51,10 @@ package struct ProfessionalQualityPrimaryArtifacts: Sendable {
     }
 
     package static func load() throws -> Self {
-        guard let profileURL = PackagedResourceBundle.current.url(
+        guard let expectedProfileFingerprint,
+              let expectedAdversarialSuiteFingerprint,
+              let expectedHoldoutQualificationFingerprint,
+              let profileURL = PackagedResourceBundle.current.url(
             forResource: profileResource,
             withExtension: "json"
         ), let adversarialURL = PackagedResourceBundle.current.url(

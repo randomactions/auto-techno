@@ -82,6 +82,108 @@ struct ModalPercussionDSPTests {
         FileHandle.standardOutput.write(Data([0x0A]))
     }
 
+    @Test("AT-0039 canonical modal continuation detects lost voices and lost records")
+    func algorithmicModalContinuationFaults() throws {
+        // Frozen before output inspection. Material and seed are held out together;
+        // all materials still share one canonical constructor. Rates are paired,
+        // not independent samples. These are short source chunks, not full bars.
+        let families: [(ModalPercussionMaterial, UInt64, String)] = [
+            (.stretchedMembrane, 1, "development"),
+            (.hollowWood, 1, "development"),
+            (.bronzePlate, 6011, "held-out-material-and-seed"),
+            (.ceramicShell, 6011, "held-out-material-and-seed")
+        ]
+        var rows: [[String: Any]] = []
+        for (material, seed, split) in families {
+            for rate in [44_100.0, 48_000.0] {
+                let openingFrames = Int((rate * 0.050).rounded())
+                let closingFrames = Int((rate * 0.300).rounded())
+                let event = scheduled(articulation: articulation(
+                    damping: 0.82, seed: seed, material: material, step: 0), startFrame: 0)
+                for scenario in ["unaltered", "lost-continuation", "lost-voices", "absent-companion"] {
+                    let events = scenario == "absent-companion" ? [] : [event]
+                    var state = ModalPercussionVoiceState()
+                    var first = [Float](repeating: 0, count: openingFrames)
+                    let opening = ModalPercussionVoice.renderBar(into: &first, bar: 0,
+                        sampleRate: rate, events: events, state: &state)
+                    let originalState = state
+                    if scenario == "lost-continuation" {
+                        state = ModalPercussionVoiceState()
+                    } else if scenario == "lost-voices" {
+                        // Keep the actual measurement ledger while losing the
+                        // sounding state. Measurement continuity alone is weaker
+                        // than the existing complete voice-state binding.
+                        state.slot0 = ModalPercussionVoiceSlotState()
+                        state.slot1 = ModalPercussionVoiceSlotState()
+                        state.slot2 = ModalPercussionVoiceSlotState()
+                        state.slot3 = ModalPercussionVoiceSlotState()
+                    }
+                    let suppliedState = state
+                    var actual = [Float](repeating: 0, count: closingFrames)
+                    let closing = ModalPercussionVoice.renderBar(into: &actual, bar: 1,
+                        sampleRate: rate, events: [], state: &state)
+                    var referenceState = ModalPercussionVoiceState()
+                    var uninterrupted = [Float](repeating: 0, count: openingFrames + closingFrames)
+                    _ = ModalPercussionVoice.renderBar(into: &uninterrupted, bar: 0,
+                        sampleRate: rate, events: events, state: &referenceState)
+                    let reference = Array(uninterrupted.dropFirst(openingFrames))
+                    #expect(Array(uninterrupted.prefix(openingFrames)) == first)
+                    let fault = scenario == "lost-continuation" || scenario == "lost-voices"
+                    let bound = opening.outgoingStateFingerprint == closing.incomingStateFingerprint
+                    #expect(bound == !fault)
+                    #expect(actual.allSatisfy(\.isFinite) && reference.allSatisfy(\.isFinite))
+                    let squareError = zip(actual, reference).reduce(0.0) {
+                        let difference = Double($1.0) - Double($1.1)
+                        return $0 + difference * difference
+                    }
+                    let errorRMS = sqrt(squareError / Double(closingFrames))
+                    if fault {
+                        #expect(originalState != suppliedState)
+                        #expect(reference.contains { $0 != 0 })
+                        #expect(actual.allSatisfy { $0 == 0 })
+                        #expect(errorRMS > 0)
+                    } else {
+                        #expect(actual == reference && errorRMS == 0)
+                    }
+                    if scenario == "absent-companion" {
+                        #expect(first.allSatisfy { $0 == 0 } && actual.allSatisfy { $0 == 0 })
+                    }
+                    var ledger = try ModalPercussionObservationLedger(bars: [opening.continuousWindows])
+                    let ledgerAccepted: Bool
+                    do { try ledger.append(closing.continuousWindows); ledgerAccepted = true }
+                    catch { ledgerAccepted = false }
+                    #expect(ledgerAccepted == (scenario != "lost-continuation"))
+                    var replayState = suppliedState
+                    var replay = [Float](repeating: 0, count: closingFrames)
+                    let replayEvidence = ModalPercussionVoice.renderBar(into: &replay, bar: 1,
+                        sampleRate: rate, events: [], state: &replayState)
+                    #expect(replay == actual && replayEvidence == closing && replayState == state)
+                    rows.append(["material": material.rawValue, "seed": seed, "split": split,
+                        "sampleRate": Int(rate), "scenario": scenario,
+                        "openingFrames": openingFrames, "closingFrames": closingFrames,
+                        "expectedStateBinding": !fault, "observedStateBinding": bound,
+                        "measurementLedgerAccepted": ledgerAccepted,
+                        "expectedIncomingVoiceState": opening.outgoingStateFingerprint,
+                        "actualIncomingVoiceState": closing.incomingStateFingerprint,
+                        "actualSampleHash": ExactPCMFingerprint.mono(actual),
+                        "referenceSampleHash": ExactPCMFingerprint.mono(reference),
+                        "sampleErrorRMS": errorRMS, "replayExact": replay == actual])
+                }
+            }
+        }
+        #expect(rows.count == 32)
+        FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: [
+            "schema": "autotechno-modal-continuation-fault-component.v1",
+            "scope": "canonical-modal-source-chunk-continuation",
+            "distinctMaterialCases": families.count,
+            "qualification": "unavailable",
+            "unavailable": ["full-prepared-transaction", "rumble-truncation",
+                "shared-nonlinear-full-mix", "perceptual-quality", "population-error-intervals"],
+            "rows": rows
+        ], options: [.sortedKeys]))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
     @Test("Continuous observation preserves retired-slot identity and overlap source separation")
     func continuousModalRetirementAndOverlap() throws {
         for rate in [44_101.0, 96_000.0] {
