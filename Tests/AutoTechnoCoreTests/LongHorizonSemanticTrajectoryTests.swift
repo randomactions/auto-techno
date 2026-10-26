@@ -51,9 +51,11 @@ struct LongHorizonSemanticTrajectoryTests {
         // This macOS JSON identity does not supply a Windows native observation.
         #expect(stableFingerprint(firstData) == "0db247d16854d624")
         #else
-        // Independently observed engine54 Windows JSON in native run39163161893.
+        // Independently observed engine58 Windows JSON in native run40327441698.
+        // Its exact bytes and independent FNV64 agree; changing only engineVersion
+        // to v54 reproduces the historical Windows pin 4877a49bedd86628.
         // This platform observation does not qualify macOS or a live study.
-        #expect(stableFingerprint(firstData) == "4877a49bedd86628")
+        #expect(stableFingerprint(firstData) == "0db247d16854d624")
         #endif
         #expect(first.phraseKindPhraseCounts.allSatisfy { $0.count > 0 })
         #expect(first.performanceCharacterPhraseCounts.allSatisfy { $0.count > 0 })

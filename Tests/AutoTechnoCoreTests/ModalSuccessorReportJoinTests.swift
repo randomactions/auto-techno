@@ -1299,6 +1299,11 @@ struct ModalSuccessorReportJoinTests {
             "qualification": "diagnostic-not-activated"
         ], options: [.sortedKeys]))
         FileHandle.standardOutput.write(Data([0x0A]))
+        if ProcessInfo.processInfo.environment["AUTOTECHNO_TRACE_CONTINUOUS_BANK_BASELINE"] == "1" {
+            FileHandle.standardOutput.write(Data("CONTINUOUS_CALIBRATION_BANK_JSON ".utf8))
+            FileHandle.standardOutput.write(try bank.deterministicJSON())
+            FileHandle.standardOutput.write(Data([0x0A]))
+        }
         // The bank includes engine identity, exact PCM-derived reports and
         // continuation. Keep observations versioned instead of applying an old
         // engine's golden to newly rendered current evidence. Missing platform

@@ -186,6 +186,7 @@ jobs:
         env:
           PYTHONPATH: scripts
           PYTHONIOENCODING: utf-8
+          AUTOTECHNO_TRACE_CONTINUOUS_BANK_BASELINE: '1'
         run: |
           @'
           import json, os, subprocess

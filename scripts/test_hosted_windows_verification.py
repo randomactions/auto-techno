@@ -1,5 +1,10 @@
 """Synthetic verifier controls; fixture success is never native execution evidence."""
 import copy
+import contextlib
+import io
+import os
+import subprocess
+import textwrap
 import json
 from pathlib import Path
 import sys
@@ -205,6 +210,60 @@ class HostedWindowsVerificationTests(unittest.TestCase):
                 hosted.collect(50, SOURCE, output)
             self.assertFalse(output.exists())
 
+
+
+
+class WindowsCalibrationByteDiagnosticTests(unittest.TestCase):
+    def test_existing_component_keeps_exact_discovery_and_refuses_non_execution(self):
+        import hosted_macos_verification as native
+        workflow = (Path(__file__).resolve().parents[1] / '.github/workflows/windows-distribution.yml').read_text()
+        step = workflow.split('      - name: Verify native Windows calibration construction fixture\n', 1)[1].split('      - name: Discover selected test library\n', 1)[0]
+        self.assertIn("if: matrix.test-library == 'calibration-fixture'", step)
+        self.assertIn("AUTOTECHNO_TRACE_CONTINUOUS_BANK_BASELINE: '1'", step)
+        self.assertNotIn('continue-on-error', step)
+        body = step.split("          @'\n", 1)[1].split("          '@ | python -", 1)[0]
+        code = compile(textwrap.dedent(body), '<Windows-calibration-byte-component>', 'exec')
+        identity = 'AutoTechnoCoreTests.ModalSuccessorReportJoinTests/continuousCalibrationMembershipAndFitting()'
+        passed = b'Test run with 1 test passed\n'
+        cases = [(SOURCE, identity, 0, passed, True),
+                 (SOURCE, identity, 0, b'Test run with 0 tests passed\n', False),
+                 (SOURCE, identity, 1, b'original assertion failed\n', False),
+                 (SOURCE, identity, 0, '↷ Test "Fixture" skipped.\nTest run with 1 test passed\n'.encode(), False),
+                 (SOURCE, identity+'\n'+identity, 0, passed, False),
+                 ('b'*40, identity, 0, passed, False)]
+        for source, discovery, exit_code, raw, success in cases:
+            with self.subTest(source=source, discovery=discovery, exit_code=exit_code, raw=raw), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                log = root/'windows-calibration-fixture-native.log'
+                def run(command, cwd, output):
+                    self.assertEqual(cwd, root)
+                    self.assertIn('--no-parallel', command)
+                    self.assertIn('--disable-xctest', command)
+                    self.assertIn('--enable-swift-testing', command)
+                    self.assertRegex(identity, command[-1])
+                    self.assertNotRegex(identity.replace('Fitting()', 'FittingExtra()'), command[-1])
+                    self.assertEqual(os.environ['AUTOTECHNO_TRACE_CONTINUOUS_BANK_BASELINE'], '1')
+                    output.write_bytes(raw)
+                    return subprocess.CompletedProcess(command, exit_code)
+                with mock.patch.dict(os.environ, {'GITHUB_SHA':SOURCE, 'RUNNER_TEMP':directory,
+                          'AUTOTECHNO_TRACE_CONTINUOUS_BANK_BASELINE':'1'}), \
+                     mock.patch.object(Path, 'cwd', return_value=root), \
+                     mock.patch.object(subprocess, 'check_output', side_effect=[source, discovery.encode()]), \
+                     mock.patch.object(native, 'run_logged_native', side_effect=run) as execute, \
+                     contextlib.redirect_stdout(io.StringIO()) as console:
+                    if success:
+                        exec(code, {})
+                        result = json.loads(console.getvalue())
+                        self.assertEqual(result['executedTests'], 1)
+                        self.assertFalse(result['fullWindowsQualification'])
+                        self.assertFalse(result['item39Complete'])
+                    else:
+                        with self.assertRaises(ValueError):
+                            exec(code, {})
+                eligible = source == SOURCE and discovery == identity
+                self.assertEqual(execute.call_count, int(eligible))
+                if eligible:
+                    self.assertEqual(log.read_bytes(), raw)
 
 if __name__ == '__main__':
     unittest.main()
