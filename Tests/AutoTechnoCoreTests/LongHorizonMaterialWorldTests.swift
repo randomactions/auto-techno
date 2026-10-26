@@ -165,8 +165,7 @@ struct LongHorizonMaterialWorldTests {
                 }
             }
             for rate in [44_100.0, 48_000.0] {
-                var renderState = RenderState()
-                renderState.barIndex = source.startBar
+                let renderState = RenderState(barIndex: source.startBar)
                 for (index, candidate) in controls.enumerated() {
                     let result = AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(
                         plan: candidate, sessionSeed: state.rootSeed, memory: state.memory,
