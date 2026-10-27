@@ -3703,3 +3703,45 @@ generation, capacity, numeric and unavailable-evidence predicate. Matching actua
 compiled engine58 is mandatory. Unbound, older, future, multi-hop, arbitrary and
 weakened inputs refuse. This supplies no PCM study, installed-positive, runtime,
 primary, Long, wall-clock soak or item qualification.
+
+## Percussion source-clock candidate (engine59)
+
+The existing resolved ensemble remains the sole owner of percussion event order,
+onsets, role, intensity and articulation. In detached `VoiceRenderer`, the four
+shared-noise source routines now prepare their existing analytic/noise bodies on
+one authored48k clock through `PercussionReferenceSource`, then read that bounded
+source with the existing `BandLimitedInterpolator`. Source entropy is consumed
+on reference frames, including score-boundary clipping, so an earlier event no
+longer advances later events by a rate-dependent number of random draws. Filter
+recurrences retain their original authored48k coefficients and arithmetic.
+Native onset geometry, tail clearance, terminal de-clicking, measurement windows
+and all acceptance predicates remain unchanged. There is no second score, engine
+selector, policy parameter, effect graph, callback path or continuing source state.
+
+The reusable capability belongs to the existing detached percussion family. Its
+scratch buffer holds at most 9,120 Float samples and is reused by the canonical
+workspace, whose actual capacity is included in the existing storage inventory.
+This adds a numeric owner; the unchanged 128MiB admission and complete physical
+allocation/RSS/deadline gates must account for it. Invalid preparation refuses the
+source; it does not create a qualifying silent substitute. Existing evidence
+completeness and preparation admission still apply. Changes take effect only in
+newly prepared future PCM; previously selected immutable PCM and route recovery
+retain their existing identity.
+
+The deficit is a rate-dependent shared-noise cursor and per-frame source response,
+localized on independent development scores after the engine58 primary rejected.
+The source clock consolidates four native-grid loops under the same score and
+renderer. Independent reference/source-support controls and connected-renderer
+replay are required, followed by cold, complete native comparison and new study
+evidence. This candidate does not repair or relabel the original failed58 study,
+prove the chapter masking failure repaired, or establish Long/runtime/item
+qualification. All original study bytes, relationships, bounds and provenance
+remain authoritative. Engine59 identifies changed PCM; existing58 resources and
+seals cannot be reused as current59 qualification.
+
+The existing hosted upper-color stack scope additionally executes exactly five
+percussion source-clock controls against its same sealed native build, retaining
+the original upper-color control and every source/build guard. It rejects empty,
+partial, skipped, foreign or failed component execution. This supplies component
+evidence only; the complete study, memory, deadlines and final-source gates remain
+separate requirements.

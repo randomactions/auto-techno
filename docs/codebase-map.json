@@ -543,6 +543,10 @@
         {
           "symbol": "MixControlResponse",
           "path": "Sources/AutoTechnoDSP/MixControlResponse.swift"
+        },
+        {
+          "symbol": "PercussionReferenceSource",
+          "path": "Sources/AutoTechnoDSP/PercussionReferenceSource.swift"
         }
       ],
       "state": [
@@ -589,7 +593,8 @@
         "Engine55 replaces rate-sized grain-position modulus inside the same AudioSliceRenderer with the high64 bits of entropy times available cell count. Exact normalized quantiles preserve physical source choice across grids with one-cell quantization; zero-span fallback, seeds, plans, cut PCM, interpolation, fades,48grain/6trigger bounds, state, buffers and render/callback ownership remain unchanged. Grain-position identity advances to v2. PhraseCompositionTests owns exact endpoint/overflow and rate-geometry regressions; independent analytic before/after and canonical native component controls supply no whole-study, installed, resource or item authority.",
         "Engine56 shares physical-time/reference-Nyquist-gain DC coefficients across existing Resonant Mono, tonal-motion and spectral-texture recurrences. Two existing per-voice continuation fields remain unchanged; exact48kHz arithmetic, source/score/envelopes/effect topology/taps/state/buffers/render and callback ownership are preserved. VoiceDCBlockingTests owns independent physical decay, transfer, per-frequency rate errors, invalid input, exact reference recurrence and stream partition controls. Complete native voice A/B and fresh study/final-source gates remain separate from component diagnosis.",
         "Engine57 selects authored per-sample DC coefficients for existing indefinite-pitch spectral sources and physical-time coefficients for pitched spectral sources using the same resolved pitch identity, VoiceDCBlocking recurrence and two caller-owned continuation fields. Selection is immutable per note; no extra state, buffer, pass, profile, callback work or patch-specific exception. Existing authored noise fingerprints and physical-time/reference/continuation gates remain unchanged; no whole-study qualification is supplied.",
-        "Engine58 candidate centralizes immutable physical-time coefficients for seven existing VoiceRenderer bar-local final-mix recurrences, preserving exact authored48k literals and operation order. Mutable locals and caller-owned continuation remain unchanged; no new state, buffer, pass, callback work, selector or acceptance bound. MixControlResponseTests owns independent step/release and per-frequency transfer oracles. Upstream masking precedes this path and is not repaired by it. Native complete-state/reference PCM controls and all fresh complete-study/final-source gates remain separate and pending."
+        "Engine58 candidate centralizes immutable physical-time coefficients for seven existing VoiceRenderer bar-local final-mix recurrences, preserving exact authored48k literals and operation order. Mutable locals and caller-owned continuation remain unchanged; no new state, buffer, pass, callback work, selector or acceptance bound. MixControlResponseTests owns independent step/release and per-frequency transfer oracles. Upstream masking precedes this path and is not repaired by it. Native complete-state/reference PCM controls and all fresh complete-study/final-source gates remain separate and pending.",
+        "Engine59 candidate shares one bounded48k source clock across the existing hat, clap/snare/rim, open-hat and metallic shared-noise family. Existing event order and native onset/articulation/de-click evidence remain canonical. A detached workspace scratch buffer is registered by actual capacity and reused; source-clock entropy advances identically across native grids, with original48k arithmetic. PercussionReferenceSourceTests owns independent original-reference hat hashes, clipped entropy/support, storage reuse, invalid geometry and deterministic connected-renderer replay. The original58 primary remains rejected; no fresh primary, Long, resource, runtime or final-source qualification is supplied by this candidate. The existing hosted upper-color scope retains its original control and adds exactly five same-sealed-build percussion controls; partial, skipped, failed or foreign native execution refuses. This component transport adds no qualification authority."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AlienAnalogVoice.swift",
@@ -609,7 +614,8 @@
         "Sources/AutoTechnoDSP/DiagnosticRoleStemCapture.swift",
         "Sources/AutoTechnoDSP/PreparationNumericStorage.swift",
         "Sources/AutoTechnoDSP/VoiceDCBlocking.swift",
-        "Sources/AutoTechnoDSP/MixControlResponse.swift"
+        "Sources/AutoTechnoDSP/MixControlResponse.swift",
+        "Sources/AutoTechnoDSP/PercussionReferenceSource.swift"
       ],
       "testPaths": [
         "Tests/AutoTechnoCoreTests/DiagnosticRoleStemStreamingTests.swift",
@@ -626,7 +632,8 @@
         "Tests/AutoTechnoCoreTests/LongHorizonEnergyCoordinationTests.swift",
         "Tests/AutoTechnoCoreTests/PhraseCompositionTests.swift",
         "Tests/AutoTechnoCoreTests/VoiceDCBlockingTests.swift",
-        "Tests/AutoTechnoCoreTests/MixControlResponseTests.swift"
+        "Tests/AutoTechnoCoreTests/MixControlResponseTests.swift",
+        "Tests/AutoTechnoCoreTests/PercussionReferenceSourceTests.swift"
       ],
       "contracts": [
         "docs/SYNTH_TRACK_RENDERING_MATRIX.md",

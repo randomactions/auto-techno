@@ -1170,3 +1170,75 @@ class HostedCompileObjectDiagnosticTests(unittest.TestCase):
                 native.assert_not_called(); debug.assert_not_called()
 
 if __name__ == '__main__':unittest.main()
+
+
+class PercussionReferenceComponentTests(unittest.TestCase):
+    """Synthetic transport controls; these never execute Swift or qualify audio."""
+    methods = ['entropyAndReferenceIdentity', 'physicalEnvelope',
+               'clippedSupportAndStorage', 'invalidInputs', 'canonicalReferenceHats']
+
+    def body(self):
+        import textwrap
+        root = Path(__file__).resolve().parents[1]
+        workflow = (root / '.github/workflows/at0039-hosted-macos.yml').read_text()
+        step = workflow.split('      - name: Inspect original upper-color preparation stack failure\n', 1)[1].split('      - name: Verify original material-world boundary fixture\n', 1)[0]
+        self.assertTrue(step.startswith("        if: inputs.scope == 'upper-color-stack-readiness'\n"))
+        body = step.split("<<'PYPERCUSSION'\n", 1)[1].split('          PYPERCUSSION\n', 1)[0]
+        return compile(textwrap.dedent(body), '<percussion-reference-component>', 'exec')
+
+    def execute_fixture(self, exit_code, raw, foreign=False):
+        code = self.body()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); build = root/'at0039-map'
+            output = root/'at0039-map-build'; output.mkdir()
+            record = build_tests.fixture(SOURCE)
+            record['buildPath'] = str(build); record['command'][-1] = str(build)
+            if foreign: record['source'] = 'b' * 40
+            def native(command, cwd, log):
+                self.assertEqual(command[:7], ['swift', 'test', '-v', '-Xswiftc', '-save-temps', '--build-path', str(build)])
+                selector = command[-1]
+                for method in self.methods:
+                    exact = 'AutoTechnoCoreTests.PercussionReferenceSourceTests/' + method + '()'
+                    self.assertRegex(exact + '/PercussionReferenceSourceTests.swift:31:4', selector)
+                    self.assertNotRegex(exact.replace('()', 'Extra()'), selector)
+                    self.assertNotRegex(exact.replace('SourceTests/', 'SourceTestsExtra/'), selector)
+                log.write_bytes(raw)
+                return hosted.subprocess.CompletedProcess(command, exit_code)
+            with mock.patch.dict(os.environ, {'GITHUB_SHA':SOURCE, 'RUNNER_TEMP':directory}), \
+                 mock.patch.object(Path, 'cwd', return_value=root), \
+                 mock.patch.object(hosted, 'bounded_regular', return_value=json.dumps(record).encode()), \
+                 mock.patch.object(hosted.native_build, 'git_source_files', return_value=record['trackedInputs']), \
+                 mock.patch.object(hosted.native_build, 'validate') as validate, \
+                 mock.patch.object(hosted.native_build, 'guard') as guard, \
+                 mock.patch.object(hosted, 'run_logged_native', side_effect=native) as run, \
+                 mock.patch.object(hosted, 'diagnose_crash', return_value=0):
+                success = not foreign and exit_code == 0 and raw == b'Test run with 5 tests passed\n'
+                if success: exec(code, {})
+                else:
+                    with self.assertRaises(ValueError): exec(code, {})
+                if foreign:
+                    run.assert_not_called(); validate.assert_not_called(); guard.assert_not_called()
+                    self.assertFalse((output/'percussion-reference-original-native.log').exists())
+                else:
+                    run.assert_called_once(); validate.assert_called_once()
+                    self.assertEqual(guard.call_count, 2)
+                    self.assertEqual((output/'percussion-reference-original-native.log').read_bytes(), raw)
+
+    def test_component_uses_the_complete_exact_five_control_population(self):
+        root = Path(__file__).resolve().parents[1]
+        source = (root/'Tests/AutoTechnoCoreTests/PercussionReferenceSourceTests.swift').read_text()
+        methods = re.findall(r'@Test\([^\n]+\)\s+func (\w+)\(', source)
+        self.assertEqual(set(methods), set(self.methods))
+        self.assertEqual(len(methods), 5)
+        self.execute_fixture(0, b'Test run with 5 tests passed\n')
+
+    def test_component_refuses_empty_partial_skipped_or_failed_native_execution(self):
+        for code, raw in [(0, b'Test run with 0 tests passed\n'),
+                          (0, b'Test run with 4 tests passed\n'),
+                          (0, b'Test "unexpected percussion skip" skipped.\nTest run with 5 tests passed\n'),
+                          (1, b'assertion failure\n'),
+                          (1, b'error: Exited with unexpected signal code 10\n')]:
+            with self.subTest(code=code, raw=raw): self.execute_fixture(code, raw)
+
+    def test_component_refuses_a_foreign_build_before_native_execution(self):
+        self.execute_fixture(0, b'Test run with 5 tests passed\n', foreign=True)

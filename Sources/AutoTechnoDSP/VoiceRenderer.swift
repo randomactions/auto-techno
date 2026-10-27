@@ -930,6 +930,7 @@ package enum VoiceRenderer {
         var foundationStem: [Float] = []
         var modalPercussionStem: [Float] = []
         var percussionStem: [Float] = []
+        var percussionReferenceSource: [Float] = []
         var percussionTextureStem: [Float] = []
         var spatialDustLeftStem = [Float](repeating: 0, count: frames)
         var spatialDustRightStem = [Float](repeating: 0, count: frames)
@@ -978,6 +979,7 @@ package enum VoiceRenderer {
         swap(&foundationStem, &checkedOut.foundationStem)
         swap(&modalPercussionStem, &checkedOut.modalPercussionStem)
         swap(&percussionStem, &checkedOut.percussionStem)
+        swap(&percussionReferenceSource, &checkedOut.percussionReferenceSource)
         swap(&percussionTextureStem, &checkedOut.percussionTextureStem)
         swap(&upperTonalStem, &checkedOut.upperTonalStem)
         swap(&atmosphereStem, &checkedOut.atmosphereStem)
@@ -1023,12 +1025,68 @@ package enum VoiceRenderer {
             resolved.modalPercussionArticulations.count
         )
 
+        // Prepare large value projections before descending into the helper.
+        // Its caller retains only this reference while visiting outer owners.
+        @inline(never)
+        func storageOwners(excluding: Set<String> = []) -> StorageOwners {
+            var buffers: [StorageOwners.Buffer] = []
+            func add(_ samples: [Float], name: String) {
+                if !excluding.contains(name) { buffers.append(.init(name: name, samples: samples)) }
+            }
+            add(output, name: "output")
+            add(kickBus, name: "kickBus")
+            add(kickDetectorBus, name: "kickDetectorBus")
+            add(foundationStem, name: "foundationStem")
+            add(modalPercussionStem, name: "modalPercussionStem")
+            add(percussionStem, name: "percussionStem")
+            add(percussionReferenceSource, name: "percussionReferenceSource")
+            add(percussionTextureStem, name: "percussionTextureStem")
+            add(spatialDustLeftStem, name: "spatialDustLeftStem")
+            add(spatialDustRightStem, name: "spatialDustRightStem")
+            add(audioSliceStem, name: "audioSliceStem")
+            add(polyphonicPadStem, name: "polyphonicPadStem")
+            add(upperTonalStem, name: "upperTonalStem")
+            add(atmosphereStem, name: "atmosphereStem")
+            add(transitionStem, name: "transitionStem")
+            add(resonantAnchorStem, name: "resonantAnchorStem")
+            add(detunedCompanionStem, name: "detunedCompanionStem")
+            add(shadowTimingStem, name: "shadowTimingStem")
+            add(responseTimingStem, name: "responseTimingStem")
+            add(resonantMonoInstrumentStem, name: "resonantMonoInstrumentStem")
+            add(resonantMonoModulationStem, name: "resonantMonoModulationStem")
+            add(tonalMotionInstrumentStem, name: "tonalMotionInstrumentStem")
+            add(tonalEnvelopeExpansionStem, name: "tonalEnvelopeExpansionStem")
+            add(spectralTextureInstrumentStem, name: "spectralTextureInstrumentStem")
+            add(spectralTextureClusterStem, name: "spectralTextureClusterStem")
+            add(spectralTextureHarmonicTailStem, name: "spectralTextureHarmonicTailStem")
+            add(spectralTextureIndefinitePitchStem, name: "spectralTextureIndefinitePitchStem")
+            add(maskingFoundationBus, name: "maskingFoundationBus")
+            add(synthBus, name: "synthBus")
+            add(pulseEchoSendBus, name: "pulseEchoSendBus")
+            add(spatialReverbSendBus, name: "spatialReverbSendBus")
+            return StorageOwners(buffers: buffers, checkedOut: checkedOut,
+                state: state, bassStarts: renderedBassStartFrames)
+        }
+        func observingHelper<Result>(excluding: Set<String>,
+            _ body: (PreparationStorageObservation?) -> Result) -> Result {
+            guard let storageObservation else { return body(nil) }
+            let owners = storageOwners(excluding: excluding)
+            return body(storageObservation.joiningOwners { owners.register($0) })
+        }
+        let referenceBarFrames = max(1, Int((240.0 / scene.bpm *
+            PercussionReferenceSource.sampleRate).rounded()))
+        let referenceStepFrames = Double(referenceBarFrames) / 16.0
+
         for (scoreEventIndex, event) in resolved.ensemble.events.enumerated() {
             let pulseArticulation = event.voice == .groovePulse
                 ? resolved.groovePulse(at: event.step) : nil
             let offset = pulseArticulation?.timingOffsetInSteps ??
                 timingOffsetInSteps(for: event.voice, step: event.step, dna: dna)
             let start = Int(((Double(event.step) + offset) * stepFrames).rounded())
+            let referenceStart = Int(((Double(event.step) + offset) *
+                referenceStepFrames).rounded())
+            let referenceAvailableFrames = max(0, min(referenceBarFrames,
+                referenceBarFrames - referenceStart))
             let accent = performance.accent(at: event.step) * event.intensity
             switch event.voice {
             case .kick:
@@ -1122,16 +1180,21 @@ package enum VoiceRenderer {
                 let role = resolved.closedHatDecay(
                     atEventIndex: scoreEventIndex
                 )?.role ?? .neutral
-                if let evidence = hat(
-                    &output, measurement: &percussionStem, start: start,
-                    sampleRate: sampleRate, level: level,
-                    brightness: scene.character.percussionBrightness,
-                    random: &random,
-                    scoreEventIndex: scoreEventIndex,
-                    event: event,
-                    timingOffsetInSteps: offset,
-                    role: role
-                ) {
+                let hatResult = observingHelper(excluding: ["output", "percussionStem", "percussionReferenceSource"]) { observation in
+                    hat(
+                        &output, measurement: &percussionStem, start: start,
+                        sampleRate: sampleRate, level: level,
+                        brightness: scene.character.percussionBrightness,
+                        random: &random, referenceAvailableFrames: referenceAvailableFrames,
+                        referenceSource: &percussionReferenceSource,
+                        storageObservation: observation,
+                        scoreEventIndex: scoreEventIndex,
+                        event: event,
+                        timingOffsetInSteps: offset,
+                        role: role
+                    )
+                }
+                if let evidence = hatResult {
                     closedHatRenderEvidence.append(evidence)
                 }
             case .clap:
@@ -1139,18 +1202,23 @@ package enum VoiceRenderer {
                     atEventIndex: scoreEventIndex
                 ), articulation.voice == event.voice,
                    articulation.step == event.step else { break }
-                if let evidence = clap(
-                    &output,
-                    measurement: &percussionStem,
-                    start: start,
-                    sampleRate: sampleRate,
-                    level: 0.08 * accent,
-                    brightness: scene.character.percussionBrightness,
-                    random: &random,
-                    articulation: articulation,
-                    event: event,
-                    timingOffsetInSteps: offset
-                ) {
+                let clapResult = observingHelper(excluding: ["output", "percussionStem", "percussionReferenceSource"]) { observation in
+                    clap(
+                        &output,
+                        measurement: &percussionStem,
+                        start: start,
+                        sampleRate: sampleRate,
+                        level: 0.08 * accent,
+                        brightness: scene.character.percussionBrightness,
+                        random: &random, referenceAvailableFrames: referenceAvailableFrames,
+                        referenceSource: &percussionReferenceSource,
+                        storageObservation: observation,
+                        articulation: articulation,
+                        event: event,
+                        timingOffsetInSteps: offset
+                    )
+                }
+                if let evidence = clapResult {
                     upperPercussionTailRenderEvidence.append(evidence)
                     sourceTerminalDeclickRenderEvidence.append(
                         evidence.terminalDeclick
@@ -1161,18 +1229,23 @@ package enum VoiceRenderer {
                     atEventIndex: scoreEventIndex
                 ), articulation.voice == event.voice,
                    articulation.step == event.step else { break }
-                if let evidence = openHat(
-                    &output,
-                    measurement: &percussionStem,
-                    start: start,
-                    sampleRate: sampleRate,
-                    level: 0.052 * accent,
-                    brightness: scene.character.percussionBrightness,
-                    random: &random,
-                    articulation: articulation,
-                    event: event,
-                    timingOffsetInSteps: offset
-                ) {
+                let openHatResult = observingHelper(excluding: ["output", "percussionStem", "percussionReferenceSource"]) { observation in
+                    openHat(
+                        &output,
+                        measurement: &percussionStem,
+                        start: start,
+                        sampleRate: sampleRate,
+                        level: 0.052 * accent,
+                        brightness: scene.character.percussionBrightness,
+                        random: &random, referenceAvailableFrames: referenceAvailableFrames,
+                        referenceSource: &percussionReferenceSource,
+                        storageObservation: observation,
+                        articulation: articulation,
+                        event: event,
+                        timingOffsetInSteps: offset
+                    )
+                }
+                if let evidence = openHatResult {
                     upperPercussionTailRenderEvidence.append(evidence)
                     sourceTerminalDeclickRenderEvidence.append(
                         evidence.terminalDeclick
@@ -1183,18 +1256,23 @@ package enum VoiceRenderer {
                     atEventIndex: scoreEventIndex
                 ), articulation.voice == event.voice,
                    articulation.step == event.step else { break }
-                if let evidence = metallicPercussion(
-                    &output,
-                    measurement: &percussionStem,
-                    start: start,
-                    sampleRate: sampleRate,
-                    level: 0.042 * accent,
-                    brightness: scene.character.percussionBrightness,
-                    random: &random,
-                    articulation: articulation,
-                    event: event,
-                    timingOffsetInSteps: offset
-                ) {
+                let metallicResult = observingHelper(excluding: ["output", "percussionStem", "percussionReferenceSource"]) { observation in
+                    metallicPercussion(
+                        &output,
+                        measurement: &percussionStem,
+                        start: start,
+                        sampleRate: sampleRate,
+                        level: 0.042 * accent,
+                        brightness: scene.character.percussionBrightness,
+                        random: &random, referenceAvailableFrames: referenceAvailableFrames,
+                        referenceSource: &percussionReferenceSource,
+                        storageObservation: observation,
+                        articulation: articulation,
+                        event: event,
+                        timingOffsetInSteps: offset
+                    )
+                }
+                if let evidence = metallicResult {
                     upperPercussionTailRenderEvidence.append(evidence)
                     sourceTerminalDeclickRenderEvidence.append(
                         evidence.terminalDeclick
@@ -1308,53 +1386,6 @@ package enum VoiceRenderer {
             modalPercussionRenderEvidence.events.allSatisfy {
                 $0.articulation.use == .foundationCompanion
             }
-        // Prepare large value projections before descending into the helper.
-        // Its caller retains only this reference while visiting outer owners.
-        @inline(never)
-        func storageOwners(excluding: Set<String> = []) -> StorageOwners {
-            var buffers: [StorageOwners.Buffer] = []
-            func add(_ samples: [Float], name: String) {
-                if !excluding.contains(name) { buffers.append(.init(name: name, samples: samples)) }
-            }
-            add(output, name: "output")
-            add(kickBus, name: "kickBus")
-            add(kickDetectorBus, name: "kickDetectorBus")
-            add(foundationStem, name: "foundationStem")
-            add(modalPercussionStem, name: "modalPercussionStem")
-            add(percussionStem, name: "percussionStem")
-            add(percussionTextureStem, name: "percussionTextureStem")
-            add(spatialDustLeftStem, name: "spatialDustLeftStem")
-            add(spatialDustRightStem, name: "spatialDustRightStem")
-            add(audioSliceStem, name: "audioSliceStem")
-            add(polyphonicPadStem, name: "polyphonicPadStem")
-            add(upperTonalStem, name: "upperTonalStem")
-            add(atmosphereStem, name: "atmosphereStem")
-            add(transitionStem, name: "transitionStem")
-            add(resonantAnchorStem, name: "resonantAnchorStem")
-            add(detunedCompanionStem, name: "detunedCompanionStem")
-            add(shadowTimingStem, name: "shadowTimingStem")
-            add(responseTimingStem, name: "responseTimingStem")
-            add(resonantMonoInstrumentStem, name: "resonantMonoInstrumentStem")
-            add(resonantMonoModulationStem, name: "resonantMonoModulationStem")
-            add(tonalMotionInstrumentStem, name: "tonalMotionInstrumentStem")
-            add(tonalEnvelopeExpansionStem, name: "tonalEnvelopeExpansionStem")
-            add(spectralTextureInstrumentStem, name: "spectralTextureInstrumentStem")
-            add(spectralTextureClusterStem, name: "spectralTextureClusterStem")
-            add(spectralTextureHarmonicTailStem, name: "spectralTextureHarmonicTailStem")
-            add(spectralTextureIndefinitePitchStem, name: "spectralTextureIndefinitePitchStem")
-            add(maskingFoundationBus, name: "maskingFoundationBus")
-            add(synthBus, name: "synthBus")
-            add(pulseEchoSendBus, name: "pulseEchoSendBus")
-            add(spatialReverbSendBus, name: "spatialReverbSendBus")
-            return StorageOwners(buffers: buffers, checkedOut: checkedOut,
-                state: state, bassStarts: renderedBassStartFrames)
-        }
-        func observingHelper<Result>(excluding: Set<String>,
-            _ body: (PreparationStorageObservation?) -> Result) -> Result {
-            guard let storageObservation else { return body(nil) }
-            let owners = storageOwners(excluding: excluding)
-            return body(storageObservation.joiningOwners { owners.register($0) })
-        }
         let percussionEchoTextureRenderEvidence = observingHelper(excluding: ["percussionTextureStem"]) { observation in
             PercussionEchoTextureVoice.render(
                 source: percussionStem,
@@ -2386,6 +2417,7 @@ package enum VoiceRenderer {
         swap(&foundationStem, &checkedOut.foundationStem)
         swap(&modalPercussionStem, &checkedOut.modalPercussionStem)
         swap(&percussionStem, &checkedOut.percussionStem)
+        swap(&percussionReferenceSource, &checkedOut.percussionReferenceSource)
         swap(&percussionTextureStem, &checkedOut.percussionTextureStem)
         swap(&upperTonalStem, &checkedOut.upperTonalStem)
         swap(&atmosphereStem, &checkedOut.atmosphereStem)
@@ -3844,9 +3876,24 @@ package enum VoiceRenderer {
         return terminalEvidence.evidence
     }
 
+    @inline(never)
+    private static func observePercussionSource(_ output: [Float],
+        measurement: [Float], source: [Float],
+        observation: PreparationStorageObservation?) {
+        observation?.observe("percussion-reference-source") { inventory in
+            inventory.register(output, owner: "percussion.output")
+            inventory.register(measurement, owner: "percussion.measurement")
+            inventory.register(source, owner: "percussion.referenceSource")
+            withExtendedLifetime((output, measurement, source)) {}
+        }
+    }
+
     private static func hat(_ output: inout [Float], measurement: inout [Float],
                             start: Int, sampleRate: Double, level: Double,
                             brightness: Double, random: inout SeededGenerator,
+                            referenceAvailableFrames: Int,
+                            referenceSource: inout [Float],
+                            storageObservation: PreparationStorageObservation?,
                             scoreEventIndex: Int, event: EnsembleResolvedEvent,
                             timingOffsetInSteps: Double,
                             role: ClosedHatDecayRole) -> ClosedHatRenderEvidence? {
@@ -3881,13 +3928,18 @@ package enum VoiceRenderer {
         var middleEnergy = 0.0
         var highEnergy = 0.0
         var finite = decayRate.isFinite && level.isFinite
+        guard PercussionReferenceSource.prepare(into: &referenceSource,
+            durationSeconds: ClosedHatVoiceContract.durationSeconds,
+            availableFrames: referenceAvailableFrames, random: &random,
+            makeSample: { t, n in
+                state += (n - state) * (0.25 + brightness * 0.25)
+                return Float((n - state * 0.7) * exp(-t * decayRate) * level)
+            }) else { return nil }
+        observePercussionSource(output, measurement: measurement,
+            source: referenceSource, observation: storageObservation)
         for i in 0..<frames {
-            let t = Double(i) / sampleRate
-            let n = random.unit() * 2 - 1
-            state += (n - state) * (0.25 + brightness * 0.25)
-            let renderedSample = Float(
-                (n - state * 0.7) * exp(-t * decayRate) * level
-            )
+            let renderedSample = PercussionReferenceSource.sample(referenceSource,
+                frame: i, nativeSampleRate: sampleRate)
             output[start + i] += renderedSample
             measurement[start + i] += renderedSample
             fingerprint.append(renderedSample)
@@ -3952,6 +4004,9 @@ package enum VoiceRenderer {
         level: Double,
         brightness: Double,
         random: inout SeededGenerator,
+        referenceAvailableFrames: Int,
+        referenceSource: inout [Float],
+        storageObservation: PreparationStorageObservation?,
         articulation: UpperPercussionTailArticulation,
         event: EnsembleResolvedEvent,
         timingOffsetInSteps: Double
@@ -3968,38 +4023,44 @@ package enum VoiceRenderer {
         )
         var low = 0.0
         let bursts = [0.0, 0.011, 0.023]
+        guard PercussionReferenceSource.prepare(into: &referenceSource,
+            durationSeconds: durationSeconds, availableFrames: referenceAvailableFrames,
+            random: &random, makeSample: { t, noise in
+                low += (noise - low) * 0.12
+                let burstEnvelope = bursts.reduce(0.0) { value, offset in
+                    guard t >= offset else { return value }
+                    return value + exp(-(t - offset) * (85 + brightness * 35))
+                }
+                let tail = t > 0.026 ? exp(-(t - 0.026) * 25) * 0.34 : 0
+                let body = sin(2 * .pi * 185 * t) * exp(-t * 31) * 0.22
+                let clapSample =
+                    ((noise - low * 0.72) * (burstEnvelope * 0.46 + tail) + body) * level
+                return switch articulation.body {
+                case .snare:
+                    Float(snareBodySample(
+                        time: t,
+                        noise: noise,
+                        lowNoise: low,
+                        brightness: brightness,
+                        level: level
+                    ))
+                case .rim:
+                    Float(rimBodySample(
+                        time: t,
+                        noise: noise,
+                        lowNoise: low,
+                        brightness: brightness,
+                        level: level
+                    ))
+                case .native, .clap:
+                    Float(clapSample)
+                }
+        }) else { return nil }
+        observePercussionSource(output, measurement: measurement,
+            source: referenceSource, observation: storageObservation)
         for i in 0..<frames {
-            let t = Double(i) / sampleRate
-            let noise = random.unit() * 2 - 1
-            low += (noise - low) * 0.12
-            let burstEnvelope = bursts.reduce(0.0) { value, offset in
-                guard t >= offset else { return value }
-                return value + exp(-(t - offset) * (85 + brightness * 35))
-            }
-            let tail = t > 0.026 ? exp(-(t - 0.026) * 25) * 0.34 : 0
-            let body = sin(2 * .pi * 185 * t) * exp(-t * 31) * 0.22
-            let clapSample =
-                ((noise - low * 0.72) * (burstEnvelope * 0.46 + tail) + body) * level
-            let baseSample: Float = switch articulation.body {
-            case .snare:
-                Float(snareBodySample(
-                    time: t,
-                    noise: noise,
-                    lowNoise: low,
-                    brightness: brightness,
-                    level: level
-                ))
-            case .rim:
-                Float(rimBodySample(
-                    time: t,
-                    noise: noise,
-                    lowNoise: low,
-                    brightness: brightness,
-                    level: level
-                ))
-            case .native, .clap:
-                Float(clapSample)
-            }
+            let baseSample = PercussionReferenceSource.sample(referenceSource,
+                frame: i, nativeSampleRate: sampleRate)
             let articulatedSample = UpperPercussionTailDSPContract.process(
                 sample: baseSample,
                 role: articulation.role,
@@ -4076,6 +4137,9 @@ package enum VoiceRenderer {
         level: Double,
         brightness: Double,
         random: inout SeededGenerator,
+        referenceAvailableFrames: Int,
+        referenceSource: inout [Float],
+        storageObservation: PreparationStorageObservation?,
         articulation: UpperPercussionTailArticulation,
         event: EnsembleResolvedEvent,
         timingOffsetInSteps: Double
@@ -4091,18 +4155,24 @@ package enum VoiceRenderer {
         )
         let partials = [1_730.0, 2_417.0, 3_101.0, 4_729.0, 6_083.0]
         var noiseState = 0.0
+        guard PercussionReferenceSource.prepare(into: &referenceSource,
+            durationSeconds: 0.065, availableFrames: referenceAvailableFrames,
+            random: &random, makeSample: { t, noise in
+                noiseState += (noise - noiseState) * 0.17
+                let resonances = partials.enumerated().reduce(0.0) { result, partial in
+                    let detune = 1 + Double(partial.offset) * brightness * 0.017
+                    return result + sin(2 * .pi * partial.element * detune * t + Double(partial.offset) * 0.7) / Double(partial.offset + 2)
+                }
+                let envelope = exp(-t * (38 - brightness * 10))
+                return Float(
+                    (resonances * 0.72 + (noise - noiseState) * 0.16) * envelope * level
+                )
+        }) else { return nil }
+        observePercussionSource(output, measurement: measurement,
+            source: referenceSource, observation: storageObservation)
         for i in 0..<frames {
-            let t = Double(i) / sampleRate
-            let noise = random.unit() * 2 - 1
-            noiseState += (noise - noiseState) * 0.17
-            let resonances = partials.enumerated().reduce(0.0) { result, partial in
-                let detune = 1 + Double(partial.offset) * brightness * 0.017
-                return result + sin(2 * .pi * partial.element * detune * t + Double(partial.offset) * 0.7) / Double(partial.offset + 2)
-            }
-            let envelope = exp(-t * (38 - brightness * 10))
-            let baseSample = Float(
-                (resonances * 0.72 + (noise - noiseState) * 0.16) * envelope * level
-            )
+            let baseSample = PercussionReferenceSource.sample(referenceSource,
+                frame: i, nativeSampleRate: sampleRate)
             let articulatedSample = UpperPercussionTailDSPContract.process(
                 sample: baseSample,
                 role: articulation.role,
@@ -4137,6 +4207,9 @@ package enum VoiceRenderer {
         level: Double,
         brightness: Double,
         random: inout SeededGenerator,
+        referenceAvailableFrames: Int,
+        referenceSource: inout [Float],
+        storageObservation: PreparationStorageObservation?,
         articulation: UpperPercussionTailArticulation,
         event: EnsembleResolvedEvent,
         timingOffsetInSteps: Double
@@ -4151,16 +4224,22 @@ package enum VoiceRenderer {
             renderedFrameCount: frames
         )
         var filtered = 0.0
+        guard PercussionReferenceSource.prepare(into: &referenceSource,
+            durationSeconds: 0.19, availableFrames: referenceAvailableFrames,
+            random: &random, makeSample: { t, noise in
+                filtered += (noise - filtered) * (0.16 + brightness * 0.16)
+                let metallic = sin(2.0 * Double.pi * (3_600 + brightness * 3_800) * t)
+                    + sin(2.0 * Double.pi * (5_100 + brightness * 2_200) * t) * 0.42
+                let envelope = min(1.0, t / 0.0015) * exp(-t * (18.0 - brightness * 4.0))
+                return Float(
+                    (noise - filtered * 0.55 + metallic * 0.16) * envelope * level
+                )
+        }) else { return nil }
+        observePercussionSource(output, measurement: measurement,
+            source: referenceSource, observation: storageObservation)
         for i in 0..<frames {
-            let t = Double(i) / sampleRate
-            let noise = random.unit() * 2.0 - 1.0
-            filtered += (noise - filtered) * (0.16 + brightness * 0.16)
-            let metallic = sin(2.0 * Double.pi * (3_600 + brightness * 3_800) * t)
-                + sin(2.0 * Double.pi * (5_100 + brightness * 2_200) * t) * 0.42
-            let envelope = min(1.0, t / 0.0015) * exp(-t * (18.0 - brightness * 4.0))
-            let baseSample = Float(
-                (noise - filtered * 0.55 + metallic * 0.16) * envelope * level
-            )
+            let baseSample = PercussionReferenceSource.sample(referenceSource,
+                frame: i, nativeSampleRate: sampleRate)
             let articulatedSample = UpperPercussionTailDSPContract.process(
                 sample: baseSample,
                 role: articulation.role,

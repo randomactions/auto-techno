@@ -1945,6 +1945,7 @@ struct RenderBuffers {
     var foundationStem: [Float] = []
     var modalPercussionStem: [Float] = []
     var percussionStem: [Float] = []
+    var percussionReferenceSource: [Float] = []
     var percussionTextureStem: [Float] = []
     var upperTonalStem: [Float] = []
     var atmosphereStem: [Float] = []
@@ -1973,6 +1974,7 @@ struct RenderBuffers {
         reset(&foundationStem, frameCount: frameCount)
         reset(&modalPercussionStem, frameCount: frameCount)
         reset(&percussionStem, frameCount: frameCount)
+        percussionReferenceSource.removeAll(keepingCapacity: true)
         reset(&percussionTextureStem, frameCount: frameCount)
         reset(&upperTonalStem, frameCount: frameCount)
         reset(&atmosphereStem, frameCount: frameCount)
@@ -2024,6 +2026,7 @@ struct RenderBuffers {
         inventory.register(foundationStem, owner: owner + ".foundationStem")
         inventory.register(modalPercussionStem, owner: owner + ".modalPercussionStem")
         inventory.register(percussionStem, owner: owner + ".percussionStem")
+        inventory.register(percussionReferenceSource, owner: owner + ".percussionReferenceSource")
         inventory.register(percussionTextureStem, owner: owner + ".percussionTextureStem")
         inventory.register(upperTonalStem, owner: owner + ".upperTonalStem")
         inventory.register(atmosphereStem, owner: owner + ".atmosphereStem")
