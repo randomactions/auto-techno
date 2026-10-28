@@ -1006,8 +1006,13 @@ class HostedMapBuildIsolationTests(unittest.TestCase):
         import shlex
         import textwrap
         workflow = (Path(__file__).resolve().parents[1] / '.github/workflows/at0039-hosted-macos.yml').read_text()
-        step = workflow.split('      - name: Generate and validate semantic codebase map\n', 1)[1]
-        body = step.split('        run: |\n', 1)[1].split('      - name: ', 1)[0]
+        # Execute both real command bodies in workflow order. Map emission is
+        # independently exercised below and must precede native preparation.
+        bodies = []
+        for name in ['Generate and validate semantic codebase map', 'Prepare sealed native map build']:
+            step = workflow.split('      - name: ' + name + '\n', 1)[1]
+            bodies.append(step.split('        run: |\n', 1)[1].split('      - name: ', 1)[0])
+        body = '\n'.join(bodies)
         commands = [shlex.split(line) for line in textwrap.dedent(body).replace('\\\n', '').splitlines()
                     if line.strip() and not line.lstrip().startswith('#')]
         proxy = directory / 'compiler_mutation_fixture.py'
@@ -1242,3 +1247,80 @@ class PercussionReferenceComponentTests(unittest.TestCase):
 
     def test_component_refuses_a_foreign_build_before_native_execution(self):
         self.execute_fixture(0, b'Test run with 5 tests passed\n', foreign=True)
+
+
+class HostedGeneratedMapFailureRetentionTests(unittest.TestCase):
+    """Synthetic transport controls; retained maps never grant native authority."""
+    def workflow(self):
+        return (Path(__file__).resolve().parents[1] / '.github/workflows/at0039-hosted-macos.yml').read_text()
+
+    def emission(self):
+        import textwrap
+        step = self.workflow().split('      - name: Emit source-bound generated map\n', 1)[1].split('      - name: ', 1)[0]
+        return textwrap.dedent(step.split("          python3 - <<'PYMAP'\n", 1)[1].split('          PYMAP', 1)[0])
+
+    def test_map_bytes_are_emitted_before_sealed_native_preparation(self):
+        workflow = self.workflow()
+        names = ['Generate and validate semantic codebase map', 'Emit source-bound generated map',
+                 'Prepare sealed native map build', 'Inspect original upper-color preparation stack failure']
+        positions = [workflow.index('      - name: ' + name + '\n') for name in names]
+        self.assertEqual(positions, sorted(positions))
+        self.assertEqual(workflow.count('      - name: Emit source-bound generated map\n'), 1)
+        generation = workflow[positions[0]:positions[1]]
+        self.assertIn('id: generate-map', generation)
+        self.assertIn('codebase_map.py generate', generation)
+        self.assertIn('codebase_map.py check', generation)
+        self.assertNotIn('--prepare-native-build', generation)
+        emission = workflow[positions[1]:positions[2]]
+        self.assertIn("if: always() && steps.generate-map.outcome == 'success'", emission)
+        preparation = workflow.split('      - name: Prepare sealed native map build\n', 1)[1].split('      - name: ', 1)[0]
+        self.assertIn('--prepare-native-build', preparation)
+        self.assertNotIn('if: always()', preparation)
+        self.assertNotIn('continue-on-error', preparation)
+        self.assertNotIn('git restore', workflow)
+        self.assertNotIn('git reset', workflow)
+
+    def test_actual_emitter_retains_complete_source_bound_chunks(self):
+        import base64
+        raw = b'# synthetic generated map\n' * 1000
+        output = io.StringIO()
+        with mock.patch.object(Path, 'read_bytes', return_value=raw) as read, \
+             mock.patch.object(hosted.subprocess, 'check_output', return_value=SOURCE) as git, \
+             contextlib.redirect_stdout(output):
+            exec(compile(self.emission(), '<workflow-map-emitter>', 'exec'), {})
+        read.assert_called_once_with()
+        git.assert_called_once_with(['git', 'rev-parse', 'HEAD'], text=True)
+        chunks = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertGreater(len(chunks), 1)
+        for index, chunk in enumerate(chunks):
+            self.assertEqual(set(chunk), {'schema', 'source', 'sha256', 'bytes', 'index', 'chunks', 'payload'})
+            self.assertEqual(chunk['schema'], 'autotechno-generated-map-chunk.v1')
+            self.assertEqual(chunk['source'], SOURCE)
+            self.assertEqual(chunk['sha256'], hosted.sha(raw))
+            self.assertEqual(chunk['bytes'], len(raw))
+            self.assertEqual(chunk['index'], index)
+            self.assertEqual(chunk['chunks'], len(chunks))
+        self.assertEqual(base64.b64decode(''.join(c['payload'] for c in chunks), validate=True), raw)
+
+    def test_missing_generated_map_cannot_emit_map_evidence(self):
+        output = io.StringIO()
+        with mock.patch.object(Path, 'read_bytes', side_effect=FileNotFoundError('synthetic missing map')), \
+             mock.patch.object(hosted.subprocess, 'check_output') as git, \
+             contextlib.redirect_stdout(output), self.assertRaises(FileNotFoundError):
+            exec(compile(self.emission(), '<workflow-map-emitter>', 'exec'), {})
+        self.assertEqual(output.getvalue(), '')
+        git.assert_not_called()
+
+    def test_changed_generated_map_still_refuses_native_inventory(self):
+        calls = []
+        def git(argv, **kwargs):
+            calls.append(argv)
+            if argv[-2:] == ['rev-parse', 'HEAD']:
+                return (SOURCE + '\n').encode()
+            if argv[-3:] == ['status', '--porcelain', '--untracked-files=all']:
+                return b' M docs/CODEBASE_MAP.md\n'
+            raise AssertionError('dirty source must refuse before inventory or compilation')
+        with mock.patch.object(hosted.native_build.subprocess, 'check_output', side_effect=git), \
+             self.assertRaisesRegex(ValueError, 'clean immutable native source'):
+            hosted.native_build.inventory(Path('/synthetic-checkout'))
+        self.assertEqual(len(calls), 2)

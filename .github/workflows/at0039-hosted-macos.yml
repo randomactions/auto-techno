@@ -113,6 +113,22 @@ jobs:
           # Finish it in separate scratch space before sealing the fresh native build.
           python3 scripts/codebase_map.py generate --build-path "$RUNNER_TEMP/at0039-map-inspection"
           python3 scripts/codebase_map.py check --build-path "$RUNNER_TEMP/at0039-map-inspection"
+      - name: Emit source-bound generated map
+        if: always() && steps.generate-map.outcome == 'success'
+        run: |
+          python3 - <<'PYMAP'
+          import base64, hashlib, json, pathlib, subprocess
+          raw = pathlib.Path('docs/CODEBASE_MAP.md').read_bytes()
+          source = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          encoded = base64.b64encode(raw).decode('ascii')
+          chunks = [encoded[i:i+8192] for i in range(0, len(encoded), 8192)]
+          for index, chunk in enumerate(chunks):
+              print(json.dumps(dict(schema='autotechno-generated-map-chunk.v1', source=source,
+                  sha256=hashlib.sha256(raw).hexdigest(), bytes=len(raw), index=index,
+                  chunks=len(chunks), payload=chunk), sort_keys=True))
+          PYMAP
+      - name: Prepare sealed native map build
+        run: |
           python3 scripts/hosted_macos_verification.py --prepare-native-build \
             --build-path "$RUNNER_TEMP/at0039-map" --output "$RUNNER_TEMP/at0039-map-build"
       - name: Verify installed primary and native stack regression fixtures
@@ -266,20 +282,6 @@ jobs:
           compression-level: 6
           overwrite: false
           include-hidden-files: false
-      - name: Emit source-bound generated map
-        if: always() && steps.generate-map.outcome == 'success'
-        run: |
-          python3 - <<'PYMAP'
-          import base64, hashlib, json, pathlib, subprocess
-          raw = pathlib.Path('docs/CODEBASE_MAP.md').read_bytes()
-          source = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
-          encoded = base64.b64encode(raw).decode('ascii')
-          chunks = [encoded[i:i+8192] for i in range(0, len(encoded), 8192)]
-          for index, chunk in enumerate(chunks):
-              print(json.dumps(dict(schema='autotechno-generated-map-chunk.v1', source=source,
-                  sha256=hashlib.sha256(raw).hexdigest(), bytes=len(raw), index=index,
-                  chunks=len(chunks), payload=chunk), sort_keys=True))
-          PYMAP
   diagnostic:
     if: inputs.scope == 'protected-continuation-diagnostic'
     name: Protected continuation crash diagnostic
